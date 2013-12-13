@@ -818,6 +818,14 @@ class Make(object):
    linker = property(_get_linker, doc = """Linker class""")
 
 
+   def _get_named_targets(self):
+      return self._m_dictNamedTargets.values()
+
+   named_targets = property(_get_named_targets, doc = """
+      Targets explicitly declared in the parsed makefile.
+   """)
+
+
    def _get_output_dir(self):
       return self._m_sOutputDir
 
@@ -877,7 +885,7 @@ class Make(object):
       # Now that all the targets have been instantiated, we can have them parse their definitions.
       for tgt, eltTarget in listNodesAndTargets:
          for nd in eltTarget.childNodes:
-            if make._is_node_whitespace(nd):
+            if self._is_node_whitespace(nd):
                # Skip whitespace/comment nodes.
                continue
             if nd.nodeType != xml.dom.Node.ELEMENT_NODE:
@@ -985,10 +993,73 @@ class Make(object):
 ####################################################################################################
 # __main__
 
-if __name__ == '__main__':
+def _main(iterArgs):
+
    make = Make()
-   make.parse('abc.abcmk')
-   for sName in ('abc-test', ):
-      make.schedule_target_jobs(make.get_target_by_name(sName))
+   iArg = 1
+   iArgEnd = len(iterArgs)
+   while iArg < iArgEnd:
+      sArg = iterArgs[iArg]
+      if sArg.startswith('--'):
+         if sArg == '--force-build':
+            # TODO: make.force_build = True
+            pass
+         elif sArg == '--dry-run':
+            # TODO: make.dry_run = True
+            pass
+         elif sArg == '--ignore-errors':
+            # TODO: make.ignore_errors = True
+            pass
+         elif sArg == '--keep-going':
+            # TODO: make.keep_going = True
+            pass
+         elif sArg == '--verbose':
+            make.verbose = True
+      elif sArg.startswith('-'):
+         for sArgChar in sArg:
+            if sArg == 'f':
+               # TODO: make.force_build = True
+               pass
+            elif sArg == 'i':
+               # TODO: make.ignore_errors = True
+               pass
+            elif sArg == 'k':
+               # TODO: make.keep_going = True
+               pass
+            elif sArg == 'n':
+               # TODO: make.dry_run = True
+               pass
+            elif sArg == 'v':
+               make.verbose = True
+      else:
+         break
+      iArg += 1
+
+   # Expect the makefile path as the next argument.
+   if iArg >= iArgEnd:
+      sys.stderr.write('error: no makefile specified\n')
+      return 1
+   make.parse(iterArgs[iArg])
+   iArg += 1
+
+   # If there are more argument, they will be treated as target named, indicating that only a subset
+   # of the targets should be built; otherwise all named targets will be built.
+   if iArg < iArgEnd:
+      iterTargets = set()
+      while iArg < iArgEnd:
+         iterTargets.add(make.get_target_by_name(sName))
+         iArg += 1
+   else:
+      iterTargets = make.named_targets
+
+   # Build all selected targets: first schedule the jobs building them, then run them.
+   for tgt in iterTargets:
+      make.schedule_target_jobs(tgt)
    make.run_scheduled_jobs()
+
+   return 0
+
+
+if __name__ == '__main__':
+   sys.exit(_main(sys.argv))
 
