@@ -497,9 +497,9 @@ class ExecutableTarget(Target):
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
          sName = elt.getAttribute('name')
-         # If the library was in the dictionary (i.e. it’s built by this makefile), assign it as
-         # a dependency of self; else just add the library name (hence passing sName as 2nd
-         # argument to make.get_target_by_name()).
+         # If the library was in the dictionary (i.e. it’s built by this makefile), assign it as a
+         # dependency of self; else just add the library name (hence passing sName as 2nd argument
+         # to make.get_target_by_name()).
          oDynLib = make.get_target_by_name(sName, sName)
          if oDynLib is not sName:
             self.add_dependency(oDynLib)
@@ -636,6 +636,10 @@ class Make(object):
 
    # C++ compiler class.
    _m_clsCxxCompiler = None
+   # See Make.ignore_errors.
+   _m_bIgnoreErrors = False
+   # See Make.keep_going.
+   _m_bKeepGoing = False
    # Linker class.
    _m_clsLinker = None
    # See Make.output_dir.
@@ -691,21 +695,37 @@ class Make(object):
       """Returns only after the specified number of jobs completes and the respective cleanup
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
+
+      Returns the count of failed jobs, unless Make._m_bIgnoreErrors == True, in which case it will
+      always return 0.
       """
 
       # This loop alternates poll loop and sleeping.
       cCompletedJobs = 0
+      cFailedJobs = 0
+      # The termination condition is in the middle.
       while True:
-         # This loop restarts the for loop, since we modify _m_dictRunningJobs.
+         # This loop restarts the for loop, since we modify _m_dictRunningJobs. The termination
+         # condition is a break statement.
          while True:
             # Poll each running job.
             for proc in self._m_dictRunningJobs.keys():
                if proc.poll() is not None:
-                  proc.wait()
+                  iRet = proc.wait()
                   # Remove the job from the running jobs.
                   sj = self._m_dictRunningJobs.pop(proc)
-                  sj.release_blocked()
                   cCompletedJobs += 1
+                  if iRet == 0 or self._m_bIgnoreErrors:
+                     # The job completed successfully or we’re ignoring its failure: any dependent
+                     # jobs can now be released.
+                     sj.release_blocked()
+                  else:
+                     if self._m_bKeepGoing:
+                        # Unschedule any dependent jobs, so we can continue ignoring this failure as
+                        # long as we have scheduled jobs that don’t depend on it.
+                        if sj._m_setBlockedJobs:
+                           self._unschedule_jobs_blocked_by(sj)
+                     cFailedJobs += 1
                   # Since we modified self._m_setScheduledJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.
                   break
@@ -715,7 +735,7 @@ class Make(object):
                break
          # If we freed up the requested count of slots, there’s nothing left to do.
          if cCompletedJobs >= cJobsToComplete:
-            return
+            return cFailedJobs
          # Wait a small amount of time.
          # TODO: proper event-based waiting.
          time.sleep(0.1)
@@ -774,6 +794,18 @@ class Make(object):
       return tgt
 
 
+   def _get_ignore_errors(self):
+      return self._m_bIgnoreErrors
+
+   def _set_ignore_errors(self, bIgnoreErrors):
+      self._m_bIgnoreErrors = bIgnoreErrors
+
+   ignore_errors = property(_get_ignore_errors, _set_ignore_errors, doc = """
+      If True, scheduled jobs will continue to be run even after a job they depend on fails. If
+      False, a failed job causes execution to stop according to the value of Make.keep_going.
+   """)
+
+
    @staticmethod
    def _is_node_whitespace(nd):
       """Returns True if a node is whitespace or a comment."""
@@ -783,6 +815,19 @@ class Make(object):
       if nd.nodeType == xml.dom.Node.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
          return True
       return False
+
+
+   def _get_keep_going(self):
+      return self._m_bKeepGoing
+
+   def _set_keep_going(self, bKeepGoing):
+      self._m_bKeepGoing = bKeepGoing
+
+   keep_going = property(_get_keep_going, _set_keep_going, doc = """
+      If True, scheduled jobs will continue to be run even after a failed job, as long as they don’t
+      depend on a failed job. If False, a failed job causes execution to stop as soon as any other
+      running jobs complete.
+   """)
 
 
    def _get_linker(self):
@@ -912,18 +957,25 @@ class Make(object):
       # This is the earliest point we know we can reset this.
       self._m_dictTargetLastScheduledJobs.clear()
 
+      cFailedJobsTotal = 0
       while self._m_setScheduledJobs:
          # Make sure any completed jobs are collected.
-         self._collect_completed_jobs(0)
+         cFailedJobs = self._collect_completed_jobs(0)
          # Make sure we have at least one free job slot.
          while len(self._m_dictRunningJobs) == self._m_cRunningJobsMax:
             # Wait for one or more jobs slots to free up.
-            self._collect_completed_jobs(1)
+            cFailedJobs += self._collect_completed_jobs(1)
 
-         # Find a job that’s ready to be executed.
+         cFailedJobsTotal += cFailedJobs
+         # Stop starting jobs in case of failed errors – unless overridden by the user.
+         if cFailedJobs > 0 and not self._m_bKeepGoing:
+            break
+
+         # Find a job that is ready to be executed.
          for sj in self._m_setScheduledJobs:
             if not sj.is_blocked():
                iterArgs = sj.get_cmd()
+               # TODO: if verbose…
                sys.stdout.write(' '.join(iterArgs) + '\n')
                proc = subprocess.Popen(iterArgs)
                # Move the job from scheduled to running jobs.
@@ -932,9 +984,9 @@ class Make(object):
                # Since we modified self._m_setScheduledJobs, we have to stop iterating over it; the
                # outer while loop will get back here, eventually.
                break
-
       # There are no more scheduled jobs, just wait for the running ones to complete.
-      self._collect_completed_jobs(len(self._m_dictRunningJobs))
+      cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
+      return cFailedJobsTotal
 
 
    def _schedule_job(self, sj):
@@ -980,6 +1032,20 @@ class Make(object):
       return sj
 
 
+   def _unschedule_jobs_blocked_by(self, sj):
+      """Recursively removes the jobs blocked by the specified job from the set of scheduled
+      jobs.
+      """
+
+      for sjBlocked in sj._m_setBlockedJobs:
+         # Use set.discard() instead of set.remove() since it may have already been removed due to a
+         # previous unrelated call to this method, e.g. another job failed before the one that
+         # caused this call.
+         self._m_setScheduledJobs.discard(sjBlocked)
+         if sjBlocked._m_setBlockedJobs:
+            self._unschedule_jobs_blocked_by(sjBlocked._m_setBlockedJobs)
+
+
    def _get_verbose(self):
       return self._m_bVerbose
 
@@ -1008,28 +1074,24 @@ def _main(iterArgs):
             # TODO: make.dry_run = True
             pass
          elif sArg == '--ignore-errors':
-            # TODO: make.ignore_errors = True
-            pass
+            make.ignore_errors = True
          elif sArg == '--keep-going':
-            # TODO: make.keep_going = True
-            pass
+            make.keep_going = True
          elif sArg == '--verbose':
             make.verbose = True
       elif sArg.startswith('-'):
          for sArgChar in sArg:
-            if sArg == 'f':
+            if sArgChar == 'f':
                # TODO: make.force_build = True
                pass
-            elif sArg == 'i':
-               # TODO: make.ignore_errors = True
-               pass
-            elif sArg == 'k':
-               # TODO: make.keep_going = True
-               pass
-            elif sArg == 'n':
+            elif sArgChar == 'i':
+               make.ignore_errors = True
+            elif sArgChar == 'k':
+               make.keep_going = True
+            elif sArgChar == 'n':
                # TODO: make.dry_run = True
                pass
-            elif sArg == 'v':
+            elif sArgChar == 'v':
                make.verbose = True
       else:
          break
@@ -1055,9 +1117,7 @@ def _main(iterArgs):
    # Build all selected targets: first schedule the jobs building them, then run them.
    for tgt in iterTargets:
       make.schedule_target_jobs(tgt)
-   make.run_scheduled_jobs()
-
-   return 0
+   return make.run_scheduled_jobs()
 
 
 if __name__ == '__main__':
