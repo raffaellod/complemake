@@ -605,18 +605,18 @@ class ScheduledJob(object):
       self._m_setBlockedJobs.add(sj)
 
 
-   def get_cmd(self):
-      """Returns the command to be invoked."""
+   def _get_blocked(self):
+      return self._m_cBlocks > 0
 
+   blocked = property(_get_blocked, doc = """
+      True if the job is blocked (i.e. requires other jobs to be run first), or False otherwise.
+   """)
+
+
+   def _get_command(self):
       return self._m_iterArgs
 
-
-   def is_blocked(self):
-      """Returns True if the job is blocked, i.e. requires other dependency jobs to be run first, or
-      False otherwise.
-      """
-
-      return self._m_cBlocks > 0
+   command = property(_get_command, doc = """Command to be invoked, as a list of arguments.""")
 
 
    def release_blocked(self):
@@ -973,8 +973,8 @@ class Make(object):
 
          # Find a job that is ready to be executed.
          for sj in self._m_setScheduledJobs:
-            if not sj.is_blocked():
-               iterArgs = sj.get_cmd()
+            if not sj.blocked:
+               iterArgs = sj.command
                # TODO: if verbose…
                sys.stdout.write(' '.join(iterArgs) + '\n')
                proc = subprocess.Popen(iterArgs)
