@@ -70,7 +70,7 @@ class Tool(object):
          os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
 
       # Build the arguments list.
-      listArgs = [self.__class__._sm_dictToolFilePaths[self.__class__]]
+      listArgs = [self._sm_dictToolFilePaths[self.__class__]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
       return ScheduledJob(make, iterBlockingJobs, listArgs)
