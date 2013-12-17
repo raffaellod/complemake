@@ -59,6 +59,26 @@ class Tool(object):
       cls._sm_dictToolFilePaths[clsTool] = sToolFilePath
 
 
+   def _run_add_cmd_flags(self, listArgs):
+      """Builds the flags portion of the tool’s command line.
+
+      The default implementation does nothing – no flags can be applied to every tool.
+      """
+
+      pass
+
+
+   def _run_add_cmd_inputs(self, listArgs):
+      """Builds the input files portion of the tool’s command line.
+
+      The default implementation adds the input file paths at the end of listArgs.
+      """
+
+      # Add the source file paths, if any.
+      if self._m_listInputFilePaths:
+         listArgs.extend(self._m_listInputFilePaths)
+
+
    def schedule_jobs(self, make, iterBlockingJobs):
       """Schedules one or more jobs that, when run, result in the execution of the tool.
 
@@ -78,26 +98,6 @@ class Tool(object):
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
       return ScheduledJob(make, iterBlockingJobs, listArgs)
-
-
-   def _run_add_cmd_flags(self, listArgs):
-      """Builds the flags portion of the tool’s command line.
-
-      The default implementation does nothing – no flags can be applied to every tool.
-      """
-
-      pass
-
-
-   def _run_add_cmd_inputs(self, listArgs):
-      """Builds the input files portion of the tool’s command line.
-
-      The default implementation adds the input file paths at the end of listArgs.
-      """
-
-      # Add the source file paths, if any.
-      if self._m_listInputFilePaths:
-         listArgs.extend(self._m_listInputFilePaths)
 
 
    def set_output(self, sOutputFilePath):
