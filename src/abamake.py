@@ -60,9 +60,13 @@ class Tool(object):
 
 
    def schedule_jobs(self, make, iterBlockingJobs):
-      """Schedules one or more jobs that, when executed, result in the execution of the tool. It’s
-      implemented by creating one or more chained ScheduledJob instances, of which the first one is
-      blocked by the jobs in iterBlockingJobs, and the last one is returned.
+      """Schedules one or more jobs that, when run, result in the execution of the tool.
+
+      An implementation will create one or more chained ScheduledJob instances, blocking the first
+      with iterBlockingJobs and returning the last one.
+
+      The default implementation schedules a single job, the command line of which is composed by
+      calling Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
       """
 
       # Make sure that the output directory exists.
@@ -77,13 +81,19 @@ class Tool(object):
 
 
    def _run_add_cmd_flags(self, listArgs):
-      """Builds the flags portion of the tool’s command line."""
+      """Builds the flags portion of the tool’s command line.
+
+      The default implementation does nothing – no flags can be applied to every tool.
+      """
 
       pass
 
 
    def _run_add_cmd_inputs(self, listArgs):
-      """Builds the input files portion of the tool’s command line."""
+      """Builds the input files portion of the tool’s command line.
+
+      The default implementation adds the input file paths at the end of listArgs.
+      """
 
       # Add the source file paths, if any.
       if self._m_listInputFilePaths:
