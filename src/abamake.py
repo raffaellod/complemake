@@ -597,6 +597,15 @@ class DynLibTarget(ExecutableTarget):
 class UnitTestTarget(ExecutableTarget):
    """Executable unit test target."""
 
+   def generate_file_path(self, make):
+      """See ExecutableTarget.generate_file_path()."""
+
+      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      sFilePath = os.path.join(make.output_dir, 'bin', 'unittest', '' + self.name + '')
+      self._m_sFilePath = sFilePath
+      return sFilePath
+
+
    def parse_makefile_child(self, elt, make):
       """See ExecutableTarget.parse_makefile_child()."""
 
