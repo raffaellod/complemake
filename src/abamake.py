@@ -40,6 +40,9 @@ class Tool(object):
    _m_listInputFilePaths = None
    # Output file path.
    _m_sOutputFilePath = None
+   # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
+   # displayed.
+   _smc_sQuietName = None
    # Associates a Tool-derived class to its executable file name.
    _sm_dictToolFilePaths = {}
 
@@ -57,6 +60,18 @@ class Tool(object):
       """Permanently associates a tool file path to a Tool-derived class."""
 
       cls._sm_dictToolFilePaths[clsTool] = sToolFilePath
+
+
+   def _get_quiet_cmd(self):
+      """Returns an iterable containing the short name and relevant (input or output) files for the
+      tool, to be displayed in quiet mode.
+      """
+
+      if self._smc_sQuietName is None:
+         sQuietName = os.path.basename(self._sm_dictToolFilePaths[self.__class__])
+      else:
+         sQuietName = self._smc_sQuietName
+      return sQuietName, self._m_sOutputFilePath
 
 
    def _run_add_cmd_flags(self, listArgs):
@@ -97,7 +112,11 @@ class Tool(object):
       listArgs = [self._sm_dictToolFilePaths[self.__class__]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
-      return ScheduledJob(make, iterBlockingJobs, listArgs)
+      if make.verbose:
+         iterQuietCmd = None
+      else:
+         iterQuietCmd = self._get_quiet_cmd()
+      return ScheduledJob(make, iterBlockingJobs, listArgs, iterQuietCmd)
 
 
    def set_output(self, sOutputFilePath):
@@ -117,6 +136,8 @@ class CxxCompiler(Tool):
    _m_iFinalOutputType = None
    # Additional include directories.
    _m_listIncludeDirs = None
+   # See Tool._smc_sQuietName.
+   _smc_sQuietName = 'C++'
 
 
    def add_include_dir(self, sIncludeDirPath):
@@ -125,6 +146,15 @@ class CxxCompiler(Tool):
       if self._m_listIncludeDirs is None:
          self._m_listIncludeDirs = []
       self._m_listIncludeDirs.append(sIncludeDirPath)
+
+
+   def _get_quiet_cmd(self):
+      """See Tool._get_quiet_cmd(). This override substitutes the output file path with the inputs,
+      to show the source file path instead of the intermediate one.
+      """
+
+      iterQuietCmd = super()._get_quiet_cmd()
+      return [iterQuietCmd[0]] + self._m_listInputFilePaths
 
 
    # Name suffix for intermediate object files.
@@ -203,6 +233,8 @@ class Linker(Tool):
    _m_listLibPaths = None
    # Type of output to generate.
    _m_iOutputType = None
+   # See Tool._smc_sQuietName.
+   _smc_sQuietName = 'LINK'
 
 
    def add_input_lib(self, sInputLibFilePath):
@@ -586,18 +618,21 @@ class ScheduledJob(object):
    complete.
    """
 
-   # Arguments of the command to execute.
+   # See ScheduledJob.command.
    _m_iterArgs = None
    # Jobs that this one is blocking.
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
    _m_cBlocks = 0
+   # See ScheduledJob.quiet_command.
+   _m_iterQuietCmd = None
 
 
-   def __init__(self, make, iterBlockingJobs, iterArgs):
+   def __init__(self, make, iterBlockingJobs, iterArgs, iterQuietCmd):
       """Constructor."""
 
       self._m_iterArgs = iterArgs
+      self._m_iterQuietCmd = iterQuietCmd
       if iterBlockingJobs is not None:
          # Assign this job as “blocked” to the jobs it depends on, and store their count.
          for sjDep in iterBlockingJobs:
@@ -627,6 +662,14 @@ class ScheduledJob(object):
       return self._m_iterArgs
 
    command = property(_get_command, doc = """Command to be invoked, as a list of arguments.""")
+
+
+   def _get_quiet_command(self):
+      return self._m_iterQuietCmd
+
+   quiet_command = property(_get_quiet_command, doc = """
+      Command summary to print out in quiet mode.
+   """)
 
 
    def release_blocked(self):
@@ -985,8 +1028,11 @@ class Make(object):
          for sj in self._m_setScheduledJobs:
             if not sj.blocked:
                iterArgs = sj.command
-               # TODO: if verbose…
-               sys.stdout.write(' '.join(iterArgs) + '\n')
+               if self._m_bVerbose:
+                  sys.stdout.write(' '.join(iterArgs) + '\n')
+               else:
+                  iterQuietCmd = sj.quiet_command
+                  sys.stdout.write('{} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                proc = subprocess.Popen(iterArgs)
                # Move the job from scheduled to running jobs.
                self._m_dictRunningJobs[proc] = sj
@@ -1059,7 +1105,10 @@ class Make(object):
    def _get_verbose(self):
       return self._m_bVerbose
 
-   verbose = property(_get_verbose, doc = """
+   def _set_verbose(self, bVerbose):
+      self._m_bVerbose = bVerbose
+
+   verbose = property(_get_verbose, _set_verbose, doc = """
       True if the exact commands invoked should be printed to stdout, of False if only a short
       description should.
    """)
