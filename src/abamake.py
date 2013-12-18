@@ -705,7 +705,7 @@ class Make(object):
    # Linker class.
    _m_clsLinker = None
    # See Make.output_dir.
-   _m_sOutputDir = '.'
+   _m_sOutputDir = ''
    # Targets explicitly declared in the parsed makefile (name -> Target).
    _m_dictNamedTargets = None
    # Running jobs (Popen -> ScheduledJob).
