@@ -1059,7 +1059,7 @@ class Make(object):
                   sys.stdout.write(' '.join(iterArgs) + '\n')
                else:
                   iterQuietCmd = sj.quiet_command
-                  sys.stdout.write('{} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
+                  sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                proc = subprocess.Popen(iterArgs)
                # Move the job from scheduled to running jobs.
                self._m_dictRunningJobs[proc] = sj
