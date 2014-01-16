@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013
+# Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
 # This file is part of Application-Building Components (henceforth referred to as ABC).
@@ -208,9 +208,8 @@ class GxxCompiler(CxxCompiler):
          listArgs.append('-fPIC')
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
       # Add the include directories.
-      if self._m_listIncludeDirs is not None:
-         for sDirPath in self._m_listIncludeDirs:
-            listArgs.append('-I' + sDirPath)
+      for sDirPath in self._m_listIncludeDirs or []:
+         listArgs.append('-I' + sDirPath)
       # Add the output file path.
       listArgs.append('-o')
       listArgs.append(self._m_sOutputFilePath)
@@ -299,13 +298,11 @@ class GnuLinker(Linker):
       super()._run_add_cmd_inputs(listArgs)
 
       # Add the library search directories.
-      if self._m_listLibPaths is not None:
-         for sDir in self._m_listLibPaths:
-            listArgs.append('-L' + sDir)
+      for sDir in self._m_listLibPaths or []:
+         listArgs.append('-L' + sDir)
       # Add the libraries.
-      if self._m_listInputLibs is not None:
-         for sLib in self._m_listInputLibs:
-            listArgs.append('-l' + sLib)
+      for sLib in self._m_listInputLibs or []:
+         listArgs.append('-l' + sLib)
 
 
 
@@ -475,21 +472,20 @@ class ExecutableTarget(Target):
       lnk = make.linker()
       lnk.set_output(self.file_path, self.output_type)
       # At this point all the dependencies are available, so add them as inputs.
-      if self._m_listLinkerInputs is not None:
-         for oDep in self._m_listLinkerInputs:
-            if isinstance(oDep, ObjectTarget):
-               lnk.add_input(oDep.file_path)
-            elif isinstance(oDep, DynLibTarget):
-               lnk.add_input_lib(oDep.name)
-               # Since we’re linking to a library built by this makefile, make sure to add the
-               # output lib/ directory to the library search path.
-               lnk.add_lib_path(os.path.join(make.output_dir, 'lib'))
-            elif isinstance(oDep, str):
-               # Strings go directly to the linker’s command line, assuming that they are external
-               # libraries to link to.
-               lnk.add_input_lib(oDep)
-            else:
-               raise Exception('unclassified linker input: {}'.format(oDep.file_path))
+      for oDep in self._m_listLinkerInputs or []:
+         if isinstance(oDep, ObjectTarget):
+            lnk.add_input(oDep.file_path)
+         elif isinstance(oDep, DynLibTarget):
+            lnk.add_input_lib(oDep.name)
+            # Since we’re linking to a library built by this makefile, make sure to add the output
+            # lib/ directory to the library search path.
+            lnk.add_lib_path(os.path.join(make.output_dir, 'lib'))
+         elif isinstance(oDep, str):
+            # Strings go directly to the linker’s command line, assuming that they are external
+            # libraries to link to.
+            lnk.add_input_lib(oDep)
+         else:
+            raise Exception('unclassified linker input: {}'.format(oDep.file_path))
       return lnk.schedule_jobs(make, iterBlockingJobs)
 
 
