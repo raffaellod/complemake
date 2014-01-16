@@ -356,7 +356,10 @@ class Target(object):
 
    def generate_file_path(self, make):
       """Generates and returns a file path for the target, based on other properties set beforehand
-      and the configuration of the provided Make instance."""
+      and the configuration of the provided Make instance.
+
+      The default implementation doesn’t generate a file path because no output file is assumed.
+      """
 
       # No output file.
       return None
@@ -383,11 +386,13 @@ class Target(object):
 # ObjectTarget
 
 class ObjectTarget(Target):
-   """Intermediate object target."""
+   """Intermediate object target. The output file will be placed in a obj/ directory relative to the
+   output base directory.
+   """
 
    # See ObjectTarget.final_output_type.
    _m_iFinalOutputType = None
-   # Source file path.
+   # See ObjectTarget.source_file_path.
    _m_sSourceFilePath = None
 
 
@@ -413,13 +418,15 @@ class ObjectTarget(Target):
       return sFilePath
 
 
-   def _get_source(self):
+   def _get_source_file_path(self):
       return self._m_sSourceFilePath
 
-   def _set_source(self, sSourceFilePath):
+   def _set_source_file_path(self, sSourceFilePath):
       self._m_sSourceFilePath = sSourceFilePath
 
-   source = property(_get_source, _set_source, doc = """Source from which the target is built.""")
+   source_file_path = property(_get_source_file_path, _set_source_file_path, doc = """
+      Source from which the target is built.
+   """)
 
 
 
@@ -448,7 +455,9 @@ class CxxObjectTarget(ObjectTarget):
 # ExecutableTarget
 
 class ExecutableTarget(Target):
-   """Executable program target."""
+   """Executable program target. The output file will be placed in a bin/ directory relative to the
+   output base directory.
+   """
 
    # See ExecutableTarget.linker_inputs.
    _m_listLinkerInputs = None
@@ -509,7 +518,7 @@ class ExecutableTarget(Target):
       return sFilePath
 
 
-   # What kind of output that ExecutableTarget.build() will tell the linker to generate.
+   # Kind of output that ExecutableTarget.build() will tell the linker to generate.
    # TODO: rename to _smc_*, since it’s only used by this and derived classes.
    output_type = Linker.OUTPUT_EXE
 
@@ -530,7 +539,7 @@ class ExecutableTarget(Target):
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
          # Assign the file path as the source.
-         tgtObj.source = sFilePath
+         tgtObj.source_file_path = sFilePath
          make._add_target(tgtObj)
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
@@ -560,7 +569,9 @@ class ExecutableTarget(Target):
 # DynLibTarget
 
 class DynLibTarget(ExecutableTarget):
-   """Dynamic library target."""
+   """Dynamic library target. The output file will be placed in a lib/ directory relative to the
+   output base directory.
+   """
 
    def generate_file_path(self, make):
       """See ExecutableTarget.generate_file_path()."""
@@ -591,7 +602,9 @@ class DynLibTarget(ExecutableTarget):
 # UnitTestTarget
 
 class UnitTestTarget(ExecutableTarget):
-   """Executable unit test target."""
+   """Executable unit test target. The output file will be placed in a bin/unittest/ directory
+   relative to the output base directory.
+   """
 
    def generate_file_path(self, make):
       """See ExecutableTarget.generate_file_path()."""
@@ -690,7 +703,16 @@ class ScheduledJob(object):
 # Make
 
 class Make(object):
-   """Processes an ABC makefile (.abcmk)."""
+   """Processes an ABC makefile (.abcmk) by parsing it, scheduling the necessary jobs to build any
+   targets to be built, and then running the jobs with the selected degree of parallelism.
+
+   Example usage:
+
+      make = Make()
+      make.parse('project.abcmk')
+      make.schedule_target_jobs(make.get_target_by_name('projectbin'))
+      make.run_scheduled_jobs()
+   """
 
    # C++ compiler class.
    _m_clsCxxCompiler = None
