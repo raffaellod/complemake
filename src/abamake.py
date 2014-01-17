@@ -722,10 +722,10 @@ class Make(object):
    _m_bKeepGoing = False
    # Linker class.
    _m_clsLinker = None
-   # See Make.output_dir.
-   _m_sOutputDir = ''
    # Targets explicitly declared in the parsed makefile (name -> Target).
    _m_dictNamedTargets = None
+   # See Make.output_dir.
+   _m_sOutputDir = ''
    # Running jobs (Popen -> ScheduledJob).
    _m_dictRunningJobs = {}
    # Maximum count of running jobs, i.e. degree of parallelism.
