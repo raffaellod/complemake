@@ -718,6 +718,8 @@ class Make(object):
    _m_clsCxxCompiler = None
    # See Make.dry_run.
    _m_bDryRun = False
+   # See Make.force_build.
+   _m_bForceBuild = False
    # See Make.ignore_errors.
    _m_bIgnoreErrors = False
    # See Make.keep_going.
@@ -874,6 +876,17 @@ class Make(object):
    dry_run = property(_get_dry_run, _set_dry_run, doc = """
       If True, commands will only be printed, not executed; if False, they will be printed and
       executed.
+   """)
+
+
+   def _get_force_build(self):
+      return self._m_bForceBuild
+
+   def _set_force_build(self, bForceBuild):
+      self._m_bForceBuild = bForceBuild
+
+   force_build = property(_get_force_build, _set_force_build, doc = """
+      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
    """)
 
 
@@ -1182,8 +1195,7 @@ def _main(iterArgs):
       sArg = iterArgs[iArg]
       if sArg.startswith('--'):
          if sArg == '--force-build':
-            # TODO: make.force_build = True
-            pass
+            make.force_build = True
          elif sArg == '--dry-run':
             make.dry_run = True
          elif sArg == '--ignore-errors':
@@ -1195,8 +1207,7 @@ def _main(iterArgs):
       elif sArg.startswith('-'):
          for sArgChar in sArg:
             if sArgChar == 'f':
-               # TODO: make.force_build = True
-               pass
+               make.force_build = True
             elif sArgChar == 'i':
                make.ignore_errors = True
             elif sArgChar == 'k':
