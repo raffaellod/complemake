@@ -714,13 +714,13 @@ class Make(object):
       make.run_scheduled_jobs()
    """
 
-   # C++ compiler class.
+   # See Make.cxxcompiler.
    _m_clsCxxCompiler = None
    # See Make.ignore_errors.
    _m_bIgnoreErrors = False
    # See Make.keep_going.
    _m_bKeepGoing = False
-   # Linker class.
+   # See Make.linker.
    _m_clsLinker = None
    # Targets explicitly declared in the parsed makefile (name -> Target).
    _m_dictNamedTargets = None
@@ -732,7 +732,9 @@ class Make(object):
    _m_cRunningJobsMax = 8
    # Scheduled jobs.
    _m_setScheduledJobs = None
-   # Scheduled jobs (Target -> ScheduledJob that completes it).
+   # “Last” scheduled jobs (Target -> ScheduledJob that completes it), i.e. jobs that are the last
+   # in a chain of jobs scheduled to build a single target. The values are a subset of, or the same
+   # as, Make._m_setScheduledJobs.
    _m_dictTargetLastScheduledJobs = None
    # All targets specified by the parsed makefile (file path -> Target), including implicit and
    # intermediate targets not explicitly declared with a <target> element.
@@ -851,7 +853,9 @@ class Make(object):
 
       return self._m_clsCxxCompiler
 
-   cxxcompiler = property(_get_cxxcompiler, doc = """C++ compiler class""")
+   cxxcompiler = property(_get_cxxcompiler, doc = """
+      C++ compiler class to be used to build CxxObjectTarget instances.
+   """)
 
 
    def get_target_by_file_path(self, sFilePaths, oFallback = _RAISE_IF_NOT_FOUND):
@@ -940,7 +944,9 @@ class Make(object):
 
       return self._m_clsLinker
 
-   linker = property(_get_linker, doc = """Linker class""")
+   linker = property(_get_linker, doc = """
+      Linker class to be used to build ExecutableTarget instances.
+   """)
 
 
    def _get_named_targets(self):
