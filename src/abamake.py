@@ -716,6 +716,8 @@ class Make(object):
 
    # See Make.cxxcompiler.
    _m_clsCxxCompiler = None
+   # See Make.dry_run.
+   _m_bDryRun = False
    # See Make.ignore_errors.
    _m_bIgnoreErrors = False
    # See Make.keep_going.
@@ -792,8 +794,12 @@ class Make(object):
          while True:
             # Poll each running job.
             for proc in self._m_dictRunningJobs.keys():
-               if proc.poll() is not None:
-                  iRet = proc.wait()
+               if self._m_bDryRun:
+                  # A no-ops is always successful.
+                  iRet = 0
+               else:
+                  iRet = proc.poll()
+               if iRet is not None:
                   # Remove the job from the running jobs.
                   sj = self._m_dictRunningJobs.pop(proc)
                   cCompletedJobs += 1
@@ -818,9 +824,10 @@ class Make(object):
          # If we freed up the requested count of slots, there’s nothing left to do.
          if cCompletedJobs >= cJobsToComplete:
             return cFailedJobs
-         # Wait a small amount of time.
-         # TODO: proper event-based waiting.
-         time.sleep(0.1)
+         if not self._m_bDryRun:
+            # Wait a small amount of time.
+            # TODO: proper event-based waiting.
+            time.sleep(0.1)
 
 
    def _get_cxxcompiler(self):
@@ -855,6 +862,18 @@ class Make(object):
 
    cxxcompiler = property(_get_cxxcompiler, doc = """
       C++ compiler class to be used to build CxxObjectTarget instances.
+   """)
+
+
+   def _get_dry_run(self):
+      return self._m_bDryRun
+
+   def _set_dry_run(self, bDryRun):
+      self._m_bDryRun = bDryRun
+
+   dry_run = property(_get_dry_run, _set_dry_run, doc = """
+      If True, commands will only be printed, not executed; if False, they will be printed and
+      executed.
    """)
 
 
@@ -1066,7 +1085,11 @@ class Make(object):
                else:
                   iterQuietCmd = sj.quiet_command
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
-               proc = subprocess.Popen(iterArgs)
+               if self._m_bDryRun:
+                  # Create a placeholder instead of a real Popen instance.
+                  proc = object()
+               else:
+                  proc = subprocess.Popen(iterArgs)
                # Move the job from scheduled to running jobs.
                self._m_dictRunningJobs[proc] = sj
                self._m_setScheduledJobs.remove(sj)
@@ -1163,8 +1186,7 @@ def _main(iterArgs):
             # TODO: make.force_build = True
             pass
          elif sArg == '--dry-run':
-            # TODO: make.dry_run = True
-            pass
+            make.dry_run = True
          elif sArg == '--ignore-errors':
             make.ignore_errors = True
          elif sArg == '--keep-going':
@@ -1181,8 +1203,7 @@ def _main(iterArgs):
             elif sArgChar == 'k':
                make.keep_going = True
             elif sArgChar == 'n':
-               # TODO: make.dry_run = True
-               pass
+               make.dry_run = True
             elif sArgChar == 'v':
                make.verbose = True
       else:
