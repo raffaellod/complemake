@@ -1108,34 +1108,33 @@ class Make(object):
 
 
    def schedule_target_jobs(self, tgt):
-      """Schedules jobs for the specified target and all its dependencies.
+      """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
 
       Recursively visits the dependency tree for the target in a leaves-first order, collecting
       (possibly chains of) ScheduledJob instances returned by Target.build() for all the
       dependencies, and making these block the ScheduledJob instance(s) for the specified target.
       """
 
-      # Visit leaves.
-      listBlockingJobs = None
-      iterDeps = tgt.dependencies
-      if iterDeps:
-         for tgtDep in iterDeps:
-            # Check if we already have a (last) ScheduledJob for this target.
-            sjDep = self._m_dictTargetLastScheduledJobs.get(tgtDep)
-            if sjDep is None:
-               # Recursively schedule jobs for this dependency, returning and storing the last one.
-               sjDep = self.schedule_target_jobs(tgtDep)
-               # Store it even if None.
-               self._m_dictTargetLastScheduledJobs[tgtDep] = sjDep
+      # Check if we already have a (last) ScheduledJob for this target.
+      sj = self._m_dictTargetLastScheduledJobs.get(tgt)
+      if sj is None:
+         # Visit leaves.
+         listBlockingJobs = None
+         for tgtDep in tgt.dependencies or []:
+            # Recursively schedule jobs for this dependency, returning and storing the last one.
+            sjDep = self.schedule_target_jobs(tgtDep)
             if sjDep is not None:
                # Keep track of the dependencies’ jobs.
                if listBlockingJobs is None:
                   listBlockingJobs = []
                listBlockingJobs.append(sjDep)
 
-      # Visit the node: give the target a chance to schedule jobs, letting it know which of its
-      # dependencies scheduled jobs to be rebuilt, if any.
-      sj = tgt.build(self, listBlockingJobs)
+         # Visit the node: give the target a chance to schedule jobs, letting it know which of its
+         # dependencies scheduled jobs to be rebuilt, if any.
+         sj = tgt.build(self, listBlockingJobs)
+         # Store the job even if None.
+         self._m_dictTargetLastScheduledJobs[tgt] = sj
+
       if sj is None:
          # If Target.build() did not return a job, there’s nothing to do for this target. This must
          # also mean that no dependencies scheduled any jobs.
