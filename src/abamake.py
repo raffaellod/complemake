@@ -168,8 +168,8 @@ class Tool(object):
 class CxxCompiler(Tool):
    """Abstract C++ compiler."""
 
-   # See ObjectTarget.final_output_type.
-   _m_iFinalOutputType = None
+   # See ObjectTarget.final_output_target.
+   _m_clsFinalOutputTarget = None
    # Additional include directories.
    _m_listIncludeDirs = None
    # See Tool._smc_sQuietName.
@@ -197,11 +197,11 @@ class CxxCompiler(Tool):
    object_suffix = None
 
 
-   def set_output(self, sOutputFilePath, iFinalOutputType):
+   def set_output(self, sOutputFilePath, iFinalOutputTarget):
       """See Tool.set_output(); also assigns the type of the final linker output."""
 
       super().set_output(sOutputFilePath)
-      self._m_iFinalOutputType = iFinalOutputType
+      self._m_clsFinalOutputTarget = iFinalOutputTarget
 
 
 
@@ -240,7 +240,7 @@ class GxxCompiler(CxxCompiler):
          '-Wsign-conversion', '-Wlogical-op', '-Wmissing-declarations', '-Wpacked',
          '-Wunreachable-code', '-Winline'
       ])
-      if self._m_iFinalOutputType == Linker.OUTPUT_DYNLIB:
+      if self._m_clsFinalOutputTarget is DynLibTarget:
          listArgs.append('-fPIC')
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
       # Add the include directories.
@@ -258,16 +258,13 @@ class GxxCompiler(CxxCompiler):
 class Linker(Tool):
    """Abstract object code linker."""
 
-   OUTPUT_EXE = 1
-   OUTPUT_DYNLIB = 2
-
 
    # Additional libraries to link to.
    _m_listInputLibs = None
    # Directories to be included in the library search path.
    _m_listLibPaths = None
    # Type of output to generate.
-   _m_iOutputType = None
+   _m_clsOutputTarget = None
    # See Tool._smc_sQuietName.
    _smc_sQuietName = 'LINK'
 
@@ -288,11 +285,11 @@ class Linker(Tool):
       self._m_listLibPaths.append(sLibPath)
 
 
-   def set_output(self, sOutputFilePath, iOutputType):
+   def set_output(self, sOutputFilePath, clsOutputTarget):
       """See Tool.set_output(); also assigns the type of the linker output."""
 
       super().set_output(sOutputFilePath)
-      self._m_iOutputType = iOutputType
+      self._m_clsOutputTarget = clsOutputTarget
 
 
 
@@ -316,7 +313,7 @@ class GnuLinker(Linker):
 
       listArgs.append('-Wl,--as-needed')
       listArgs.append('-ggdb')
-      if self._m_iOutputType == Linker.OUTPUT_DYNLIB:
+      if self._m_clsOutputTarget is DynLibTarget:
          listArgs.append('-shared')
       # TODO: add support for os.environ['LDFLAGS'] ?
       # Add the output file path.
@@ -426,19 +423,19 @@ class ObjectTarget(Target):
    output base directory.
    """
 
-   # See ObjectTarget.final_output_type.
-   _m_iFinalOutputType = None
+   # See ObjectTarget.final_output_target.
+   _m_clsFinalOutputTarget = None
    # See ObjectTarget.source_file_path.
    _m_sSourceFilePath = None
 
 
-   def _get_final_output_type(self):
-      return self._m_iFinalOutputType
+   def _get_final_output_target(self):
+      return self._m_clsFinalOutputTarget
 
-   def _set_final_output_type(self, iFinalOutputType):
-      self._m_iFinalOutputType = iFinalOutputType
+   def _set_final_output_target(self, iFinalOutputTarget):
+      self._m_clsFinalOutputTarget = iFinalOutputTarget
 
-   final_output_type = property(_get_final_output_type, _set_final_output_type, doc = """
+   final_output_target = property(_get_final_output_target, _set_final_output_target, doc = """
       Kind of output that ObjectTarget.build() will aim for when generating the object file, e.g. by
       passing -fPIC for a C++ source file when compiling it for a shared object.
    """)
@@ -480,7 +477,7 @@ class CxxObjectTarget(ObjectTarget):
          return None
 
       cxx = make.cxxcompiler()
-      cxx.set_output(self.file_path, self.final_output_type)
+      cxx.set_output(self.file_path, self.final_output_target)
       cxx.add_input(self._m_sSourceFilePath)
       # TODO: add file-specific flags.
       return cxx.schedule_jobs(make, iterBlockingJobs)
@@ -515,7 +512,7 @@ class ExecutableTarget(Target):
          return None
 
       lnk = make.linker()
-      lnk.set_output(self.file_path, self.output_type)
+      lnk.set_output(self.file_path, self.__class__)
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
          if isinstance(oDep, ObjectTarget):
@@ -554,11 +551,6 @@ class ExecutableTarget(Target):
       return sFilePath
 
 
-   # Kind of output that ExecutableTarget.build() will tell the linker to generate.
-   # TODO: rename to _smc_*, since it’s only used by this and derived classes.
-   output_type = Linker.OUTPUT_EXE
-
-
    def parse_makefile_child(self, elt, make):
       """See Target.parse_makefile_child()."""
 
@@ -571,7 +563,7 @@ class ExecutableTarget(Target):
             raise Exception('unsupported source file type')
          # Create an object target and add it as a dependency to the containing target.
          tgtObj = clsObjTarget()
-         tgtObj.final_output_type = self.output_type
+         tgtObj.final_output_target = self.__class__
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
          # Assign the file path as the source.
@@ -627,10 +619,6 @@ class DynLibTarget(ExecutableTarget):
          tgtUnitTest = make.get_target_by_name(sName)
          # Make the unit test link to this library.
          tgtUnitTest.add_linker_input(self)
-
-
-   # See ExecutableTarget.output_type.
-   output_type = Linker.OUTPUT_DYNLIB
 
 
 
