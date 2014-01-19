@@ -66,6 +66,7 @@ class Tool(object):
       # TODO: accept paths provided via command line.
       # TODO: apply a cross-compiler prefix.
 
+      listTried = []
       for clsTool, iterArgs, sOutMatch in iterSupported:
          # Make sure we have a US English environment dictionary.
          if cls._sm_dictUSEngEnv is None:
@@ -81,15 +82,19 @@ class Tool(object):
                sOut, sErr = procTool.communicate()
          except FileNotFoundError:
             # This just means that the program is not installed; move on to the next candidate.
-            continue
-         if re.search(sOutMatch, sOut, re.MULTILINE):
-            # Permanently associate the tool to the file path.
-            cls._sm_dictToolFilePaths[clsTool] = iterArgs[0]
-            # Return the selection.
-            return clsTool
+            pass
+         else:
+            if re.search(sOutMatch, sOut, re.MULTILINE):
+               # Permanently associate the tool to the file path.
+               cls._sm_dictToolFilePaths[clsTool] = iterArgs[0]
+               # Return the selection.
+               return clsTool
+
+         # Remember we tried this executable name.
+         listTried.append(iterArgs[0])
 
       # No executable matched any of the supported ones.
-      raise Exception('unsupported linker')
+      raise Exception('unable to detect tool; expected one of: ' + ', '.join(listTried))
 
 
 
