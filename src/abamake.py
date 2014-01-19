@@ -63,7 +63,7 @@ class Tool(object):
       returning the corresponding class.
       """
 
-      # TODO: accept a linker executable path provided via command line.
+      # TODO: accept paths provided via command line.
       # TODO: apply a cross-compiler prefix.
 
       for clsTool, iterArgs, sOutMatch in iterSupported:
@@ -88,7 +88,7 @@ class Tool(object):
             # Return the selection.
             return clsTool
 
-      # The executable’s output didn’t match any of the known strings above.
+      # No executable matched any of the supported ones.
       raise Exception('unsupported linker')
 
 
