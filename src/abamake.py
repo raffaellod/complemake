@@ -45,6 +45,8 @@ class Tool(object):
    _smc_sQuietName = None
    # Associates a Tool-derived class to its executable file name.
    _sm_dictToolFilePaths = {}
+   # Environment block (dictionary) modified to force programs to display output in US English.
+   _sm_dictUSEngEnv = None
 
 
    def add_input(self, sInputFilePath):
@@ -56,10 +58,41 @@ class Tool(object):
 
 
    @classmethod
-   def associate_file_path(cls, clsTool, sToolFilePath):
-      """Permanently associates a tool file path to a Tool-derived class."""
+   def detect(cls, iterSupported):
+      """Attempts to detect the presence of a tool’s executable from a list of supported ones,
+      returning the corresponding class.
+      """
 
-      cls._sm_dictToolFilePaths[clsTool] = sToolFilePath
+      # TODO: accept a linker executable path provided via command line.
+      # TODO: apply a cross-compiler prefix.
+
+      for clsTool, iterArgs, sOutMatch in iterSupported:
+         # Make sure we have a US English environment dictionary.
+         if cls._sm_dictUSEngEnv is None:
+            # Copy the current environment and add to it a locale override for US English.
+            cls._sm_dictUSEngEnv = os.environ.copy()
+            cls._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
+
+         try:
+            with subprocess.Popen(
+               iterArgs,
+               stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True,
+               env = cls._sm_dictUSEngEnv
+            ) as procTool:
+               sOut, sErr = procTool.communicate()
+               iRet = procTool.returncode
+         except FileNotFoundError:
+            # This just means that the program is not installed; move on to the next candidate.
+            continue
+         if re.search(sOutMatch, sOut, re.MULTILINE):
+            # Permanently associate the tool to the file path.
+            cls._sm_dictToolFilePaths[clsTool] = iterArgs[0]
+            # Return the selection.
+            return clsTool
+
+      # The executable’s output didn’t match any of the known strings above.
+      raise Exception('unsupported linker')
+
 
 
    def _get_quiet_cmd(self):
@@ -743,8 +776,6 @@ class Make(object):
    # All targets specified by the parsed makefile (file path -> Target), including implicit and
    # intermediate targets not explicitly declared with a <target> element.
    _m_dictTargets = None
-   # Environment block (dictionary) modified to force programs to display output in US English.
-   _m_dictUSEngEnv = None
    # See Make.verbose.
    _m_bVerbose = False
 
@@ -760,10 +791,6 @@ class Make(object):
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
       self._m_dictTargets = {}
-
-      # Copy the current environment and add to it a locale override for US English.
-      self._m_dictUSEngEnv = os.environ.copy()
-      self._m_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
 
 
    def _add_target(self, tgt):
@@ -834,32 +861,11 @@ class Make(object):
 
    def _get_cxxcompiler(self):
       if self._m_clsCxxCompiler is None:
-         # TODO: check for existance in PATH of one of the supported compiler executables.
-         # TODO: accept a compiler executable path provided via command line.
-         # TODO: apply a cross-compiler prefix.
-         sToolFilePath = 'g++'
-
-         # Ask the tool to identify itself.
-         for sVersionArg in '--version', '/?':
-            with subprocess.Popen(
-               [sToolFilePath, sVersionArg],
-               stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True,
-               env = self._m_dictUSEngEnv
-            ) as procTool:
-               sOut, sErr = procTool.communicate()
-            if re.search(r'^g\+\+ ', sOut, re.MULTILINE):
-               clsTool = GxxCompiler
-               break
-            # TODO: what’s MSC’s output?
-         else:
-            # The executable’s output didn’t match any of the known strings above.
-            raise Exception('unsupported C++ compiler')
-
-         # Assign the tool its executable file path.
-         Tool.associate_file_path(clsTool, sToolFilePath)
-         # Remember the selection.
-         self._m_clsCxxCompiler = clsTool
-
+         # TODO: what’s MSC’s output?
+         self._m_clsCxxCompiler = Tool.detect((
+            (GxxCompiler, ('g++', '--version'), r'^g\+\+ '),
+            (object,      ('cl',  '/?'       ), r' CL '   ),
+         ))
       return self._m_clsCxxCompiler
 
    cxxcompiler = property(_get_cxxcompiler, doc = """
@@ -948,32 +954,12 @@ class Make(object):
 
    def _get_linker(self):
       if self._m_clsLinker is None:
-         # TODO: check for existance in PATH for one of the supported linker executables.
-         # TODO: accept a linker executable path provided via command line.
-         # TODO: apply a cross-compiler prefix.
-         sToolFilePath = 'g++'
-
-         # Ask the tool to identify itself.
-         for sVersionArg in '-Wl,--version', '--version', '/?':
-            with subprocess.Popen(
-               [sToolFilePath, sVersionArg],
-               stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True,
-               env = self._m_dictUSEngEnv
-            ) as procTool:
-               sOut, sErr = procTool.communicate()
-            if re.search(r'^GNU ld ', sOut, re.MULTILINE):
-               clsTool = GnuLinker
-               break
-            # TODO: what’s MS Link’s output?
-         else:
-            # The executable’s output didn’t match any of the known strings above.
-            raise Exception('unsupported linker')
-
-         # Assign the tool its executable file path.
-         Tool.associate_file_path(clsTool, sToolFilePath)
-         # Remember the selection.
-         self._m_clsLinker = clsTool
-
+         # TODO: what’s MS Link’s output?
+         self._m_clsLinker = Tool.detect((
+            (GnuLinker, ('g++',  '-Wl,--version'), r'^GNU ld '),
+            (GnuLinker, ('ld',   '--version'    ), r'^GNU ld '),
+            (object,    ('link', '/?'           ), r' Link '  ),
+         ))
       return self._m_clsLinker
 
    linker = property(_get_linker, doc = """
