@@ -800,7 +800,7 @@ class Make(object):
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
 
-      Returns the count of failed jobs, unless Make._m_bIgnoreErrors == True, in which case it will
+      Returns the count of failed jobs, unless Make._m_bIgnoreErrors is True, in which case it will
       always return 0.
       """
 
