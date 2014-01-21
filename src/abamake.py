@@ -119,7 +119,7 @@ class Tool(object):
       """
 
       if self._smc_sQuietName is None:
-         sQuietName = os.path.basename(self._sm_dictToolFilePaths[self.__class__])
+         sQuietName = os.path.basename(self._sm_dictToolFilePaths[type(self)])
       else:
          sQuietName = self._smc_sQuietName
       return sQuietName, self._m_sOutputFilePath
@@ -174,7 +174,7 @@ class Tool(object):
          os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
 
       # Build the arguments list.
-      listArgs = [self._sm_dictToolFilePaths[self.__class__]]
+      listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
       if make.verbose:
@@ -591,7 +591,7 @@ class ExecutableTarget(Target):
          return None
 
       lnk = make.linker()
-      lnk.set_output(self.file_path, self.__class__)
+      lnk.set_output(self.file_path, type(self))
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
          if isinstance(oDep, ObjectTarget):
@@ -642,7 +642,7 @@ class ExecutableTarget(Target):
             raise Exception('unsupported source file type')
          # Create an object target and add it as a dependency to the containing target.
          tgtObj = clsObjTarget()
-         tgtObj.final_output_target = self.__class__
+         tgtObj.final_output_target = type(self)
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
          # Assign the file path as the source.
