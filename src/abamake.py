@@ -566,7 +566,7 @@ class ExecutableTarget(Target):
    output base directory.
    """
 
-   # See ExecutableTarget.linker_inputs.
+   # List of dynamic libraries against which the target will be linked.
    _m_listLinkerInputs = None
 
 
@@ -608,17 +608,6 @@ class ExecutableTarget(Target):
          else:
             raise Exception('unclassified linker input: {}'.format(oDep.file_path))
       return lnk.schedule_jobs(make, iterBlockingJobs)
-
-
-   def _get_linker_inputs(self):
-      if self._m_listLinkerInputs is None:
-         return None
-      else:
-         return self._m_listLinkerInputs
-
-   linker_inputs = property(_get_linker_inputs, doc = """
-      List of dynamic libraries against which the target will be linked.
-   """)
 
 
    def generate_file_path(self, make):
