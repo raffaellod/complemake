@@ -756,22 +756,12 @@ class ScheduledJob(object):
       if iterBlockingJobs is not None:
          # Assign this job as “blocked” by the jobs it depends on, and store their count.
          for sjDep in iterBlockingJobs:
-            sjDep._add_blocked(self)
+            if sjDep._m_setBlockedJobs is None:
+               sjDep._m_setBlockedJobs = set()
+            sjDep._m_setBlockedJobs.add(self)
          self._m_cBlocks = len(iterBlockingJobs)
       # Schedule this job.
       make._schedule_job(self)
-
-
-   def _add_blocked(self, sj):
-      """Adds a job to be released once this one completes.
-
-      ScheduledJob sj
-         Job to block.
-      """
-
-      if self._m_setBlockedJobs is None:
-         self._m_setBlockedJobs = set()
-      self._m_setBlockedJobs.add(sj)
 
 
    def _get_blocked(self):
