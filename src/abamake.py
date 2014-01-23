@@ -993,7 +993,7 @@ class Make(object):
 
       tgt = self._m_dictTargets.get(sFilePath, oFallback)
       if tgt is self._RAISE_IF_NOT_FOUND:
-         raise NameError('unknown target: {}'.format(sFilePath))
+         raise FileNotFoundError('unknown target: {}'.format(sFilePath))
       return tgt
 
 
@@ -1351,7 +1351,8 @@ def _main(iterArgs):
    if iArg < iArgEnd:
       iterTargets = set()
       while iArg < iArgEnd:
-         iterTargets.add(make.get_target_by_name(sName))
+         sArg = iterArgs[iArg]
+         iterTargets.add(make.get_target_by_name(sArg, None) or make.get_target_by_file_path(sArg))
          iArg += 1
    else:
       iterTargets = make.named_targets
