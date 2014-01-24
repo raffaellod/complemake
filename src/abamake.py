@@ -629,14 +629,14 @@ class ExecutableTarget(Target):
             clsObjTarget = CxxObjectTarget
          else:
             raise Exception('unsupported source file type')
-         # Create an object target and add it as a dependency to the containing target.
+         # Create an object target and assign the file path as its source.
          tgtObj = clsObjTarget()
+         tgtObj.source_file_path = sFilePath
+         make._add_target(tgtObj)
+         # Add the target as a dependency to this target.
          tgtObj.final_output_target = type(self)
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
-         # Assign the file path as the source.
-         tgtObj.source_file_path = sFilePath
-         make._add_target(tgtObj)
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
          sName = elt.getAttribute('name')
@@ -1119,17 +1119,19 @@ class Make(object):
 
          if eltTarget.nodeName == 'target':
             sType = eltTarget.getAttribute('type')
-            # Instantiate a specialization of Target based on the “type” attribute.
+            # Pick a Target-derived class for this target type.
             if sType == 'unittest':
-               tgt = UnitTestTarget()
+               clsTarget = UnitTestTarget
             elif sType == 'exe':
-               tgt = ExecutableTarget()
+               clsTarget = ExecutableTarget
             elif sType == 'dynlib':
-               tgt = DynLibTarget()
+               clsTarget = DynLibTarget
             else:
                raise Exception('unsupported target type: {}'.format(sType))
-            # Assign the target its name and add it to the targets.
+            # Instantiate the Target-derived class, assigning it its name.
+            tgt = clsTarget()
             tgt.name = eltTarget.getAttribute('name')
+            # Add it to the target lists.
             self._add_target(tgt)
             listNodesAndTargets.append((tgt, eltTarget))
          else:
