@@ -404,6 +404,23 @@ class Target(object):
    _m_sName = None
 
 
+   def __init__(self, make, sName = None):
+      """Constructor. Generates the target’s file path by calling Target._generate_file_path(), then
+      adds itself to the Make instance’s target lists.
+
+      Make make
+         Make instance.
+      str sName
+         See Target.name.
+      """
+
+      self._m_sName = sName
+      self._m_sFilePath = self._generate_file_path(make)
+      if self._m_sFilePath is not None:
+         # Add self to the target lists.
+         make._add_target(self)
+
+
    def add_dependency(self, tgtDep):
       """Adds a target dependency.
 
@@ -450,9 +467,9 @@ class Target(object):
    file_path = property(_get_file_path, doc = """Target file path.""")
 
 
-   def generate_file_path(self, make):
-      """Generates and returns a file path for the target, based on other properties set beforehand
-      and the configuration of the provided Make instance.
+   def _generate_file_path(self, make):
+      """Generates and returns a file path for the target, based on other member varialbes set
+      beforehand and the configuration of the provided Make instance. Called by Target.__init__().
 
       The default implementation doesn’t generate a file path because no output file is assumed.
 
@@ -469,10 +486,7 @@ class Target(object):
    def _get_name(self):
       return self._m_sName
 
-   def _set_name(self, sName):
-      self._m_sName = sName
-
-   name = property(_get_name, _set_name, doc = """Name of the target.""")
+   name = property(_get_name, doc = """Name of the target.""")
 
 
    def parse_makefile_child(self, elt, make):
@@ -503,6 +517,21 @@ class ObjectTarget(Target):
    _m_sSourceFilePath = None
 
 
+   def __init__(self, make, sName, sSourceFilePath):
+      """Constructor. See Target.__init__().
+
+      Make make
+         Make instance.
+      str sName
+         See Target.name.
+      str sSourceFilePath
+         See ObjectTarget.source_file_path.
+      """
+
+      self._m_sSourceFilePath = sSourceFilePath
+      super().__init__(make, sName)
+
+
    def _get_final_output_target(self):
       return self._m_clsFinalOutputTarget
 
@@ -515,23 +544,18 @@ class ObjectTarget(Target):
    """)
 
 
-   def generate_file_path(self, make):
-      """See Target.generate_file_path()."""
+   def _generate_file_path(self, make):
+      """See Target._generate_file_path()."""
 
-      sFilePath = os.path.join(
+      return os.path.join(
          make.output_dir, 'obj', self._m_sSourceFilePath + make.cxxcompiler.object_suffix
       )
-      self._m_sFilePath = sFilePath
-      return sFilePath
 
 
    def _get_source_file_path(self):
       return self._m_sSourceFilePath
 
-   def _set_source_file_path(self, sSourceFilePath):
-      self._m_sSourceFilePath = sSourceFilePath
-
-   source_file_path = property(_get_source_file_path, _set_source_file_path, doc = """
+   source_file_path = property(_get_source_file_path, doc = """
       Source from which the target is built.
    """)
 
@@ -610,13 +634,11 @@ class ExecutableTarget(Target):
       return lnk.schedule_jobs(make, iterBlockingJobs)
 
 
-   def generate_file_path(self, make):
-      """See Target.generate_file_path()."""
+   def _generate_file_path(self, make):
+      """See Target._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      sFilePath = os.path.join(make.output_dir, 'bin', '' + self.name + '')
-      self._m_sFilePath = sFilePath
-      return sFilePath
+      return os.path.join(make.output_dir, 'bin', '' + self.name + '')
 
 
    def parse_makefile_child(self, elt, make):
@@ -629,10 +651,8 @@ class ExecutableTarget(Target):
             clsObjTarget = CxxObjectTarget
          else:
             raise Exception('unsupported source file type')
-         # Create an object target and assign the file path as its source.
-         tgtObj = clsObjTarget()
-         tgtObj.source_file_path = sFilePath
-         make._add_target(tgtObj)
+         # Create an object target with the file path as its source.
+         tgtObj = clsObjTarget(make, None, sFilePath)
          # Add the target as a dependency to this target.
          tgtObj.final_output_target = type(self)
          self.add_dependency(tgtObj)
@@ -669,13 +689,11 @@ class DynLibTarget(ExecutableTarget):
    output base directory.
    """
 
-   def generate_file_path(self, make):
-      """See ExecutableTarget.generate_file_path()."""
+   def _generate_file_path(self, make):
+      """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
-      sFilePath = os.path.join(make.output_dir, 'lib', 'lib' + self.name + '.so')
-      self._m_sFilePath = sFilePath
-      return sFilePath
+      return os.path.join(make.output_dir, 'lib', 'lib' + self.name + '.so')
 
 
    def parse_makefile_child(self, elt, make):
@@ -698,13 +716,11 @@ class UnitTestTarget(ExecutableTarget):
    relative to the output base directory.
    """
 
-   def generate_file_path(self, make):
-      """See ExecutableTarget.generate_file_path()."""
+   def _generate_file_path(self, make):
+      """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      sFilePath = os.path.join(make.output_dir, 'bin', 'unittest', '' + self.name + '')
-      self._m_sFilePath = sFilePath
-      return sFilePath
+      return os.path.join(make.output_dir, 'bin', 'unittest', '' + self.name + '')
 
 
    def parse_makefile_child(self, elt, make):
@@ -857,15 +873,13 @@ class Make(object):
 
 
    def _add_target(self, tgt):
-      """Lets a target generate its output file path, then adds it to the targets dictionary and the
-      named targets dictionary (if the target has a name).
+      """Adds a target to the relevant dictionaries.
 
       Target tgt
          Target to add.
       """
 
-      sFilePath = tgt.generate_file_path(self)
-      self._m_dictTargets[sFilePath] = tgt
+      self._m_dictTargets[tgt.file_path] = tgt
       sName = tgt.name
       if sName:
          self._m_dictNamedTargets[sName] = tgt
@@ -1129,10 +1143,7 @@ class Make(object):
             else:
                raise Exception('unsupported target type: {}'.format(sType))
             # Instantiate the Target-derived class, assigning it its name.
-            tgt = clsTarget()
-            tgt.name = eltTarget.getAttribute('name')
-            # Add it to the target lists.
-            self._add_target(tgt)
+            tgt = clsTarget(self, eltTarget.getAttribute('name'))
             listNodesAndTargets.append((tgt, eltTarget))
          else:
             raise SyntaxError('expected <target>; found: <{}>'.format(eltTarget.nodeName))
