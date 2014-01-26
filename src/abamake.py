@@ -177,7 +177,7 @@ class Tool(object):
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
-      if make.verbose:
+      if make.verbosity >= Make.VERBOSITY_LOW:
          iterQuietCmd = None
       else:
          iterQuietCmd = self._get_quiet_cmd()
@@ -826,6 +826,16 @@ class Make(object):
       make.run_scheduled_jobs()
    """
 
+   # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
+   # executed, instead of its command-line.
+   VERBOSITY_NONE = 1
+   # Print each job’s command-line as-is instead of a short summary.
+   VERBOSITY_LOW = 2
+   # Like VERBOSITY_LOW, and also describe what triggers the (re)building of each target.
+   VERBOSITY_MEDIUM = 3
+   # Like VERBOSITY_MED, and also show all the files that are being checked for changes.
+   VERBOSITY_HIGH = 4
+
    # See Make.cxxcompiler.
    _m_clsCxxCompiler = None
    # See Make.dry_run.
@@ -855,8 +865,6 @@ class Make(object):
    # All targets specified by the parsed makefile (file path -> Target), including implicit and
    # intermediate targets not explicitly declared with a <target> element.
    _m_dictTargets = None
-   # See Make.verbose.
-   _m_bVerbose = False
 
    # Special value used with get_target_by_*() to indicate that a target not found should result in
    # an exception.
@@ -870,6 +878,7 @@ class Make(object):
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
       self._m_dictTargets = {}
+      self.verbosity = Make.VERBOSITY_NONE
 
 
    def _add_target(self, tgt):
@@ -1196,7 +1205,7 @@ class Make(object):
          for sj in self._m_setScheduledJobs:
             if not sj.blocked:
                iterArgs = sj.command
-               if self._m_bVerbose:
+               if self.verbosity >= Make.VERBOSITY_LOW:
                   sys.stdout.write(' '.join(iterArgs) + '\n')
                else:
                   iterQuietCmd = sj.quiet_command
@@ -1285,16 +1294,9 @@ class Make(object):
             self._unschedule_jobs_blocked_by(sjBlocked._m_setBlockedJobs)
 
 
-   def _get_verbose(self):
-      return self._m_bVerbose
-
-   def _set_verbose(self, bVerbose):
-      self._m_bVerbose = bVerbose
-
-   verbose = property(_get_verbose, _set_verbose, doc = """
-      True if the exact commands invoked should be printed to stdout, of False if only a short
-      description should.
-   """)
+   # True if the exact commands invoked should be printed to stdout, of False if only a short
+   # description should.
+   verbosity = None
 
 
 
@@ -1325,7 +1327,7 @@ def _main(iterArgs):
          elif sArg == '--keep-going':
             make.keep_going = True
          elif sArg == '--verbose':
-            make.verbose = True
+            make.verbosity += 1
       elif sArg.startswith('-'):
          for sArgChar in sArg:
             if sArgChar == 'f':
@@ -1337,7 +1339,7 @@ def _main(iterArgs):
             elif sArgChar == 'n':
                make.dry_run = True
             elif sArgChar == 'v':
-               make.verbose = True
+               make.verbosity += 1
       else:
          break
       iArg += 1
