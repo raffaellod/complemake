@@ -109,7 +109,6 @@ class Tool(object):
       raise Exception('unable to detect tool; expected one of: ' + ', '.join(listTried))
 
 
-
    def _get_quiet_cmd(self):
       """Returns an iterable containing the short name and relevant (input or output) files for the
       tool, to be displayed in quiet mode.
@@ -628,7 +627,6 @@ class ExecutableTarget(Target):
    def build(self, make, iterBlockingJobs):
       """See Target.build()."""
 
-      listExtDeps = None
       if iterBlockingJobs:
          if make.verbosity >= Make.VERBOSITY_MEDIUM:
             sys.stdout.write(
@@ -640,12 +638,9 @@ class ExecutableTarget(Target):
             sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
          return None
       else:
-         # Pick every non-Target linker input, i.e. any libraries/object files not built by the same
-         # makefile.
-         listExtDeps = list(filter(lambda o: not isinstance(o, Target), self._m_listLinkerInputs))
-         if make.file_metadata_changed(listExtDeps):
+         if make.file_metadata_changed(self._m_listLinkerInputs):
             if make.verbosity >= Make.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: rebuilding due to changed external dependencies\n'.format(
+               sys.stdout.write('{}: rebuilding due to changed dependencies\n'.format(
                   self.file_path
                ))
          else:
@@ -671,7 +666,7 @@ class ExecutableTarget(Target):
             lnk.add_input_lib(oDep)
          else:
             raise Exception('unclassified linker input: {}'.format(oDep.file_path))
-      return lnk.schedule_jobs(make, iterBlockingJobs, listExtDeps)
+      return lnk.schedule_jobs(make, iterBlockingJobs, self._m_listLinkerInputs)
 
 
    def _generate_file_path(self, make):
@@ -977,6 +972,9 @@ class Make(object):
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
                      sj.release_blocked()
+                     # Also update any input/output file’s metadata.
+                     if not self._m_bDryRun and sj._m_iterMetadataToUpdate:
+                        self.update_file_metadata(sj._m_iterMetadataToUpdate)
                   else:
                      if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
@@ -1240,7 +1238,6 @@ class Make(object):
          print('Target {}'.format(tgt.file_path))
 
 
-
    def run_scheduled_jobs(self):
       """Executes any scheduled jobs."""
 
@@ -1364,7 +1361,9 @@ class Make(object):
          Paths to the files whose metadata needs to be updated.
       """
 
-      pass
+      for sFilePath in iterFilePaths:
+         if self.verbosity >= Make.VERBOSITY_HIGH:
+            sys.stdout.write('Updating metadata for {}\n'.format(sFilePath))
 
 
    # True if the exact commands invoked should be printed to stdout, of False if only a short
