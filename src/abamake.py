@@ -151,7 +151,7 @@ class Tool(object):
          listArgs.extend(self._m_listInputFilePaths)
 
 
-   def schedule_jobs(self, make, iterBlockingJobs):
+   def schedule_jobs(self, make, iterBlockingJobs, iterMetadataToUpdate):
       """Schedules one or more jobs that, when run, result in the execution of the tool.
 
       An implementation will create one or more chained ScheduledJob instances, blocking the first
@@ -165,6 +165,8 @@ class Tool(object):
       iterable(ScheduledJob*) iterBlockingJobs
          Jobs that should block the first one scheduled for this execution of the tool (Tool
          instance).
+      iterable(str*) iterMetadataToUpdate
+         Paths to the files for which metadata should be updated when this job completes.
       ScheduledJob return
          Last job scheduled.
       """
@@ -181,7 +183,7 @@ class Tool(object):
          iterQuietCmd = None
       else:
          iterQuietCmd = self._get_quiet_cmd()
-      return ScheduledJob(make, iterBlockingJobs, listArgs, iterQuietCmd)
+      return ScheduledJob(make, iterBlockingJobs, listArgs, iterQuietCmd, iterMetadataToUpdate)
 
 
    def set_output(self, sOutputFilePath):
@@ -570,15 +572,29 @@ class CxxObjectTarget(ObjectTarget):
    def build(self, make, iterBlockingJobs):
       """See Target.build()."""
 
-      # TODO: check for changed dependencies.
-      if not iterBlockingJobs and False:
-         return None
+      tplExtDeps = None
+      if iterBlockingJobs:
+         if make.verbosity >= Make.VERBOSITY_MEDIUM:
+            sys.stdout.write(
+               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
+            )
+      else:
+         # TODO: check for additional changed external dependencies.
+         tplExtDeps = (self._m_sSourceFilePath, )
+         if make.file_metadata_changed(tplExtDeps):
+            if make.verbosity >= Make.VERBOSITY_MEDIUM:
+               sys.stdout.write('{}: rebuilding due to changed sources\n'.format(self.file_path))
+         else:
+            # No dependencies being rebuilt, source up-to-date: no need to rebuild.
+            if make.verbosity >= Make.VERBOSITY_MEDIUM:
+               sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+            return None
 
       cxx = make.cxxcompiler()
       cxx.set_output(self.file_path, self.final_output_target)
-      cxx.add_input(self._m_sSourceFilePath)
+      cxx.add_input(self.source_file_path)
       # TODO: add file-specific flags.
-      return cxx.schedule_jobs(make, iterBlockingJobs)
+      return cxx.schedule_jobs(make, iterBlockingJobs, tplExtDeps)
 
 
 
@@ -590,7 +606,9 @@ class ExecutableTarget(Target):
    output base directory.
    """
 
-   # List of dynamic libraries against which the target will be linked.
+   # List of dynamic libraries against which the target will be linked. Each item is either a Target
+   # instance (for libraries/object files that can be built by the same makefile) or a string (for
+   # external files).
    _m_listLinkerInputs = None
 
 
@@ -610,9 +628,31 @@ class ExecutableTarget(Target):
    def build(self, make, iterBlockingJobs):
       """See Target.build()."""
 
-      # TODO: check for changed dependencies.
-      if not iterBlockingJobs and False:
+      listExtDeps = None
+      if iterBlockingJobs:
+         if make.verbosity >= Make.VERBOSITY_MEDIUM:
+            sys.stdout.write(
+               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
+            )
+      elif self._m_listLinkerInputs is None:
+         # No dependencies being rebuilt, no inputs: no change.
+         if make.verbosity >= Make.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
          return None
+      else:
+         # Pick every non-Target linker input, i.e. any libraries/object files not built by the same
+         # makefile.
+         listExtDeps = list(filter(lambda o: not isinstance(o, Target), self._m_listLinkerInputs))
+         if make.file_metadata_changed(listExtDeps):
+            if make.verbosity >= Make.VERBOSITY_MEDIUM:
+               sys.stdout.write('{}: rebuilding due to changed external dependencies\n'.format(
+                  self.file_path
+               ))
+         else:
+            # No dependencies being rebuilt, inputs up-to-date: no need to rebuild.
+            if make.verbosity >= Make.VERBOSITY_MEDIUM:
+               sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+            return None
 
       lnk = make.linker()
       lnk.set_output(self.file_path, type(self))
@@ -631,7 +671,7 @@ class ExecutableTarget(Target):
             lnk.add_input_lib(oDep)
          else:
             raise Exception('unclassified linker input: {}'.format(oDep.file_path))
-      return lnk.schedule_jobs(make, iterBlockingJobs)
+      return lnk.schedule_jobs(make, iterBlockingJobs, listExtDeps)
 
 
    def _generate_file_path(self, make):
@@ -752,9 +792,12 @@ class ScheduledJob(object):
    _m_cBlocks = 0
    # See ScheduledJob.quiet_command.
    _m_iterQuietCmd = None
+   # Files for which we’ll need to update metadata after this job completes. This includes the
+   # output file and any input files that are not built by the same makefile.
+   _m_iterMetadataToUpdate = None
 
 
-   def __init__(self, make, iterBlockingJobs, iterArgs, iterQuietCmd):
+   def __init__(self, make, iterBlockingJobs, iterArgs, iterQuietCmd, iterMetadataToUpdate):
       """Constructor.
 
       Make make
@@ -765,10 +808,13 @@ class ScheduledJob(object):
          Command-line arguments to execute this job.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of Tool._get_quiet_cmd().
+      iterable(str*) iterMetadataToUpdate
+         Paths to the files for which metadata should be updated when this job completes.
       """
 
       self._m_iterArgs = iterArgs
       self._m_iterQuietCmd = iterQuietCmd
+      self._m_iterMetadataToUpdate = iterMetadataToUpdate
       if iterBlockingJobs is not None:
          # Assign this job as “blocked” by the jobs it depends on, and store their count.
          for sjDep in iterBlockingJobs:
@@ -978,6 +1024,20 @@ class Make(object):
       If True, commands will only be printed, not executed; if False, they will be printed and
       executed.
    """)
+
+
+   def file_metadata_changed(self, iterFilePaths):
+      """Checks the specified input files for changes, returning True if any file appears to have
+      changed. After the target dependent on these files has been built, the metadata should be
+      refreshed by calling Make.update_file_metadata() with the same arguments.
+
+      iterable(str*) iterFilePaths
+         Paths to the files to check for changes.
+      bool return
+         True if any file has changed, or False otherwise.
+      """
+
+      return True
 
 
    def _get_force_build(self):
@@ -1292,6 +1352,19 @@ class Make(object):
          self._m_setScheduledJobs.discard(sjBlocked)
          if sjBlocked._m_setBlockedJobs:
             self._unschedule_jobs_blocked_by(sjBlocked._m_setBlockedJobs)
+
+
+   def update_file_metadata(self, iterFilePaths):
+      """Updates the metadata stored by ABC Make for the specified files.
+
+      This should be called after each build job completes, to update the metadata for its output
+      file and any input files that are not built by the same makefile.
+
+      iterable(str*) iterFilePaths
+         Paths to the files whose metadata needs to be updated.
+      """
+
+      pass
 
 
    # True if the exact commands invoked should be printed to stdout, of False if only a short
