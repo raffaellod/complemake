@@ -571,7 +571,7 @@ class CxxObjectTarget(ObjectTarget):
    def build(self, make, iterBlockingJobs):
       """See Target.build()."""
 
-      tplExtDeps = None
+      tplDeps = None
       if iterBlockingJobs:
          if make.verbosity >= Make.VERBOSITY_MEDIUM:
             sys.stdout.write(
@@ -579,8 +579,8 @@ class CxxObjectTarget(ObjectTarget):
             )
       else:
          # TODO: check for additional changed external dependencies.
-         tplExtDeps = (self._m_sSourceFilePath, )
-         if make.file_metadata_changed(tplExtDeps):
+         tplDeps = (self._m_sSourceFilePath, )
+         if make.file_metadata_changed(tplDeps):
             if make.verbosity >= Make.VERBOSITY_MEDIUM:
                sys.stdout.write('{}: rebuilding due to changed sources\n'.format(self.file_path))
          else:
@@ -593,7 +593,7 @@ class CxxObjectTarget(ObjectTarget):
       cxx.set_output(self.file_path, self.final_output_target)
       cxx.add_input(self.source_file_path)
       # TODO: add file-specific flags.
-      return cxx.schedule_jobs(make, iterBlockingJobs, tplExtDeps)
+      return cxx.schedule_jobs(make, iterBlockingJobs, tplDeps)
 
 
 
@@ -627,18 +627,38 @@ class ExecutableTarget(Target):
    def build(self, make, iterBlockingJobs):
       """See Target.build()."""
 
+      # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
+      # over that list only once, combine building the list of dependencies for which metadata need
+      # to be checked with collecting linker inputs.
+      listDeps = []
+      lnk = make.linker()
+      lnk.set_output(self.file_path, type(self))
+      # At this point all the dependencies are available, so add them as inputs.
+      for oDep in self._m_listLinkerInputs or []:
+         if isinstance(oDep, str):
+            listDeps.append(oDep)
+            # Strings go directly to the linker’s command line, assuming that they are external
+            # libraries to link to.
+            lnk.add_input_lib(oDep)
+         else:
+            listDeps.append(oDep.file_path)
+            if isinstance(oDep, ObjectTarget):
+               lnk.add_input(oDep.file_path)
+            elif isinstance(oDep, DynLibTarget):
+               lnk.add_input_lib(oDep.name)
+               # Since we’re linking to a library built by this makefile, make sure to add the
+               # output lib/ directory to the library search path.
+               lnk.add_lib_path(os.path.join(make.output_dir, 'lib'))
+            else:
+               raise Exception('unclassified linker input: {}'.format(oDep.file_path))
+
       if iterBlockingJobs:
          if make.verbosity >= Make.VERBOSITY_MEDIUM:
             sys.stdout.write(
                '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
             )
-      elif self._m_listLinkerInputs is None:
-         # No dependencies being rebuilt, no inputs: no change.
-         if make.verbosity >= Make.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-         return None
-      else:
-         if make.file_metadata_changed(self._m_listLinkerInputs):
+      elif listDeps:
+         if make.file_metadata_changed(listDeps):
             if make.verbosity >= Make.VERBOSITY_MEDIUM:
                sys.stdout.write('{}: rebuilding due to changed dependencies\n'.format(
                   self.file_path
@@ -648,25 +668,13 @@ class ExecutableTarget(Target):
             if make.verbosity >= Make.VERBOSITY_MEDIUM:
                sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
             return None
+      else:
+         # No dependencies being rebuilt, no inputs: no change.
+         if make.verbosity >= Make.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+         return None
 
-      lnk = make.linker()
-      lnk.set_output(self.file_path, type(self))
-      # At this point all the dependencies are available, so add them as inputs.
-      for oDep in self._m_listLinkerInputs or []:
-         if isinstance(oDep, ObjectTarget):
-            lnk.add_input(oDep.file_path)
-         elif isinstance(oDep, DynLibTarget):
-            lnk.add_input_lib(oDep.name)
-            # Since we’re linking to a library built by this makefile, make sure to add the output
-            # lib/ directory to the library search path.
-            lnk.add_lib_path(os.path.join(make.output_dir, 'lib'))
-         elif isinstance(oDep, str):
-            # Strings go directly to the linker’s command line, assuming that they are external
-            # libraries to link to.
-            lnk.add_input_lib(oDep)
-         else:
-            raise Exception('unclassified linker input: {}'.format(oDep.file_path))
-      return lnk.schedule_jobs(make, iterBlockingJobs, self._m_listLinkerInputs)
+      return lnk.schedule_jobs(make, iterBlockingJobs, listDeps)
 
 
    def _generate_file_path(self, make):
