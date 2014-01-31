@@ -1501,6 +1501,8 @@ def _main(iterArgs):
    make = Make()
    iArg = 1
    iArgEnd = len(iterArgs)
+
+   # Parse arguments, looking for option flags.
    while iArg < iArgEnd:
       sArg = iterArgs[iArg]
       if sArg.startswith('--'):
@@ -1530,12 +1532,32 @@ def _main(iterArgs):
          break
       iArg += 1
 
-   # Expect the makefile path as the next argument.
-   if iArg >= iArgEnd:
-      sys.stderr.write('error: no makefile specified\n')
-      return 1
-   make.parse(iterArgs[iArg])
-   iArg += 1
+   # Check for a makefile name.
+   if iArg < iArgEnd:
+      sArg = iterArgs[iArg]
+      if sArg.endswith('.abcmk'):
+         # Save the argument as the makefile path and consume it.
+         sMakefilePath = sArg
+         iArg += 1
+   else:
+      # Check if the current directory contains a single ABC makefile.
+      sMakefilePath = None
+      for sFilePath in os.listdir():
+         if sFilePath.endswith('.abcmk'):
+            if sMakefilePath is None:
+               sMakefilePath = sFilePath
+            else:
+               sys.stderr.write(
+                  'error: multiple makefiles found in the current directory, please specify one ' +
+                     'explicitly\n'
+               )
+               return 1
+      if not sMakefilePath:
+         sys.stderr.write('error: no makefile specified\n')
+         return 1
+
+   # Load the makefile.
+   make.parse(sMakefilePath)
 
    # If there are more argument, they will be treated as target named, indicating that only a subset
    # of the targets should be built; otherwise all named targets will be built.
