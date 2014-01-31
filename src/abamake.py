@@ -853,6 +853,101 @@ class ScheduledJob(object):
 
 
 ####################################################################################################
+# FileMetadata
+
+class FileMetadata(object):
+   """Metadata for a single file."""
+
+
+   def __init__(self, sFilePath):
+      """Constructor.
+
+      str sFilePath
+         Path to the file of which to collect metadata.
+      """
+
+      pass
+
+
+   def __eq__(self, other):
+      # TODO: implement.
+      return False
+
+
+   def __ne__(self, other):
+      return not self.__eq__(fm2)
+
+
+####################################################################################################
+# FileMetadataPair
+
+class FileMetadataPair(object):
+   """Stores Handles storage and retrieval of file metadata."""
+
+
+   # Stored file metadata, or None if the file’s metadata was never collected.
+   stored = None
+   # Current file metadata, or None if the file’s metadata has not yet been refreshed.
+   current = None
+
+
+
+####################################################################################################
+# MetadataStore
+
+class MetadataStore(object):
+   """Handles storage and retrieval of file metadata."""
+
+
+   def __init__(self):
+      """Constructor."""
+
+      self._m_dictMetadata = {}
+
+
+   def file_changed(self, sFilePath):
+      """Compares the metadata stored for the specified file against the file’s current metadata.
+
+      str sFilePath
+         Path to the file of which to compare metadata.
+      bool return
+         True if the file is determined to have changed, or False otherwise.
+      """
+
+      fmp = self._m_dictMetadata.get(sFilePath)
+      # If we have no metadata to compare, report the file as changed.
+      if fmp is None or fmp.stored is None:
+         return True
+      # If we still haven’t read the file’s current metadata, retrieve it now.
+      if fmp.current is None:
+         fmp.current = FileMetadata(sFilePath)
+      # Compare stored vs. current metadata.
+      return fmp.current == fmp.stored
+
+
+   def update(self, sFilePath):
+      """Creates or updates metadata for the specified file.
+
+      str sFilePath
+         Path to the file of which to update metadata.
+      """
+
+      fmp = self._m_dictMetadata.get(sFilePath)
+      # Make sure the metadata pair is in the dictionary.
+      if fmp is None:
+         fmp = FileMetadataPair()
+         self._m_dictMetadata[sFilePath] = fmp
+      # It’s still possible that MetadataStore.file_changed() was never called for this file (e.g.
+      # prior changed metadata was sufficient to decide that a dependency needed to be rebuilt), so
+      # make sure we have up-to-date metadata for this file.
+      if fmp.current is None:
+         fmp.current = FileMetadata(sFilePath)
+      # Replace the stored metadata.
+      fmp.stored = fmp.current
+
+
+
+####################################################################################################
 # Make
 
 class Make(object):
@@ -889,6 +984,8 @@ class Make(object):
    _m_bKeepGoing = False
    # See Make.linker.
    _m_clsLinker = None
+   # Metadata store.
+   _m_mds = None
    # Targets explicitly declared in the parsed makefile (name -> Target).
    _m_dictNamedTargets = None
    # See Make.output_dir.
@@ -915,6 +1012,7 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
+      self._m_mds = MetadataStore()
       self._m_dictNamedTargets = {}
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
@@ -1035,7 +1133,14 @@ class Make(object):
          True if any file has changed, or False otherwise.
       """
 
-      return True
+      for sFilePath in iterFilePaths:
+         if self._m_mds.file_changed(sFilePath):
+            if self.verbosity >= Make.VERBOSITY_HIGH:
+               sys.stdout.write('Metadata changed for {}\n'.format(sFilePath))
+            return True
+         if self.verbosity >= Make.VERBOSITY_HIGH:
+            sys.stdout.write('Metadata unchanged for {}\n'.format(sFilePath))
+      return False
 
 
    def _get_force_build(self):
@@ -1354,8 +1459,8 @@ class Make(object):
    def update_file_metadata(self, iterFilePaths):
       """Updates the metadata stored by ABC Make for the specified files.
 
-      This should be called after each build job completes, to update the metadata for its output
-      file and any input files that are not built by the same makefile.
+      This should be called after each build job completes, to update the metadata for its input
+      files.
 
       iterable(str*) iterFilePaths
          Paths to the files whose metadata needs to be updated.
@@ -1364,6 +1469,7 @@ class Make(object):
       for sFilePath in iterFilePaths:
          if self.verbosity >= Make.VERBOSITY_HIGH:
             sys.stdout.write('Updating metadata for {}\n'.format(sFilePath))
+         self._m_mds.update(sFilePath)
 
 
    # True if the exact commands invoked should be printed to stdout, of False if only a short
