@@ -1562,7 +1562,7 @@ def _main(iterArgs):
    # If there are more argument, they will be treated as target named, indicating that only a subset
    # of the targets should be built; otherwise all named targets will be built.
    if iArg < iArgEnd:
-      iterTargets = set()
+      iterTargets = []
       while iArg < iArgEnd:
          sArg = iterArgs[iArg]
          iterTargets.add(make.get_target_by_name(sArg, None) or make.get_target_by_file_path(sArg))
