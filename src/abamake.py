@@ -866,6 +866,9 @@ class ScheduledJob(object):
 class FileMetadata(object):
    """Metadata for a single file."""
 
+   # Time of the file’s last modification.
+   _m_iMTime = None
+
 
    def __init__(self, sFilePath):
       """Constructor.
@@ -874,16 +877,15 @@ class FileMetadata(object):
          Path to the file of which to collect metadata.
       """
 
-      pass
+      self._m_iMTime = os.path.getmtime(sFilePath)
 
 
    def __eq__(self, other):
-      # TODO: implement.
-      return False
+      return self._m_iMTime == other._m_iMTime
 
 
    def __ne__(self, other):
-      return not self.__eq__(fm2)
+      return not self.__eq__(other)
 
 
 ####################################################################################################
