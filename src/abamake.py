@@ -1080,8 +1080,8 @@ class Make(object):
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
                      sj.release_blocked()
-                     # Also update any input/output file’s metadata.
-                     if not self._m_bDryRun and sj._m_iterMetadataToUpdate:
+                     # If the job was successfully executed, update any input files’ metadata.
+                     if iRet == 0 and not self._m_bDryRun and sj._m_iterMetadataToUpdate:
                         self.update_file_metadata(sj._m_iterMetadataToUpdate)
                   else:
                      if self._m_bKeepGoing:
