@@ -1427,6 +1427,7 @@ class Make(object):
          if self.verbosity >= Make.VERBOSITY_HIGH:
             sys.stdout.write('Writing MetadataStore\n')
          self._m_mds.write()
+      self._m_mds = None
 
       return cFailedJobsTotal
 
