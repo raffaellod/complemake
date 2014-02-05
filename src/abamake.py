@@ -1423,7 +1423,7 @@ class Make(object):
       cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
 
       # Write any new metadata.
-      if self._m_mds:
+      if self._m_mds and not self._m_bDryRun:
          if self.verbosity >= Make.VERBOSITY_HIGH:
             sys.stdout.write('Writing MetadataStore\n')
          self._m_mds.write()
