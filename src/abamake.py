@@ -908,11 +908,25 @@ class FileMetadataPair(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
+   # Persistent storage file path.
+   _m_sFilePath = None
+   # Metadata for each file (str -> FileMetadata).
+   _m_dictMetadata = None
 
-   def __init__(self):
-      """Constructor."""
 
+   def __init__(self, sFilePath):
+      """Constructor. Loads metadata from the specified file.
+
+      str sFilePath
+         Metadata storage file.
+      """
+
+      self._m_sFilePath = sFilePath
       self._m_dictMetadata = {}
+
+
+   def __bool__(self):
+      return bool(self._m_dictMetadata)
 
 
    def file_changed(self, sFilePath):
@@ -954,6 +968,12 @@ class MetadataStore(object):
          fmp.current = FileMetadata(sFilePath)
       # Replace the stored metadata.
       fmp.stored = fmp.current
+
+
+   def write(self):
+      """Stores metadata to the file from which it was loaded."""
+
+      pass
 
 
 
@@ -1022,7 +1042,6 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_mds = MetadataStore()
       self._m_dictNamedTargets = {}
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
@@ -1286,6 +1305,13 @@ class Make(object):
       """
 
       self.parse_doc(xml.dom.minidom.parse(sFilePath))
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata')
+      self._m_mds = MetadataStore(sMetadataFilePath)
+      if self.verbosity >= Make.VERBOSITY_HIGH:
+         if self._m_mds:
+            sys.stdout.write('MetadataStore loaded from {}\n'.format(sMetadataFilePath))
+         else:
+            sys.stdout.write('MetadataStore empty or missing: {}\n'.format(sMetadataFilePath))
 
 
    def parse_doc(self, doc):
@@ -1395,6 +1421,13 @@ class Make(object):
                break
       # There are no more scheduled jobs, just wait for the running ones to complete.
       cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
+
+      # Write any new metadata.
+      if self._m_mds:
+         if self.verbosity >= Make.VERBOSITY_HIGH:
+            sys.stdout.write('Writing MetadataStore\n')
+         self._m_mds.write()
+
       return cFailedJobsTotal
 
 
