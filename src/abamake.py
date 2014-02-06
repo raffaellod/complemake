@@ -1067,7 +1067,7 @@ class Make(object):
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
 
-      Returns the count of failed jobs, unless Make._m_bIgnoreErrors is True, in which case it will
+      Returns the count of failed jobs, unless Make.ignore_errors is True, in which case it will
       always return 0.
 
       int cJobsToComplete
@@ -1086,7 +1086,7 @@ class Make(object):
          while True:
             # Poll each running job.
             for proc in self._m_dictRunningJobs.keys():
-               if self._m_bDryRun:
+               if self.dry_run:
                   # A no-ops is always successful.
                   iRet = 0
                else:
@@ -1095,15 +1095,15 @@ class Make(object):
                   # Remove the job from the running jobs.
                   sj = self._m_dictRunningJobs.pop(proc)
                   cCompletedJobs += 1
-                  if iRet == 0 or self._m_bIgnoreErrors:
+                  if iRet == 0 or self.ignore_errors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
                      sj.release_blocked()
                      # If the job was successfully executed, update any input files’ metadata.
-                     if iRet == 0 and not self._m_bDryRun and sj._m_iterMetadataToUpdate:
+                     if iRet == 0 and not self.dry_run and sj._m_iterMetadataToUpdate:
                         self.update_file_metadata(sj._m_iterMetadataToUpdate)
                   else:
-                     if self._m_bKeepGoing:
+                     if self.keep_going:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
                         if sj._m_setBlockedJobs:
@@ -1119,7 +1119,7 @@ class Make(object):
          # If we freed up the requested count of slots, there’s nothing left to do.
          if cCompletedJobs >= cJobsToComplete:
             return cFailedJobs
-         if not self._m_bDryRun:
+         if not self.dry_run:
             # Wait a small amount of time.
             # TODO: proper event-based waiting.
             time.sleep(0.1)
@@ -1396,7 +1396,7 @@ class Make(object):
 
          cFailedJobsTotal += cFailedJobs
          # Stop starting jobs in case of failed errors – unless overridden by the user.
-         if cFailedJobs > 0 and not self._m_bKeepGoing:
+         if cFailedJobs > 0 and not self.keep_going:
             break
 
          # Find a job that is ready to be executed.
@@ -1408,7 +1408,7 @@ class Make(object):
                else:
                   iterQuietCmd = sj.quiet_command
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
-               if self._m_bDryRun:
+               if self.dry_run:
                   # Create a placeholder instead of a real Popen instance.
                   proc = object()
                else:
@@ -1423,7 +1423,7 @@ class Make(object):
       cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
 
       # Write any new metadata.
-      if self._m_mds and not self._m_bDryRun:
+      if self._m_mds and not self.dry_run:
          if self.verbosity >= Make.VERBOSITY_HIGH:
             sys.stdout.write('Writing MetadataStore\n')
          self._m_mds.write()
