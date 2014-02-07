@@ -1304,7 +1304,8 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      self.parse_doc(xml.dom.minidom.parse(sFilePath))
+      with xml.dom.minidom.parse(sFilePath) as doc:
+         self.parse_doc(doc)
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata')
       self._m_mds = MetadataStore(sMetadataFilePath)
       if self.verbosity >= Make.VERBOSITY_HIGH:
@@ -1322,9 +1323,6 @@ class Make(object):
       """
 
       doc.documentElement.normalize()
-
-      # TODO: check whether and where this method should use contexts for the DOM nodes and/or
-      # directly call unlink() on them.
 
       # Do a first scan of the top level elements, to find invalid nodes and unrecognized target
       # types. In the process, we instantiate all the target elements, so
