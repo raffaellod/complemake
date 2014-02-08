@@ -866,8 +866,10 @@ class ScheduledJob(object):
 class FileMetadata(object):
    """Metadata for a single file."""
 
-   # Time of the file’s last modification.
-   _m_iMTime = None
+   __slots__ = (
+      # Time of the file’s last modification.
+      '_m_iMTime',
+   )
 
 
    def __init__(self, sFilePath):
@@ -880,12 +882,25 @@ class FileMetadata(object):
       self._m_iMTime = os.path.getmtime(sFilePath)
 
 
+   def __getstate__(self):
+      return {
+         'mtime': self._m_iMTime,
+      }
+
+
+   def __setstate__(self, dictState):
+      for sName, sValue in dictState:
+         if sName == 'mtime':
+            self._m_iMTime = float(sValue)
+
+
    def __eq__(self, other):
-      return self._m_iMTime == other._m_iMTime
+      return self._m_iMTime - other._m_iMTime < 0.5
 
 
    def __ne__(self, other):
       return not self.__eq__(other)
+
 
 
 ####################################################################################################
@@ -908,10 +923,12 @@ class FileMetadataPair(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
+   # Metadata for each file (str -> FileMetadata).
+   _m_bDirty = False
    # Persistent storage file path.
    _m_sFilePath = None
    # Metadata for each file (str -> FileMetadata).
-   _m_dictMetadata = None
+   _m_dictMetadataPairs = None
 
 
    def __init__(self, sFilePath):
@@ -922,11 +939,26 @@ class MetadataStore(object):
       """
 
       self._m_sFilePath = sFilePath
-      self._m_dictMetadata = {}
+      self._m_dictMetadataPairs = {}
+      try:
+         with xml.dom.minidom.parse(sFilePath) as doc:
+            doc.documentElement.normalize()
+            for eltFile in doc.documentElement.childNodes:
+               # Skip unimportant nodes.
+               if eltFile.nodeType != xml.dom.Node.ELEMENT_NODE or eltFile.nodeName != 'file':
+                  continue
+               # Parse this <file> element into the “stored” FileMetadata member of a new
+               # FileMetadataPair instance.
+               fmdp = FileMetadataPair()
+               fmdp.stored = FileMetadata.__new__(FileMetadata)
+               fmdp.stored.__setstate__(eltFile.attributes.items())
+               self._m_dictMetadataPairs[eltFile.getAttribute('path')] = fmdp
+      except FileNotFoundError:
+         pass
 
 
    def __bool__(self):
-      return bool(self._m_dictMetadata)
+      return bool(self._m_dictMetadataPairs)
 
 
    def file_changed(self, sFilePath):
@@ -938,15 +970,15 @@ class MetadataStore(object):
          True if the file is determined to have changed, or False otherwise.
       """
 
-      fmp = self._m_dictMetadata.get(sFilePath)
+      fmdp = self._m_dictMetadataPairs.get(sFilePath)
       # If we have no metadata to compare, report the file as changed.
-      if fmp is None or fmp.stored is None:
+      if fmdp is None or fmdp.stored is None:
          return True
       # If we still haven’t read the file’s current metadata, retrieve it now.
-      if fmp.current is None:
-         fmp.current = FileMetadata(sFilePath)
+      if fmdp.current is None:
+         fmdp.current = FileMetadata(sFilePath)
       # Compare stored vs. current metadata.
-      return fmp.current == fmp.stored
+      return fmdp.current != fmdp.stored
 
 
    def update(self, sFilePath):
@@ -956,24 +988,45 @@ class MetadataStore(object):
          Path to the file of which to update metadata.
       """
 
-      fmp = self._m_dictMetadata.get(sFilePath)
+      fmdp = self._m_dictMetadataPairs.get(sFilePath)
       # Make sure the metadata pair is in the dictionary.
-      if fmp is None:
-         fmp = FileMetadataPair()
-         self._m_dictMetadata[sFilePath] = fmp
+      if fmdp is None:
+         fmdp = FileMetadataPair()
+         self._m_dictMetadataPairs[sFilePath] = fmdp
       # It’s still possible that MetadataStore.file_changed() was never called for this file (e.g.
       # prior changed metadata was sufficient to decide that a dependency needed to be rebuilt), so
       # make sure we have up-to-date metadata for this file.
-      if fmp.current is None:
-         fmp.current = FileMetadata(sFilePath)
+      if fmdp.current is None:
+         fmdp.current = FileMetadata(sFilePath)
       # Replace the stored metadata.
-      fmp.stored = fmp.current
+      fmdp.stored = fmdp.current
+      self._m_bDirty = True
 
 
    def write(self):
       """Stores metadata to the file from which it was loaded."""
 
-      pass
+      if not self._m_bDirty:
+         return
+
+      # Create an empty XML document.
+      doc = xml.dom.getDOMImplementation().createDocument(
+         doctype       = None,
+         namespaceURI  = None,
+         qualifiedName = None,
+      )
+      eltRoot = doc.appendChild(doc.createElement('metadata'))
+      # Add metadata for each file.
+      for sFilePath, fmdp in self._m_dictMetadataPairs.items():
+         eltFile = eltRoot.appendChild(doc.createElement('file'))
+         eltFile.setAttribute('path', sFilePath)
+         # Add the metadata as attributes for this <file> element.
+         for sName, oValue in fmdp.stored.__getstate__().items():
+            eltFile.setAttribute(sName, str(oValue))
+      # Write the document to file.
+      os.makedirs(os.path.dirname(self._m_sFilePath), 0o755, True)
+      with open(self._m_sFilePath, 'w') as fileMetadata:
+         doc.writexml(fileMetadata, addindent = '   ', newl = '\n')
 
 
 
@@ -1306,7 +1359,7 @@ class Make(object):
 
       with xml.dom.minidom.parse(sFilePath) as doc:
          self.parse_doc(doc)
-      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata')
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata.xml')
       self._m_mds = MetadataStore(sMetadataFilePath)
       if self.verbosity >= Make.VERBOSITY_HIGH:
          if self._m_mds:
@@ -1577,7 +1630,7 @@ def _main(iterArgs):
       # Check if the current directory contains a single ABC makefile.
       sMakefilePath = None
       for sFilePath in os.listdir():
-         if sFilePath.endswith('.abcmk'):
+         if sFilePath.endswith('.abcmk') and len(sFilePath) > len('.abcmk'):
             if sMakefilePath is None:
                sMakefilePath = sFilePath
             else:
