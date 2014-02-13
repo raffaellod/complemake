@@ -219,10 +219,14 @@ class CxxObjectTarget(ObjectTarget):
             if mk.verbosity >= mk.VERBOSITY_MEDIUM:
                sys.stdout.write('{}: rebuilding due to changed sources\n'.format(self.file_path))
          else:
-            # No dependencies being rebuilt, source up-to-date: no need to rebuild.
-            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-            return None
+            # No dependencies being rebuilt, source up-to-date: no need to rebuild, unless --force.
+            if mk.force_build:
+               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                  sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
+            else:
+               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                  sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+               return None
 
       cxx = mk.cxxcompiler()
       cxx.set_output(self.file_path, self.final_output_target)
@@ -292,22 +296,21 @@ class ExecutableTarget(Target):
             sys.stdout.write(
                '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
             )
-      elif listDeps:
-         if mk.file_metadata_changed(listDeps):
+      elif listDeps and mk.file_metadata_changed(listDeps):
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: rebuilding due to changed dependencies\n'.format(
+               self.file_path
+            ))
+      else:
+         # No dependencies being rebuilt, no inputs or inputs up-to-date: no need to rebuild, unless
+         # --force.
+         if mk.force_build:
             if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: rebuilding due to changed dependencies\n'.format(
-                  self.file_path
-               ))
+               sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
          else:
-            # No dependencies being rebuilt, inputs up-to-date: no need to rebuild.
             if mk.verbosity >= mk.VERBOSITY_MEDIUM:
                sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
             return None
-      else:
-         # No dependencies being rebuilt, no inputs: no change.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-         return None
 
       return lnk.schedule_jobs(mk, iterBlockingJobs, listDeps)
 
