@@ -20,6 +20,8 @@
 
 """This module contains the Make class, which parses and executes ABC makefiles (.abcmk), as well as
 Target and its derived classes (make.target.*) and Tool and its derived classes (make.tool.*).
+
+This file contains Make and other core classes.
 """
 
 import os

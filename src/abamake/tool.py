@@ -18,7 +18,9 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Builds outputs and runs unit tests as specified in a .abcmk file."""
+"""Classes implementing different build tools, such as C++ compilers, providing an abstract
+interface to the very different implementations.
+"""
 
 import os
 import re

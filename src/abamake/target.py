@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Builds outputs and runs unit tests as specified in a .abcmk file."""
+"""Classes implementing different types of build target, each aware of how to build itself."""
 
 import os
 import re
