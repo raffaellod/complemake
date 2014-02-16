@@ -167,11 +167,17 @@ class FileMetadata(object):
 class FileMetadataPair(object):
    """Stores Handles storage and retrieval of file metadata."""
 
+   __slots__ = (
+      # Stored file metadata, or None if the file’s metadata was never collected.
+      'stored',
+      # Current file metadata, or None if the file’s metadata has not yet been refreshed.
+      'current',
+   )
 
-   # Stored file metadata, or None if the file’s metadata was never collected.
-   stored = None
-   # Current file metadata, or None if the file’s metadata has not yet been refreshed.
-   current = None
+
+   def __init__(self):
+      self.stored = None
+      self.current = None
 
 
 
