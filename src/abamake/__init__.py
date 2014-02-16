@@ -845,7 +845,7 @@ class Make(object):
          # caused this call.
          self._m_setScheduledJobs.discard(sjBlocked)
          if sjBlocked._m_setBlockedJobs:
-            self._unschedule_jobs_blocked_by(sjBlocked._m_setBlockedJobs)
+            self._unschedule_jobs_blocked_by(sjBlocked)
 
 
    def update_file_metadata(self, iterFilePaths):
