@@ -24,6 +24,8 @@ import os
 import re
 import sys
 
+import make
+
 
 
 ####################################################################################################
@@ -52,9 +54,8 @@ class Target(object):
 
       self._m_sName = sName
       self._m_sFilePath = self._generate_file_path(mk)
-      if self._m_sFilePath is not None:
-         # Add self to the target lists.
-         mk._add_target(self)
+      # Add self to any applicable targets lists.
+      mk._add_target(self)
 
 
    def add_dependency(self, tgtDep):
@@ -384,18 +385,138 @@ class DynLibTarget(ExecutableTarget):
       if elt.nodeName == 'unittest':
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName)
-         # Make the unit test link to this library.
-         tgtUnitTest.add_linker_input(self)
+         # If tgtUnitTest generates an executable, have it link to this library.
+         if isinstance(tgtUnitTest, ExecutableTarget):
+            tgtUnitTest.add_linker_input(self)
 
 
 
 ####################################################################################################
 # UnitTestTarget
 
-class UnitTestTarget(ExecutableTarget):
+class UnitTestTarget(Target):
+   """Generic unit test target."""
+
+
+   def parse_makefile_child(self, elt, mk):
+      """See Target.parse_makefile_child()."""
+
+      if elt.nodeName == 'unittest':
+         raise SyntaxError('<unittest> not allowed in <target type="unittest">')
+      else:
+         super().parse_makefile_child(elt, mk)
+
+
+
+####################################################################################################
+# ComparisonUnitTestTarget
+
+class ComparisonUnitTestTarget(UnitTestTarget):
+   """Unit test target that compares the output of a tool (e.g. C preprocessor) against a file with
+   the expected output.
+   """
+
+   _m_sExpectedOutputFilePath = None
+
+
+   def build(self, mk, iterBlockingJobs):
+      """See Target.build(). In addition to building the unit test, it also schedules its execution.
+      """
+
+      tplDeps = None
+      if iterBlockingJobs:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: re-running due to dependencies being rebuilt\n'.format(self.name))
+      else:
+         tplDeps = (self._m_sExpectedOutputFilePath, )
+         if mk.file_metadata_changed(tplDeps):
+            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+               sys.stdout.write('{}: rebuilding due to changed inputs\n'.format(self.name))
+         else:
+            # No dependencies being rebuilt, source up-to-date: no need to rebuild, unless --force.
+            if mk.force_build:
+               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                  sys.stdout.write('{}: inputs unchanged, but rebuild forced\n'.format(self.name))
+            else:
+               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                  sys.stdout.write('{}: inputs unchanged\n'.format(self.name))
+               return None
+
+      # TODO: supply the path of the tool’s output.
+      listArgs = ['cmp', '-s', '/tmp/test', self._m_sExpectedOutputFilePath]
+      # TODO: move verbosity-related logic in a common place, leaving here only iterQuietCmd = …
+      if mk.verbosity >= mk.VERBOSITY_LOW:
+         iterQuietCmd = None
+      else:
+         iterQuietCmd = ('CMP', self.name)
+      return make.ScheduledJob(mk, iterBlockingJobs, listArgs, iterQuietCmd, tplDeps)
+
+
+   def parse_makefile_child(self, elt, mk):
+      """See ExecutableTarget.parse_makefile_child()."""
+
+      if elt.nodeName == 'source':
+         # TODO: implement CxxPreprocessedTarget, then enable the following lines.
+         pass
+         # Pick the correct target class based on the file name extension.
+#        sFilePath = elt.getAttribute('path')
+#        if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
+#           clsObjTarget = CxxPreprocessedTarget
+#        else:
+#           raise Exception('unsupported source file type')
+         # Create an object target with the file path as its source.
+#        tgtObj = clsObjTarget(mk, None, sFilePath)
+         # Add the target as a dependency to this target.
+#        self.add_dependency(tgtObj)
+      elif elt.nodeName == 'expected-output':
+         self._m_sExpectedOutputFilePath = elt.getAttribute('path')
+      else:
+         super().parse_makefile_child(elt, mk)
+
+
+
+####################################################################################################
+# ExecutableUnitTestTarget
+
+class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
    """Executable unit test target. The output file will be placed in a bin/unittest/ directory
    relative to the output base directory.
    """
+
+   # Path to the script file that will be invoked to execute the unit test.
+   _m_sScriptFilePath = None
+
+
+   def build(self, mk, iterBlockingJobs):
+      """See ExecutableTarget.build(). In addition to building the unit test, it also schedules its
+      execution.
+      """
+
+      sjBuild = super().build(mk, iterBlockingJobs)
+      # If to build the unit test executable we scheduled any jobs, make sure that the metadata for
+      # the jobs’ output is updated and that the unit test execution depends on the build job(s).
+      if sjBuild:
+         tplBlockingJobs = (sjBuild, )
+         tplDeps = (self.file_path, )
+      else:
+         # No need to block the unit test job with iterBlockingJobs: if sjBuild is None,
+         # iterBlockingJobs must be None as well, or else we would’ve scheduled jobs in
+         # Target.build().
+         assert(not iterBlockingJobs)
+         tplBlockingJobs = None
+         tplDeps = None
+
+      if self._m_sScriptFilePath:
+         tplArgs = (self._m_sScriptFilePath, self.file_path)
+      else:
+         tplArgs = (self.file_path, )
+      # TODO: move verbosity-related logic in a common place, leaving here only iterQuietCmd = …
+      if mk.verbosity >= mk.VERBOSITY_LOW:
+         iterQuietCmd = None
+      else:
+         iterQuietCmd = ('TEST', self.name)
+      return make.ScheduledJob(mk, tplBlockingJobs, tplArgs, iterQuietCmd, tplDeps)
+
 
    def _generate_file_path(self, mk):
       """See ExecutableTarget._generate_file_path()."""
@@ -405,13 +526,13 @@ class UnitTestTarget(ExecutableTarget):
 
 
    def parse_makefile_child(self, elt, mk):
-      """See ExecutableTarget.parse_makefile_child()."""
+      """See ExecutableTarget.parse_makefile_child() and UnitTestTarget.parse_makefile_child()."""
 
-      if elt.nodeName == 'unittest':
-         raise SyntaxError('<unittest> not allowed in <target type="unittest">')
-      elif elt.nodeName == 'runner':
-         # TODO: assign the runner type.
-         pass
+      if elt.nodeName == 'script':
+         self._m_sScriptFilePath = elt.getAttribute('path')
+         # TODO: support <script name="…"> to refer to a program built by the same makefile.
+         # TODO: support more attributes, such as command-line args for the script.
       else:
+         # TODO: call both ExecutableTarget and UnitTestTarget’s implementation.
          super().parse_makefile_child(elt, mk)
 
