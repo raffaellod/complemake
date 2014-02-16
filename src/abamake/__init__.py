@@ -218,6 +218,7 @@ class MetadataStore(object):
                fmdp.stored.__setstate__(eltFile.attributes.items())
                self._m_dictMetadataPairs[eltFile.getAttribute('path')] = fmdp
       except FileNotFoundError:
+         # If we can’t load the persistent metadata store, start it over.
          pass
 
 
@@ -240,7 +241,12 @@ class MetadataStore(object):
          return True
       # If we still haven’t read the file’s current metadata, retrieve it now.
       if fmdp.current is None:
-         fmdp.current = FileMetadata(sFilePath)
+         try:
+            fmdp.current = FileMetadata(sFilePath)
+         except FileNotFoundError:
+            # If the file doesn’t exist (anymore), consider it changed.
+            return True
+
       # Compare stored vs. current metadata.
       return fmdp.current != fmdp.stored
 
@@ -258,8 +264,9 @@ class MetadataStore(object):
          fmdp = FileMetadataPair()
          self._m_dictMetadataPairs[sFilePath] = fmdp
       # It’s still possible that MetadataStore.file_changed() was never called for this file (e.g.
-      # prior changed metadata was sufficient to decide that a dependency needed to be rebuilt), so
-      # make sure we have up-to-date metadata for this file.
+      # prior changed metadata was sufficient to decide that a dependency needed to be rebuilt), or
+      # that the file did not exist at the time it was called (see “except FileNotFoundError”
+      # above), so make sure we have up-to-date metadata for this file.
       if fmdp.current is None:
          fmdp.current = FileMetadata(sFilePath)
       # Replace the stored metadata.
