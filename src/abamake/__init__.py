@@ -53,8 +53,8 @@ class ScheduledJob(object):
    _m_cBlocks = 0
    # See ScheduledJob.quiet_command.
    _m_iterQuietCmd = None
-   # Files for which we’ll need to update metadata after this job completes. This includes the
-   # output file and any input files that are not built by the same makefile.
+   # Paths to the input and output files for which we’ll need to update metadata after this job
+   # completes.
    _m_iterMetadataToUpdate = None
 
 
@@ -425,7 +425,7 @@ class Make(object):
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
                      sj.release_blocked()
-                     # If the job was successfully executed, update any input files’ metadata.
+                     # If the job was successfully executed, update any files’ metadata.
                      if iRet == 0 and not self.dry_run and sj._m_iterMetadataToUpdate:
                         self.update_file_metadata(sj._m_iterMetadataToUpdate)
                   else:
@@ -478,24 +478,26 @@ class Make(object):
 
 
    def file_metadata_changed(self, iterFilePaths):
-      """Checks the specified input files for changes, returning True if any file appears to have
-      changed. After the target dependent on these files has been built, the metadata should be
-      refreshed by calling Make.update_file_metadata() with the same arguments.
+      """Checks the specified files for changes, returning a list containing any files that appear
+      to have changed. After the target dependent on these files has been built, the metadata should
+      be refreshed by passing the return value to Make.update_file_metadata().
 
       iterable(str*) iterFilePaths
          Paths to the files to check for changes.
-      bool return
-         True if any file has changed, or False otherwise.
+      iterable(str*) return
+         List of changed files, or None if no file changes are detected.
       """
 
+      listChanged = []
       for sFilePath in iterFilePaths:
          if self._m_mds.file_changed(sFilePath):
             if self.verbosity >= Make.VERBOSITY_HIGH:
                sys.stdout.write('Metadata changed for {}\n'.format(sFilePath))
-            return True
-         if self.verbosity >= Make.VERBOSITY_HIGH:
-            sys.stdout.write('Metadata unchanged for {}\n'.format(sFilePath))
-      return False
+            listChanged.append(sFilePath)
+         else:
+            if self.verbosity >= Make.VERBOSITY_HIGH:
+               sys.stdout.write('Metadata unchanged for {}\n'.format(sFilePath))
+      return listChanged or None
 
 
    def _get_force_build(self):
@@ -858,8 +860,8 @@ class Make(object):
    def update_file_metadata(self, iterFilePaths):
       """Updates the metadata stored by ABC Make for the specified files.
 
-      This should be called after each build job completes, to update the metadata for its input
-      files.
+      This should be called after each build job completes, to update the metadata for its input and
+      output files.
 
       iterable(str*) iterFilePaths
          Paths to the files whose metadata needs to be updated.

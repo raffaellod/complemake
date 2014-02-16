@@ -218,33 +218,33 @@ class CxxObjectTarget(ObjectTarget):
    def build(self, mk, iterBlockingJobs):
       """See Target.build()."""
 
-      tplDeps = None
+      # Get a list of changed files.
+      # TODO: check for additional changed external dependencies.
+      iterChangedFiles = mk.file_metadata_changed((self.file_path, self.source_file_path))
+
+      # See if this build is really necessary.
       if iterBlockingJobs:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write(
                '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
             )
+      elif iterChangedFiles:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
+      elif mk.force_build:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
       else:
-         # TODO: check for additional changed external dependencies.
-         tplDeps = (self._m_sSourceFilePath, )
-         if mk.file_metadata_changed(tplDeps):
-            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: rebuilding due to changed sources\n'.format(self.file_path))
-         else:
-            # No dependencies being rebuilt, source up-to-date: no need to rebuild, unless --force.
-            if mk.force_build:
-               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                  sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
-            else:
-               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                  sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-               return None
+         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+         return None
 
       cxx = mk.cxxcompiler()
       cxx.set_output(self.file_path, self.final_output_target)
       cxx.add_input(self.source_file_path)
       # TODO: add file-specific flags.
-      return cxx.schedule_jobs(mk, iterBlockingJobs, tplDeps)
+      return cxx.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
 
 
 
@@ -278,21 +278,22 @@ class ExecutableTarget(Target):
    def build(self, mk, iterBlockingJobs):
       """See Target.build()."""
 
-      # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
-      # over that list only once, combine building the list of dependencies for which metadata need
-      # to be checked with collecting linker inputs.
-      listDeps = []
       lnk = mk.linker()
       lnk.set_output(self.file_path, type(self))
+
+      # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
+      # over that list only once, combine building the list of files to be checked for changes with
+      # collecting linker inputs.
+      listFilesToCheck = [self.file_path]
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
          if isinstance(oDep, str):
-            listDeps.append(oDep)
+            listFilesToCheck.append(oDep)
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
             lnk.add_input_lib(oDep)
          else:
-            listDeps.append(oDep.file_path)
+            listFilesToCheck.append(oDep.file_path)
             if isinstance(oDep, ObjectTarget):
                lnk.add_input(oDep.file_path)
             elif isinstance(oDep, DynLibTarget):
@@ -303,28 +304,32 @@ class ExecutableTarget(Target):
             else:
                raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
+      # Get a list of changed files.
+      if listFilesToCheck:
+         iterChangedFiles = mk.file_metadata_changed(listFilesToCheck)
+      else:
+         iterChangedFiles = None
+      del listFilesToCheck
+
+      # See if this build is really necessary.
       if iterBlockingJobs:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write(
                '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
             )
-      elif listDeps and mk.file_metadata_changed(listDeps):
+      elif iterChangedFiles:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: rebuilding due to changed dependencies\n'.format(
-               self.file_path
-            ))
+            sys.stdout.write('{}: rebuilding due to detected changeds\n'.format(self.file_path))
+      elif mk.force_build:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
       else:
-         # No dependencies being rebuilt, no inputs or inputs up-to-date: no need to rebuild, unless
-         # --force.
-         if mk.force_build:
-            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
-         else:
-            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-            return None
+         # No dependencies being rebuilt, no inputs or inputs up-to-date: no need to rebuild.
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+         return None
 
-      return lnk.schedule_jobs(mk, iterBlockingJobs, listDeps)
+      return lnk.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
 
 
    def _generate_file_path(self, mk):
