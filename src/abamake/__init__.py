@@ -633,7 +633,7 @@ class Make(object):
       """
 
       with xml.dom.minidom.parse(sFilePath) as doc:
-         self.parse_doc(doc)
+         self._parse_doc(doc)
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata.xml')
       self._m_mds = MetadataStore(sMetadataFilePath)
       if self.verbosity >= Make.VERBOSITY_HIGH:
@@ -643,7 +643,7 @@ class Make(object):
             sys.stdout.write('MetadataStore empty or missing: {}\n'.format(sMetadataFilePath))
 
 
-   def parse_doc(self, doc):
+   def _parse_doc(self, doc):
       """Parses a DOM representation of an ABC makefile.
 
       xml.dom.Document doc
