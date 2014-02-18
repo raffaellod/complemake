@@ -169,6 +169,17 @@ class ProcessedSourceTarget(Target):
       super().__init__(mk, sName)
 
 
+   def build(self, mk, iterBlockingJobs):
+      """See Target.build()."""
+
+      # Check if a build is needed.
+      bBuildNeeded, iterChangedFiles = self._is_build_needed(mk, iterBlockingJobs)
+      if not bBuildNeeded:
+         return None
+      # Instantiate the appropriate tool, and have it schedule any applicable jobs.
+      return self._get_tool(mk).schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
+
+
    def _get_final_output_target(self):
       return self._m_clsFinalOutputTarget
 
@@ -181,10 +192,63 @@ class ProcessedSourceTarget(Target):
    """)
 
 
+   def _is_build_needed(self, mk, iterBlockingJobs):
+      """Checks if a build of this target should be scheduled.
+
+      Make mk
+         Make instance.
+      iterable(ScheduledJob*) iterBlockingJobs
+         Jobs that should block the first one scheduled to build this target.
+      tuple(bool, iterable(str*)) return
+         Tuple containing the response (True if a build is needed, or False otherwise) and a list of
+         changed files (or None if no file changes are detected).
+      """
+
+      # Get a list of changed files.
+      # TODO: check for additional changed external dependencies.
+      iterChangedFiles = mk.file_metadata_changed((self.file_path, self.source_file_path))
+
+      # See if this build is really necessary.
+      if iterBlockingJobs:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write(
+               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
+            )
+      elif iterChangedFiles:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
+      elif mk.force_build:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
+      else:
+         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+         return False, None
+
+      return True, iterChangedFiles
+
+
    def _generate_file_path(self, mk):
       """See Target._generate_file_path()."""
 
       return os.path.join(mk.output_dir, 'int', self._m_sSourceFilePath)
+
+
+   def _get_tool(self, mk):
+      """Instantiates and prepares the tool to build the target.
+
+      Make mk
+         Make instance.
+      Tool return
+         Ready-to-use tool.
+      """
+
+      cxx = mk.cxxcompiler()
+      cxx.set_output(self.file_path, self.final_output_target)
+      cxx.add_input(self.source_file_path)
+      # TODO: add file-specific flags.
+      return cxx
 
 
    def _get_source_file_path(self):
@@ -193,6 +257,27 @@ class ProcessedSourceTarget(Target):
    source_file_path = property(_get_source_file_path, doc = """
       Source from which the target is built.
    """)
+
+
+
+####################################################################################################
+# CxxPreprocessedTarget
+
+class CxxPreprocessedTarget(ProcessedSourceTarget):
+   """Preprocessed C++ source target."""
+
+   def _generate_file_path(self, mk):
+      """See ProcessedSourceTarget._generate_file_path()."""
+
+      return super()._generate_file_path(mk) + '.i'
+
+
+   def _get_tool(self, mk):
+      """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
+
+      cxx = CxxObjectTarget._get_tool(self, mk)
+      # TODO: activate “preprocess only” compiler flag.
+      return cxx
 
 
 
@@ -215,36 +300,14 @@ class ObjectTarget(ProcessedSourceTarget):
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
-   def build(self, mk, iterBlockingJobs):
-      """See Target.build()."""
-
-      # Get a list of changed files.
-      # TODO: check for additional changed external dependencies.
-      iterChangedFiles = mk.file_metadata_changed((self.file_path, self.source_file_path))
-
-      # See if this build is really necessary.
-      if iterBlockingJobs:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(
-               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
-            )
-      elif iterChangedFiles:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
-      elif mk.force_build:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
-      else:
-         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-         return None
+   def _get_tool(self, mk):
+      """See ObjectTarget._get_tool()."""
 
       cxx = mk.cxxcompiler()
       cxx.set_output(self.file_path, self.final_output_target)
       cxx.add_input(self.source_file_path)
       # TODO: add file-specific flags.
-      return cxx.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
+      return cxx
 
 
 
