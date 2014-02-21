@@ -126,17 +126,19 @@ class Target(object):
    name = property(_get_name, doc = """Name of the target.""")
 
 
-   def parse_makefile_child(self, elt, mk):
+   def parse_makefile_child(self, mk, elt):
       """Validates and processes the specified child element of the target’s <target> element.
 
-      xml.dom.Element elt
-         <target> element to parse.
       Make mk
          Make instance.
+      xml.dom.Element elt
+         Element to parse.
+      bool return
+         True if elt was recognized and parsed, or False if it was not expected.
       """
 
       # Default implementation: expect no child elements.
-      raise SyntaxError('unexpected element: <{}>'.format(elt.nodeName))
+      return False
 
 
 
@@ -402,7 +404,7 @@ class ExecutableTarget(Target):
       return os.path.join(mk.output_dir, 'bin', '' + self.name + '')
 
 
-   def parse_makefile_child(self, elt, mk):
+   def parse_makefile_child(self, mk, elt):
       """See Target.parse_makefile_child()."""
 
       if elt.nodeName == 'source':
@@ -418,7 +420,8 @@ class ExecutableTarget(Target):
          tgtObj.final_output_target = type(self)
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
-      elif elt.nodeName == 'dynlib':
+         return True
+      if elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
          sName = elt.getAttribute('name')
          # If the library was in the dictionary (i.e. it’s built by this makefile), assign it as a
@@ -428,7 +431,8 @@ class ExecutableTarget(Target):
          if oDynLib is not sName:
             self.add_dependency(oDynLib)
          self.add_linker_input(oDynLib)
-      elif elt.nodeName == 'unittest':
+         return True
+      if elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName, None)
@@ -437,8 +441,8 @@ class ExecutableTarget(Target):
                'could not find definition of referenced unit test: {}'.format(sName)
             )
          tgtUnitTest.add_dependency(self)
-      else:
-         super().parse_makefile_child(elt, mk)
+         return True
+      return super().parse_makefile_child(mk, elt)
 
 
 
@@ -457,16 +461,20 @@ class DynLibTarget(ExecutableTarget):
       return os.path.join(mk.output_dir, 'lib', 'lib' + self.name + '.so')
 
 
-   def parse_makefile_child(self, elt, mk):
+   def parse_makefile_child(self, mk, elt):
       """See ExecutableTarget.parse_makefile_child()."""
 
-      super().parse_makefile_child(elt, mk)
+      # This implementation does not allow more element types than the base class’ version.
+      if not super().parse_makefile_child(mk, elt):
+         return False
+      # Apply additional logic on the recognized element.
       if elt.nodeName == 'unittest':
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName)
          # If tgtUnitTest generates an executable, have it link to this library.
          if isinstance(tgtUnitTest, ExecutableTarget):
             tgtUnitTest.add_linker_input(self)
+      return True
 
 
 
@@ -477,13 +485,12 @@ class UnitTestTarget(Target):
    """Generic unit test target."""
 
 
-   def parse_makefile_child(self, elt, mk):
+   def parse_makefile_child(self, mk, elt):
       """See Target.parse_makefile_child()."""
 
       if elt.nodeName == 'unittest':
          raise SyntaxError('<unittest> not allowed in <target type="unittest">')
-      else:
-         super().parse_makefile_child(elt, mk)
+      return super().parse_makefile_child(mk, elt)
 
 
 
@@ -531,8 +538,8 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       return make.ScheduledJob(mk, iterBlockingJobs, listArgs, iterQuietCmd, tplDeps)
 
 
-   def parse_makefile_child(self, elt, mk):
-      """See ExecutableTarget.parse_makefile_child()."""
+   def parse_makefile_child(self, mk, elt):
+      """See UnitTestTarget.parse_makefile_child()."""
 
       if elt.nodeName == 'source':
          # TODO: implement CxxPreprocessedTarget, then enable the following lines.
@@ -547,10 +554,11 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 #        tgtObj = clsObjTarget(mk, None, sFilePath)
          # Add the target as a dependency to this target.
 #        self.add_dependency(tgtObj)
-      elif elt.nodeName == 'expected-output':
+         return True
+      if elt.nodeName == 'expected-output':
          self._m_sExpectedOutputFilePath = elt.getAttribute('path')
-      else:
-         super().parse_makefile_child(elt, mk)
+         return True
+      return super().parse_makefile_child(mk, elt)
 
 
 
@@ -604,14 +612,15 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
       return os.path.join(mk.output_dir, 'bin', 'unittest', '' + self.name + '')
 
 
-   def parse_makefile_child(self, elt, mk):
+   def parse_makefile_child(self, mk, elt):
       """See ExecutableTarget.parse_makefile_child() and UnitTestTarget.parse_makefile_child()."""
 
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-      else:
-         # TODO: call both ExecutableTarget and UnitTestTarget’s implementation.
-         super().parse_makefile_child(elt, mk)
+         return True
+      if ExecutableTarget.parse_makefile_child(self, mk, elt):
+         return True
+      return UnitTestTarget.parse_makefile_child(self, mk, elt)
 

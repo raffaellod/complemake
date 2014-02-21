@@ -720,8 +720,11 @@ class Make(object):
                # Skip whitespace/comment nodes.
                continue
             if nd.nodeType != xml.dom.Node.ELEMENT_NODE:
-               raise Exception('expected element node, found: '.format(nd.nodeName))
-            tgt.parse_makefile_child(nd, self)
+               raise SyntaxError('expected element node, found: '.format(nd.nodeName))
+            if not tgt.parse_makefile_child(self, nd):
+               # Target.parse_makefile_child() returns False when it doesn’t know how to handle the
+               # specified element.
+               raise SyntaxError('unexpected element: <{}>'.format(nd.nodeName))
 
 
    def print_targets_graph(self):
