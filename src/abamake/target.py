@@ -530,12 +530,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
       # TODO: supply the path of the tool’s output.
       listArgs = ['cmp', '-s', '/tmp/test', self._m_sExpectedOutputFilePath]
-      # TODO: move verbosity-related logic in a common place, leaving here only iterQuietCmd = …
-      if mk.verbosity >= mk.VERBOSITY_LOW:
-         iterQuietCmd = None
-      else:
-         iterQuietCmd = ('CMP', self.name)
-      return make.ScheduledJob(mk, iterBlockingJobs, listArgs, iterQuietCmd, tplDeps)
+      return make.ScheduledJob(mk, iterBlockingJobs, listArgs, ('CMP', self.name), tplDeps)
 
 
    def parse_makefile_child(self, mk, elt):
@@ -597,12 +592,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          tplArgs = (self._m_sScriptFilePath, self.file_path)
       else:
          tplArgs = (self.file_path, )
-      # TODO: move verbosity-related logic in a common place, leaving here only iterQuietCmd = …
-      if mk.verbosity >= mk.VERBOSITY_LOW:
-         iterQuietCmd = None
-      else:
-         iterQuietCmd = ('TEST', self.name)
-      return make.ScheduledJob(mk, tplBlockingJobs, tplArgs, iterQuietCmd, tplDeps)
+      return make.ScheduledJob(mk, tplBlockingJobs, tplArgs, ('TEST', self.name), tplDeps)
 
 
    def _generate_file_path(self, mk):

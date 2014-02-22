@@ -179,11 +179,9 @@ class Tool(object):
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
-      if mk.verbosity >= mk.VERBOSITY_LOW:
-         iterQuietCmd = None
-      else:
-         iterQuietCmd = self._get_quiet_cmd()
-      return make.ScheduledJob(mk, iterBlockingJobs, listArgs, iterQuietCmd, iterMetadataToUpdate)
+      return make.ScheduledJob(
+         mk, iterBlockingJobs, listArgs, self._get_quiet_cmd(), iterMetadataToUpdate
+      )
 
 
    def set_output(self, sOutputFilePath):
