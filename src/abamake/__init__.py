@@ -314,12 +314,9 @@ class MetadataStore(object):
       if fmdp is None:
          fmdp = FileMetadataPair()
          self._m_dictMetadataPairs[sFilePath] = fmdp
-      # It’s still possible that MetadataStore.file_changed() was never called for this file (e.g.
-      # prior changed metadata was sufficient to decide that a dependency needed to be rebuilt), or
-      # that the file did not exist at the time it was called (see “except FileNotFoundError”
-      # above), so make sure we have up-to-date metadata for this file.
-      if fmdp.current is None:
-         fmdp.current = FileMetadata(sFilePath)
+      # Always re-read the file metadata because if we obtained it during scheduling, the file might
+      # have been regenerated now that jobs have been run.
+      fmdp.current = FileMetadata(sFilePath)
       # Replace the stored metadata.
       fmdp.stored = fmdp.current
       self._m_bDirty = True
