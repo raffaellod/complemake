@@ -179,7 +179,9 @@ class Tool(object):
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
-      return make.Job(mk, iterBlockingJobs, listArgs, self._get_quiet_cmd(), iterMetadataToUpdate)
+      return make.ExternalCommandJob(
+         mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, listArgs
+      )
 
 
    def set_output(self, sOutputFilePath):

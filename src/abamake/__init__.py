@@ -41,12 +41,10 @@ import make.tool as tool
 # Job
 
 class Job(object):
-   """Schedules a job in the Make instance’s queue, keeping track of the jobs it must wait to
-   complete.
+   """Asynchronous job that is first scheduled and then executed by a Make instance. It keeps track
+   of the jobs it depends on.
    """
 
-   # See Job.command.
-   _m_iterArgs = None
    # Jobs that this one is blocking.
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
@@ -58,22 +56,19 @@ class Job(object):
    _m_iterMetadataToUpdate = None
 
 
-   def __init__(self, make, iterBlockingJobs, iterArgs, iterQuietCmd, iterMetadataToUpdate):
+   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate):
       """Constructor.
 
-      Make make
+      Make mk
          Make instance.
       iterable(Job*) iterBlockingJobs
          Jobs that block this one.
-      iterable(str+) iterArgs
-         Command-line arguments to execute this job.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       iterable(str*) iterMetadataToUpdate
          Paths to the files for which metadata should be updated when this job completes.
       """
 
-      self._m_iterArgs = iterArgs
       self._m_iterQuietCmd = iterQuietCmd
       self._m_iterMetadataToUpdate = iterMetadataToUpdate
       if iterBlockingJobs is not None:
@@ -84,7 +79,7 @@ class Job(object):
             jobDep._m_setBlockedJobs.add(self)
          self._m_cBlocks = len(iterBlockingJobs)
       # Schedule this job.
-      make._schedule_job(self)
+      mk._schedule_job(self)
 
 
    def _get_blocked(self):
@@ -95,17 +90,21 @@ class Job(object):
    """)
 
 
-   def _get_command(self):
-      return self._m_iterArgs
+   def get_verbose_command(self):
+      """Returns a command-line for Make to print out in verbose mode.
 
-   command = property(_get_command, doc = """Command to be invoked, as a list of arguments.""")
+      str return
+         Job’s command line.
+      """
+
+      raise NotImplementedError('Job.get_verbose_command() must be overridden')
 
 
    def _get_quiet_command(self):
       return self._m_iterQuietCmd
 
    quiet_command = property(_get_quiet_command, doc = """
-      Command summary to print out in quiet mode.
+      Command summary for Make to print out in quiet mode.
    """)
 
 
@@ -115,6 +114,58 @@ class Job(object):
       if self._m_setBlockedJobs:
          for job in self._m_setBlockedJobs:
             job._m_cBlocks -= 1
+
+
+   def start(self):
+      """Starts the job, returning TODO.
+
+      TODO return
+         Handle to check the job status and eventual exit code.
+      """
+
+      raise NotImplementedError('Job.start() must be overridden')
+
+
+
+####################################################################################################
+# ExternalCommandJob
+
+class ExternalCommandJob(Job):
+   """Models a job consisting in the invocation of an external program."""
+
+   # Command to be invoked, as a list of arguments.
+   _m_iterArgs = None
+
+
+   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate, iterArgs):
+      """Constructor. See Job.__init__().
+
+      Make mk
+         Make instance.
+      iterable(Job*) iterBlockingJobs
+         Jobs that block this one.
+      iterable(str, str*) iterQuietCmd
+         “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
+      iterable(str*) iterMetadataToUpdate
+         Paths to the files for which metadata should be updated when this job completes.
+      iterable(str+) iterArgs
+         Command-line arguments to execute this job.
+      """
+
+      super().__init__(mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate)
+      self._m_iterArgs = iterArgs
+
+
+   def get_verbose_command(self):
+      """See Job.get_verbose_command()."""
+
+      return ' '.join(self._m_iterArgs)
+
+
+   def start(self):
+      """See Job.start()."""
+
+      return subprocess.Popen(self._m_iterArgs)
 
 
 
@@ -413,7 +464,7 @@ class Make(object):
             # Poll each running job.
             for proc in self._m_dictRunningJobs.keys():
                if self.dry_run:
-                  # A no-ops is always successful.
+                  # A no-op is always successful.
                   iRet = 0
                else:
                   iRet = proc.poll()
@@ -762,9 +813,8 @@ class Make(object):
          # Find a job that is ready to be executed.
          for job in self._m_setScheduledJobs:
             if not job.blocked:
-               iterArgs = job.command
                if self.verbosity >= Make.VERBOSITY_LOW:
-                  sys.stdout.write(' '.join(iterArgs) + '\n')
+                  sys.stdout.write(job.get_verbose_command() + '\n')
                else:
                   iterQuietCmd = job.quiet_command
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
@@ -772,7 +822,7 @@ class Make(object):
                   # Create a placeholder instead of a real Popen instance.
                   proc = object()
                else:
-                  proc = subprocess.Popen(iterArgs)
+                  proc = job.start()
                # Move the job from scheduled to running jobs.
                self._m_dictRunningJobs[proc] = job
                self._m_setScheduledJobs.remove(job)
