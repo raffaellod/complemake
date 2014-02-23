@@ -154,20 +154,20 @@ class Tool(object):
    def schedule_jobs(self, mk, iterBlockingJobs, iterMetadataToUpdate):
       """Schedules one or more jobs that, when run, result in the execution of the tool.
 
-      An implementation will create one or more chained ScheduledJob instances, blocking the first
-      with iterBlockingJobs and returning the last one.
+      An implementation will create one or more chained Job instances, blocking the first with
+      iterBlockingJobs and returning the last one.
 
       The default implementation schedules a single job, the command line of which is composed by
       calling Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
 
       Make mk
          Make instance.
-      iterable(make.ScheduledJob*) iterBlockingJobs
+      iterable(make.Job*) iterBlockingJobs
          Jobs that should block the first one scheduled for this execution of the tool (Tool
          instance).
       iterable(str*) iterMetadataToUpdate
          Paths to the files for which metadata should be updated when this job completes.
-      make.ScheduledJob return
+      make.Job return
          Last job scheduled.
       """
 
@@ -179,9 +179,7 @@ class Tool(object):
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
-      return make.ScheduledJob(
-         mk, iterBlockingJobs, listArgs, self._get_quiet_cmd(), iterMetadataToUpdate
-      )
+      return make.Job(mk, iterBlockingJobs, listArgs, self._get_quiet_cmd(), iterMetadataToUpdate)
 
 
    def set_output(self, sOutputFilePath):

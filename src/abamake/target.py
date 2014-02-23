@@ -76,9 +76,9 @@ class Target(object):
 
       Make mk
          Make instance.
-      iterable(ScheduledJob*) iterBlockingJobs
+      iterable(Job*) iterBlockingJobs
          Jobs that should block the first one scheduled to build this target.
-      ScheduledJob return
+      Job return
          Last job scheduled if the target scheduled jobs to be rebuilt, of None if it was already
          current.
       """
@@ -199,7 +199,7 @@ class ProcessedSourceTarget(Target):
 
       Make mk
          Make instance.
-      iterable(ScheduledJob*) iterBlockingJobs
+      iterable(Job*) iterBlockingJobs
          Jobs that should block the first one scheduled to build this target.
       tuple(bool, iterable(str*)) return
          Tuple containing the response (True if a build is needed, or False otherwise) and a list of
@@ -278,7 +278,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
 
       cxx = CxxObjectTarget._get_tool(self, mk)
-      # TODO: activate “preprocess only” compiler flag.
+      cxx.add_flags(make.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
 
@@ -530,25 +530,30 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
       # TODO: supply the path of the tool’s output.
       listArgs = ['cmp', '-s', '/tmp/test', self._m_sExpectedOutputFilePath]
-      return make.ScheduledJob(mk, iterBlockingJobs, listArgs, ('CMP', self.name), tplDeps)
+      return make.Job(mk, iterBlockingJobs, listArgs, ('CMP', self.name), tplDeps)
 
 
    def parse_makefile_child(self, mk, elt):
       """See UnitTestTarget.parse_makefile_child()."""
 
       if elt.nodeName == 'source':
-         # TODO: implement CxxPreprocessedTarget, then enable the following lines.
-         pass
+         # Check if we already found a <source> child element (dependency).
+         for tgt in self._m_setDeps or []:
+            if isinstance(tgt, ProcessedSourceTarget):
+               raise Exception(
+                  ('a tool output comparison like “{}” unit test can only have a single <source> ' +
+                     'element').format(self.name)
+               )
          # Pick the correct target class based on the file name extension.
-#        sFilePath = elt.getAttribute('path')
-#        if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
-#           clsObjTarget = CxxPreprocessedTarget
-#        else:
-#           raise Exception('unsupported source file type')
+         sFilePath = elt.getAttribute('path')
+         if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
+            clsObjTarget = CxxPreprocessedTarget
+         else:
+            raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
-#        tgtObj = clsObjTarget(mk, None, sFilePath)
+         tgtObj = clsObjTarget(mk, None, sFilePath)
          # Add the target as a dependency to this target.
-#        self.add_dependency(tgtObj)
+         self.add_dependency(tgtObj)
          return True
       if elt.nodeName == 'expected-output':
          self._m_sExpectedOutputFilePath = elt.getAttribute('path')
@@ -592,7 +597,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          tplArgs = (self._m_sScriptFilePath, self.file_path)
       else:
          tplArgs = (self.file_path, )
-      return make.ScheduledJob(mk, tplBlockingJobs, tplArgs, ('TEST', self.name), tplDeps)
+      return make.Job(mk, tplBlockingJobs, tplArgs, ('TEST', self.name), tplDeps)
 
 
    def _generate_file_path(self, mk):

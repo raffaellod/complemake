@@ -38,20 +38,20 @@ import make.tool as tool
 
 
 ####################################################################################################
-# ScheduledJob
+# Job
 
-class ScheduledJob(object):
+class Job(object):
    """Schedules a job in the Make instance’s queue, keeping track of the jobs it must wait to
    complete.
    """
 
-   # See ScheduledJob.command.
+   # See Job.command.
    _m_iterArgs = None
    # Jobs that this one is blocking.
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
    _m_cBlocks = 0
-   # See ScheduledJob.quiet_command.
+   # See Job.quiet_command.
    _m_iterQuietCmd = None
    # Paths to the input and output files for which we’ll need to update metadata after this job
    # completes.
@@ -63,7 +63,7 @@ class ScheduledJob(object):
 
       Make make
          Make instance.
-      iterable(ScheduledJob*) iterBlockingJobs
+      iterable(Job*) iterBlockingJobs
          Jobs that block this one.
       iterable(str+) iterArgs
          Command-line arguments to execute this job.
@@ -344,15 +344,15 @@ class Make(object):
    _m_dictNamedTargets = None
    # See Make.output_dir.
    _m_sOutputDir = ''
-   # Running jobs (Popen -> ScheduledJob).
+   # Running jobs (Popen -> Job).
    _m_dictRunningJobs = {}
    # Maximum count of running jobs, i.e. degree of parallelism.
    _m_cRunningJobsMax = 8
    # Scheduled jobs.
    _m_setScheduledJobs = None
-   # “Last” scheduled jobs (Target -> ScheduledJob that completes it), i.e. jobs that are the last
-   # in a chain of jobs scheduled to build a single target. The values are a subset of, or the same
-   # as, Make._m_setScheduledJobs.
+   # “Last” scheduled jobs (Target -> Job that completes it), i.e. jobs that are the last in a chain
+   # of jobs scheduled to build a single target. The values are a subset of, or the same as,
+   # Make._m_setScheduledJobs.
    _m_dictTargetLastScheduledJobs = None
    # All targets specified by the parsed makefile (file path -> Target), including implicit and
    # intermediate targets not explicitly declared with a <target> element.
@@ -793,9 +793,9 @@ class Make(object):
 
 
    def _schedule_job(self, sj):
-      """Used by ScheduledJob.__init__() to add itself to the set of scheduled jobs.
+      """Used by Job.__init__() to add itself to the set of scheduled jobs.
 
-      ScheduledJob sj
+      Job sj
          Job to schedule.
       """
 
@@ -806,16 +806,16 @@ class Make(object):
       """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
 
       Recursively visits the dependency tree for the target in a leaves-first order, collecting
-      (possibly chains of) ScheduledJob instances returned by Target.build() for all the
-      dependencies, and making these block the ScheduledJob instance(s) for the specified target.
+      (possibly chains of) Job instances returned by Target.build() for all the dependencies, and
+      making these block the Job instance(s) for the specified target.
 
       Target tgt
          Target instance for which jobs should be scheduled by calling its build() method.
-      ScheduledJob return
+      Job return
          Last job scheduled by tgt.build().
       """
 
-      # Check if we already have a (last) ScheduledJob for this target.
+      # Check if we already have a (last) Job for this target.
       sj = self._m_dictTargetLastScheduledJobs.get(tgt)
       if sj is None:
          # Visit leaves.
@@ -847,7 +847,7 @@ class Make(object):
       """Recursively removes the jobs blocked by the specified job from the set of scheduled
       jobs.
 
-      ScheduledJob sj
+      Job sj
          Job to be unscheduled.
       """
 
