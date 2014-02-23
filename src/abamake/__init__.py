@@ -78,10 +78,10 @@ class Job(object):
       self._m_iterMetadataToUpdate = iterMetadataToUpdate
       if iterBlockingJobs is not None:
          # Assign this job as “blocked” by the jobs it depends on, and store their count.
-         for sjDep in iterBlockingJobs:
-            if sjDep._m_setBlockedJobs is None:
-               sjDep._m_setBlockedJobs = set()
-            sjDep._m_setBlockedJobs.add(self)
+         for jobDep in iterBlockingJobs:
+            if jobDep._m_setBlockedJobs is None:
+               jobDep._m_setBlockedJobs = set()
+            jobDep._m_setBlockedJobs.add(self)
          self._m_cBlocks = len(iterBlockingJobs)
       # Schedule this job.
       make._schedule_job(self)
@@ -113,8 +113,8 @@ class Job(object):
       """Release any jobs this one was blocking."""
 
       if self._m_setBlockedJobs:
-         for sj in self._m_setBlockedJobs:
-            sj._m_cBlocks -= 1
+         for job in self._m_setBlockedJobs:
+            job._m_cBlocks -= 1
 
 
 
@@ -419,21 +419,21 @@ class Make(object):
                   iRet = proc.poll()
                if iRet is not None:
                   # Remove the job from the running jobs.
-                  sj = self._m_dictRunningJobs.pop(proc)
+                  job = self._m_dictRunningJobs.pop(proc)
                   cCompletedJobs += 1
                   if iRet == 0 or self.ignore_errors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
-                     sj.release_blocked()
+                     job.release_blocked()
                      # If the job was successfully executed, update any files’ metadata.
-                     if iRet == 0 and not self.dry_run and sj._m_iterMetadataToUpdate:
-                        self.update_file_metadata(sj._m_iterMetadataToUpdate)
+                     if iRet == 0 and not self.dry_run and job._m_iterMetadataToUpdate:
+                        self.update_file_metadata(job._m_iterMetadataToUpdate)
                   else:
                      if self.keep_going:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
-                        if sj._m_setBlockedJobs:
-                           self._unschedule_jobs_blocked_by(sj)
+                        if job._m_setBlockedJobs:
+                           self._unschedule_jobs_blocked_by(job)
                      cFailedJobs += 1
                   # Since we modified self._m_setScheduledJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.
@@ -760,13 +760,13 @@ class Make(object):
             break
 
          # Find a job that is ready to be executed.
-         for sj in self._m_setScheduledJobs:
-            if not sj.blocked:
-               iterArgs = sj.command
+         for job in self._m_setScheduledJobs:
+            if not job.blocked:
+               iterArgs = job.command
                if self.verbosity >= Make.VERBOSITY_LOW:
                   sys.stdout.write(' '.join(iterArgs) + '\n')
                else:
-                  iterQuietCmd = sj.quiet_command
+                  iterQuietCmd = job.quiet_command
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                if self.dry_run:
                   # Create a placeholder instead of a real Popen instance.
@@ -774,8 +774,8 @@ class Make(object):
                else:
                   proc = subprocess.Popen(iterArgs)
                # Move the job from scheduled to running jobs.
-               self._m_dictRunningJobs[proc] = sj
-               self._m_setScheduledJobs.remove(sj)
+               self._m_dictRunningJobs[proc] = job
+               self._m_setScheduledJobs.remove(job)
                # Since we modified self._m_setScheduledJobs, we have to stop iterating over it; the
                # outer while loop will get back here, eventually.
                break
@@ -792,14 +792,14 @@ class Make(object):
       return cFailedJobsTotal
 
 
-   def _schedule_job(self, sj):
+   def _schedule_job(self, job):
       """Used by Job.__init__() to add itself to the set of scheduled jobs.
 
-      Job sj
+      Job job
          Job to schedule.
       """
 
-      self._m_setScheduledJobs.add(sj)
+      self._m_setScheduledJobs.add(job)
 
 
    def schedule_target_jobs(self, tgt):
@@ -816,48 +816,48 @@ class Make(object):
       """
 
       # Check if we already have a (last) Job for this target.
-      sj = self._m_dictTargetLastScheduledJobs.get(tgt)
-      if sj is None:
+      job = self._m_dictTargetLastScheduledJobs.get(tgt)
+      if job is None:
          # Visit leaves.
          listBlockingJobs = None
          for tgtDep in tgt.dependencies or []:
             # Recursively schedule jobs for this dependency, returning and storing the last one.
-            sjDep = self.schedule_target_jobs(tgtDep)
-            if sjDep is not None:
+            jobDep = self.schedule_target_jobs(tgtDep)
+            if jobDep is not None:
                # Keep track of the dependencies’ jobs.
                if listBlockingJobs is None:
                   listBlockingJobs = []
-               listBlockingJobs.append(sjDep)
+               listBlockingJobs.append(jobDep)
 
          # Visit the node: give the target a chance to schedule jobs, letting it know which of its
          # dependencies scheduled jobs to be rebuilt, if any.
-         sj = tgt.build(self, listBlockingJobs)
+         job = tgt.build(self, listBlockingJobs)
          # Store the job even if None.
-         self._m_dictTargetLastScheduledJobs[tgt] = sj
+         self._m_dictTargetLastScheduledJobs[tgt] = job
 
-      if sj is None:
+      if job is None:
          # If Target.build() did not return a job, there’s nothing to do for this target. This must
          # also mean that no dependencies scheduled any jobs.
          # TODO: how about phonies or “virtual targets”?
          assert(not listBlockingJobs)
-      return sj
+      return job
 
 
-   def _unschedule_jobs_blocked_by(self, sj):
+   def _unschedule_jobs_blocked_by(self, job):
       """Recursively removes the jobs blocked by the specified job from the set of scheduled
       jobs.
 
-      Job sj
+      Job job
          Job to be unscheduled.
       """
 
-      for sjBlocked in sj._m_setBlockedJobs:
+      for jobBlocked in job._m_setBlockedJobs:
          # Use set.discard() instead of set.remove() since it may have already been removed due to a
          # previous unrelated call to this method, e.g. another job failed before the one that
          # caused this call.
-         self._m_setScheduledJobs.discard(sjBlocked)
-         if sjBlocked._m_setBlockedJobs:
-            self._unschedule_jobs_blocked_by(sjBlocked)
+         self._m_setScheduledJobs.discard(jobBlocked)
+         if jobBlocked._m_setBlockedJobs:
+            self._unschedule_jobs_blocked_by(jobBlocked)
 
 
    def update_file_metadata(self, iterFilePaths):

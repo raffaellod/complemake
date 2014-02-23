@@ -579,14 +579,14 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
       execution.
       """
 
-      sjBuild = super().build(mk, iterBlockingJobs)
+      jobBuild = super().build(mk, iterBlockingJobs)
       # If to build the unit test executable we scheduled any jobs, make sure that the metadata for
       # the jobs’ output is updated and that the unit test execution depends on the build job(s).
-      if sjBuild:
-         tplBlockingJobs = (sjBuild, )
+      if jobBuild:
+         tplBlockingJobs = (jobBuild, )
          tplDeps = (self.file_path, )
       else:
-         # No need to block the unit test job with iterBlockingJobs: if sjBuild is None,
+         # No need to block the unit test job with iterBlockingJobs: if jobBuild is None,
          # iterBlockingJobs must be None as well, or else we would’ve scheduled jobs in
          # Target.build().
          assert(not iterBlockingJobs)
