@@ -358,10 +358,10 @@ class Make(object):
 
    Example usage:
 
-      make = Make()
-      make.parse('project.abcmk')
-      make.schedule_target_jobs(make.get_target_by_name('projectbin'))
-      make.run_scheduled_jobs()
+      mk = make.Make()
+      mk.parse('project.abcmk')
+      mk.schedule_target_jobs(mk.get_target_by_name('projectbin'))
+      mk.run_scheduled_jobs()
    """
 
    # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
