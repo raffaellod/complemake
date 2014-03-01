@@ -264,7 +264,7 @@ class FileMetadata(object):
 
 
    def __setstate__(self, dictState):
-      for sName, sValue in dictState:
+      for sName, sValue in dictState.items():
          if sName == 'mtime':
             self._m_dtMTime = datetime.strptime(sValue, '%Y-%m-%d %H:%M:%S.%f')
 
@@ -332,7 +332,7 @@ class MetadataStore(object):
                # FileMetadataPair instance.
                fmdp = FileMetadataPair()
                fmdp.stored = FileMetadata.__new__(FileMetadata)
-               fmdp.stored.__setstate__(eltFile.attributes.items())
+               fmdp.stored.__setstate__(eltFile.attributes)
                self._m_dictMetadataPairs[eltFile.getAttribute('path')] = fmdp
       except FileNotFoundError:
          # If we can’t load the persistent metadata store, start it over.
