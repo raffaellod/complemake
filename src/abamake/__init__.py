@@ -38,6 +38,68 @@ import make.tool as tool
 
 
 ####################################################################################################
+# RunningJob
+
+class RunningJob(object):
+   """Runtime version of Job. Allows to synchronize with it and to check its return status."""
+
+   __slots__ = ()
+
+
+   def poll(self):
+      """Returns the execution status of the job.
+
+      int return
+         Exit code of the job, or None if the job is still running.
+      """
+
+      raise NotImplementedError('RunningJob.poll() must be overridden')
+
+
+
+####################################################################################################
+# RunningNoopJob
+
+class RunningNoopJob(RunningJob):
+   """No-op running job. Used to implement Make’s “dry run” mode."""
+
+   def poll(self):
+      """See RunningJob.poll()."""
+
+      return 0
+
+
+
+####################################################################################################
+# RunningPopenJob
+
+class RunningPopenJob(RunningJob):
+   """Running job consisting in an external process (Popen)."""
+
+   __slots__ = (
+      # Controlled Popen instance.
+      '_m_popen',
+   )
+
+
+   def __init__(self, popen):
+      """Constructor.
+
+      Popen popen
+         External process to take control of.
+      """
+
+      self._m_popen = popen
+
+
+   def poll(self):
+      """See RunningJob.poll()."""
+
+      return self._m_popen.poll()
+
+
+
+####################################################################################################
 # Job
 
 class Job(object):
@@ -119,10 +181,11 @@ class Job(object):
 
 
    def start(self):
-      """Starts the job, returning TODO.
+      """Starts the job, returning a RunningJob instance that can be used to check on the job’s
+      execution status.
 
-      TODO return
-         Handle to check the job status and eventual exit code.
+      RunningJob return
+         Object to check the job status and eventual exit code.
       """
 
       raise NotImplementedError('Job.start() must be overridden')
@@ -167,7 +230,7 @@ class ExternalCommandJob(Job):
    def start(self):
       """See Job.start()."""
 
-      return subprocess.Popen(self._m_iterArgs)
+      return RunningPopenJob(subprocess.Popen(self._m_iterArgs))
 
 
 
@@ -462,11 +525,7 @@ class Make(object):
          while True:
             # Poll each running job.
             for proc in self._m_dictRunningJobs.keys():
-               if self.dry_run:
-                  # A no-op is always successful.
-                  iRet = 0
-               else:
-                  iRet = proc.poll()
+               iRet = proc.poll()
                if iRet is not None:
                   # Remove the job from the running jobs.
                   job = self._m_dictRunningJobs.pop(proc)
@@ -819,7 +878,7 @@ class Make(object):
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                if self.dry_run:
                   # Create a placeholder instead of a real Popen instance.
-                  proc = object()
+                  proc = RunningNoopJob()
                else:
                   proc = job.start()
                # Move the job from scheduled to running jobs.
