@@ -49,7 +49,7 @@ class Job(object):
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
    _m_cBlocks = 0
-   # See Job.quiet_command.
+   # Command summary for Make to print out in quiet mode..
    _m_iterQuietCmd = None
    # Paths to the input and output files for which we’ll need to update metadata after this job
    # completes.
@@ -90,6 +90,16 @@ class Job(object):
    """)
 
 
+   def get_quiet_command(self):
+      """Returns a command summary for Make to print out in quiet mode.
+
+      iterable(str, str+) return
+         Job’s command summary.
+      """
+
+      return self._m_iterQuietCmd
+
+
    def get_verbose_command(self):
       """Returns a command-line for Make to print out in verbose mode.
 
@@ -98,14 +108,6 @@ class Job(object):
       """
 
       raise NotImplementedError('Job.get_verbose_command() must be overridden')
-
-
-   def _get_quiet_command(self):
-      return self._m_iterQuietCmd
-
-   quiet_command = property(_get_quiet_command, doc = """
-      Command summary for Make to print out in quiet mode.
-   """)
 
 
    def release_blocked(self):
@@ -813,7 +815,7 @@ class Make(object):
                if self.verbosity >= Make.VERBOSITY_LOW:
                   sys.stdout.write(job.get_verbose_command() + '\n')
                else:
-                  iterQuietCmd = job.quiet_command
+                  iterQuietCmd = job.get_quiet_command()
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                if self.dry_run:
                   # Create a placeholder instead of a real Popen instance.
