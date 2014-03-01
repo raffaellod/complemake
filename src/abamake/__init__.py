@@ -24,6 +24,7 @@ Target and its derived classes (make.target.*) and Tool and its derived classes 
 This file contains Make and other core classes.
 """
 
+from datetime import datetime
 import os
 import re
 import subprocess
@@ -241,8 +242,8 @@ class FileMetadata(object):
    """Metadata for a single file."""
 
    __slots__ = (
-      # Time of the file’s last modification.
-      '_m_iMTime',
+      # Date/time of the file’s last modification.
+      '_m_dtMTime',
    )
 
 
@@ -253,23 +254,23 @@ class FileMetadata(object):
          Path to the file of which to collect metadata.
       """
 
-      self._m_iMTime = os.path.getmtime(sFilePath)
+      self._m_dtMTime = datetime.fromtimestamp(os.path.getmtime(sFilePath))
 
 
    def __getstate__(self):
       return {
-         'mtime': self._m_iMTime,
+         'mtime': self._m_dtMTime.isoformat(' '),
       }
 
 
    def __setstate__(self, dictState):
       for sName, sValue in dictState:
          if sName == 'mtime':
-            self._m_iMTime = float(sValue)
+            self._m_dtMTime = datetime.strptime(sValue, '%Y-%m-%d %H:%M:%S.%f')
 
 
    def __eq__(self, other):
-      return self._m_iMTime - other._m_iMTime < 0.5
+      return self._m_dtMTime == other._m_dtMTime
 
 
    def __ne__(self, other):
