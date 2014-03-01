@@ -175,10 +175,14 @@ class Tool(object):
       if self._m_sOutputFilePath:
          os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
 
+      # Make sure to update the metadata for the output file once the job completes.
+      iterMetadataToUpdate = [self._m_sOutputFilePath] + (iterMetadataToUpdate or [])
+
       # Build the arguments list.
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
       self._run_add_cmd_inputs(listArgs)
+
       return make.ExternalCommandJob(
          mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, listArgs
       )
