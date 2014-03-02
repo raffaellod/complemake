@@ -543,11 +543,11 @@ class Make(object):
          # condition is a break statement.
          while True:
             # Poll each running job.
-            for proc in self._m_dictRunningJobs.keys():
-               iRet = proc.poll()
+            for rj in self._m_dictRunningJobs.keys():
+               iRet = rj.poll()
                if iRet is not None:
                   # Remove the job from the running jobs.
-                  job = self._m_dictRunningJobs.pop(proc)
+                  job = self._m_dictRunningJobs.pop(rj)
                   cCompletedJobs += 1
                   if iRet == 0 or self.ignore_errors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
@@ -897,11 +897,11 @@ class Make(object):
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                if self.dry_run:
                   # Create an always-successful job instead of starting the real job.
-                  proc = RunningNoopJob(0)
+                  rj = RunningNoopJob(0)
                else:
-                  proc = job.start()
+                  rj = job.start()
                # Move the job from scheduled to running jobs.
-               self._m_dictRunningJobs[proc] = job
+               self._m_dictRunningJobs[rj] = job
                self._m_setScheduledJobs.remove(job)
                # Since we modified self._m_setScheduledJobs, we have to stop iterating over it; the
                # outer while loop will get back here, eventually.
