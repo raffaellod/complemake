@@ -62,12 +62,30 @@ class RunningJob(object):
 # RunningNoopJob
 
 class RunningNoopJob(RunningJob):
-   """No-op running job. Used to implement Make’s “dry run” mode."""
+   """No-op running job. Used to implement Make’s “dry run” mode as well as jobs that are carried
+   out synchronously.
+   """
+
+   __slots__ = (
+      # Value that poll() will return.
+      '_m_iRet',
+   )
+
+
+   def __init__(self, iRet):
+      """Constructor.
+
+      int iRet
+         Value that poll() will return.
+      """
+
+      self._m_iRet = iRet
+
 
    def poll(self):
       """See RunningJob.poll()."""
 
-      return 0
+      return self._m_iRet
 
 
 
@@ -878,8 +896,8 @@ class Make(object):
                   iterQuietCmd = job.get_quiet_command()
                   sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
                if self.dry_run:
-                  # Create a placeholder instead of a real Popen instance.
-                  proc = RunningNoopJob()
+                  # Create an always-successful job instead of starting the real job.
+                  proc = RunningNoopJob(0)
                else:
                   proc = job.start()
                # Move the job from scheduled to running jobs.
