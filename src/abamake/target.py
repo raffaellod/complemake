@@ -120,6 +120,49 @@ class Target(object):
       return None
 
 
+   def _is_build_needed(self, mk, iterBlockingJobs, iterFilesToCheck):
+      """Checks if a build of this target should be scheduled.
+
+      Make mk
+         Make instance.
+      iterable(Job*) iterBlockingJobs
+         Jobs that should block the first one scheduled to build this target.
+      iterable(str*) iterFilesToCheck
+         List of file paths to be checked for changes.
+      tuple(bool, iterable(str*)) return
+         Tuple containing the response (True if a build is needed, or False otherwise) and a list of
+         changed files (or None if no file changes are detected).
+      """
+
+      # Get a list of changed files.
+      if iterFilesToCheck:
+         iterChangedFiles = mk.file_metadata_changed(iterFilesToCheck)
+      else:
+         iterChangedFiles = None
+
+      # Choose a name to use for self, for logging purposes.
+      sSelf = self._m_sFilePath or self._m_sName
+
+      # See if this build is really necessary.
+      if iterBlockingJobs:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write(sSelf + ': rebuilding due to dependencies being rebuilt\n')
+      elif iterChangedFiles:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write(sSelf + ': rebuilding due to detected changes\n')
+      elif mk.force_build:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write(sSelf + ': up-to-date, but rebuild forced\n')
+      else:
+         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write(sSelf + ': up-to-date\n')
+         return False, None
+
+      # Build needed.
+      return True, iterChangedFiles
+
+
    def _get_name(self):
       return self._m_sName
 
@@ -174,8 +217,10 @@ class ProcessedSourceTarget(Target):
    def build(self, mk, iterBlockingJobs):
       """See Target.build()."""
 
-      # Check if a build is needed.
-      bBuildNeeded, iterChangedFiles = self._is_build_needed(mk, iterBlockingJobs)
+      # TODO: check for additional changed external dependencies.
+      bBuildNeeded, iterChangedFiles = self._is_build_needed(
+         mk, iterBlockingJobs, (self.file_path, self.source_file_path)
+      )
       if not bBuildNeeded:
          return None
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
@@ -192,43 +237,6 @@ class ProcessedSourceTarget(Target):
       Kind of output that ProcessedSourceTarget.build() will aim for when generating the object
       file, e.g. by passing -fPIC for a C++ source file when compiling it for a shared object.
    """)
-
-
-   def _is_build_needed(self, mk, iterBlockingJobs):
-      """Checks if a build of this target should be scheduled.
-
-      Make mk
-         Make instance.
-      iterable(Job*) iterBlockingJobs
-         Jobs that should block the first one scheduled to build this target.
-      tuple(bool, iterable(str*)) return
-         Tuple containing the response (True if a build is needed, or False otherwise) and a list of
-         changed files (or None if no file changes are detected).
-      """
-
-      # Get a list of changed files.
-      # TODO: check for additional changed external dependencies.
-      iterChangedFiles = mk.file_metadata_changed((self.file_path, self.source_file_path))
-
-      # See if this build is really necessary.
-      if iterBlockingJobs:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(
-               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
-            )
-      elif iterChangedFiles:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
-      elif mk.force_build:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
-      else:
-         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
-         return False, None
-
-      return True, iterChangedFiles
 
 
    def _generate_file_path(self, mk):
@@ -369,29 +377,9 @@ class ExecutableTarget(Target):
             else:
                raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
-      # Get a list of changed files.
-      if listFilesToCheck:
-         iterChangedFiles = mk.file_metadata_changed(listFilesToCheck)
-      else:
-         iterChangedFiles = None
-      del listFilesToCheck
-
-      # See if this build is really necessary.
-      if iterBlockingJobs:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(
-               '{}: rebuilding due to dependencies being rebuilt\n'.format(self.file_path)
-            )
-      elif iterChangedFiles:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
-      elif mk.force_build:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
-      else:
-         # No dependencies being rebuilt, no inputs or inputs up-to-date: no need to rebuild.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: up-to-date\n'.format(self.file_path))
+      # TODO: check for additional changed external dependencies.
+      bBuildNeeded, iterChangedFiles = self._is_build_needed(mk, iterBlockingJobs, listFilesToCheck)
+      if not bBuildNeeded:
          return None
 
       return lnk.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
@@ -502,6 +490,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
    the expected output.
    """
 
+   # Path to the file containing the expected command output.
    _m_sExpectedOutputFilePath = None
 
 
@@ -509,22 +498,10 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
-      # Get a list of changed files.
-      iterChangedFiles = mk.file_metadata_changed((self.file_path, self._m_sExpectedOutputFilePath))
-      if iterBlockingJobs:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: re-running due to dependencies being rebuilt\n'.format(self.name))
-      elif iterChangedFiles:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: re-running due to detected changes\n'.format(self.name))
-      elif mk.force_build:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: inputs unchanged, but re-run forced\n'.format(self.name))
-      else:
-         # No dependencies being rebuilt, expected output file up-to-date: no need to re-run the
-         # comparison.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: inputs unchanged\n'.format(self.name))
+      bBuildNeeded, iterChangedFiles = self._is_build_needed(
+         mk, iterBlockingJobs, (self._m_sExpectedOutputFilePath, )
+      )
+      if not bBuildNeeded:
          return None
 
       # TODO: supply the path of the tool’s output.
