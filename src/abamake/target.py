@@ -384,7 +384,7 @@ class ExecutableTarget(Target):
             )
       elif iterChangedFiles:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write('{}: rebuilding due to detected changeds\n'.format(self.file_path))
+            sys.stdout.write('{}: rebuilding due to detected changes\n'.format(self.file_path))
       elif mk.force_build:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write('{}: up-to-date, but rebuild forced\n'.format(self.file_path))
@@ -509,28 +509,29 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
-      tplDeps = None
+      # Get a list of changed files.
+      iterChangedFiles = mk.file_metadata_changed((self.file_path, self._m_sExpectedOutputFilePath))
       if iterBlockingJobs:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write('{}: re-running due to dependencies being rebuilt\n'.format(self.name))
+      elif iterChangedFiles:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: re-running due to detected changes\n'.format(self.name))
+      elif mk.force_build:
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: inputs unchanged, but re-run forced\n'.format(self.name))
       else:
-         tplDeps = (self._m_sExpectedOutputFilePath, )
-         if mk.file_metadata_changed(tplDeps):
-            if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-               sys.stdout.write('{}: rebuilding due to changed inputs\n'.format(self.name))
-         else:
-            # No dependencies being rebuilt, source up-to-date: no need to rebuild, unless --force.
-            if mk.force_build:
-               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                  sys.stdout.write('{}: inputs unchanged, but rebuild forced\n'.format(self.name))
-            else:
-               if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                  sys.stdout.write('{}: inputs unchanged\n'.format(self.name))
-               return None
+         # No dependencies being rebuilt, expected output file up-to-date: no need to re-run the
+         # comparison.
+         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+            sys.stdout.write('{}: inputs unchanged\n'.format(self.name))
+         return None
 
       # TODO: supply the path of the tool’s output.
       listArgs = ['cmp', '-s', '/tmp/test', self._m_sExpectedOutputFilePath]
-      return make.ExternalCommandJob(mk, iterBlockingJobs, ('CMP', self.name), tplDeps, listArgs)
+      return make.ExternalCommandJob(
+         mk, iterBlockingJobs, ('CMP', self.name), iterChangedFiles, listArgs
+      )
 
 
    def parse_makefile_child(self, mk, elt):
