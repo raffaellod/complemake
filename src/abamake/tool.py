@@ -37,6 +37,8 @@ import make.target
 class Tool(object):
    """Abstract tool."""
 
+   # Abstract tool flags (*FLAG_*).
+   _m_setAbstractFlags = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
    # Output file path.
@@ -48,6 +50,21 @@ class Tool(object):
    _sm_dictToolFilePaths = {}
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
+
+
+   def add_flags(self, *args):
+      """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
+      will take care of translating each flag into a command-line argument understood by a specific
+      tool implementation (e.g. GCC).
+
+      iterable(int*) *args
+         Flags to turn on.
+      """
+
+      if self._m_setAbstractFlags is None:
+         self._m_setAbstractFlags = set()
+      for iFlag in args:
+         self._m_setAbstractFlags.add(iFlag)
 
 
    def add_input(self, sInputFilePath):
@@ -128,13 +145,22 @@ class Tool(object):
    def _run_add_cmd_flags(self, listArgs):
       """Builds the flags portion of the tool’s command line.
 
-      The default implementation does nothing – no flags can be applied to every tool.
+      The default implementation applies the flags added with Tool.add_flags() after translating
+      them using Tool._translate_abstract_flag(), which in its default implementation returns None.
 
       list(str*) listArgs
          Arguments list.
       """
 
-      pass
+      # Add any additional abstract flags, translating them to arguments understood by GCC.
+      if self._m_setAbstractFlags:
+         for iFlag in self._m_setAbstractFlags:
+            sFlag = self._translate_abstract_flag(iFlag)
+            if sFlag is None:
+               raise NotImplementedError('{} does not implement abstract flag {}'.format(
+                  type(self), iFlag
+               ))
+            listArgs.append(sFlag)
 
 
    def _run_add_cmd_inputs(self, listArgs):
@@ -198,6 +224,19 @@ class Tool(object):
       self._m_sOutputFilePath = sOutputFilePath
 
 
+   def _translate_abstract_flag(self, iFlag):
+      """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
+      implementation.
+
+      int iFlag
+         Abstract flag.
+      str return
+         Corresponding command-line argument.
+      """
+
+      return None
+
+
 
 ####################################################################################################
 # CxxCompiler
@@ -207,8 +246,6 @@ class CxxCompiler(Tool):
 
    # See ObjectTarget.final_output_target.
    _m_clsFinalOutputTarget = None
-   # Abstract compiler flags (*FLAG_*).
-   _m_setFlags = None
    # Additional include directories.
    _m_listIncludeDirs = None
    # See Tool._smc_sQuietName.
@@ -216,21 +253,6 @@ class CxxCompiler(Tool):
 
    # Forces the compiler to only run the source file through the preprocessor.
    CFLAG_PREPROCESS_ONLY = 1
-
-
-   def add_flags(self, *args):
-      """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
-      will take care of translating each flag into a command-line argument understood by a specific
-      tool implementation (e.g. GCC).
-
-      iterable(int*) *args
-         Flags to turn on.
-      """
-
-      if self._m_setFlags is None:
-         self._m_setFlags = set()
-      for iFlag in args:
-         self._m_setFlags.add(iFlag)
 
 
    def add_include_dir(self, sIncludeDirPath):
@@ -299,12 +321,11 @@ class GxxCompiler(CxxCompiler):
    def _run_add_cmd_flags(self, listArgs):
       """See CxxCompiler._run_add_cmd_flags()."""
 
-      super()._run_add_cmd_flags(listArgs)
-
       # Add flags.
       listArgs.extend([
          '-c', '-std=c++0x', '-fnon-call-exceptions', '-fvisibility=hidden'
       ])
+      super()._run_add_cmd_flags(listArgs)
       listArgs.extend([
          '-ggdb', '-O0', '-DDEBUG=1'
       ])
@@ -316,16 +337,8 @@ class GxxCompiler(CxxCompiler):
       if self._m_clsFinalOutputTarget is make.target.DynLibTarget:
          listArgs.append('-fPIC')
 
-      # Add any additional abstract flags, translating them to arguments understood by GCC.
-      for iFlag in self._m_setFlags or []:
-         sFlag = self._translate_abstract_flag(iFlag)
-         if sFlag is None:
-            raise NotImplementedError('{} does not implement abstract flag {}'.format(
-               type(self), iFlag
-            ))
-         listArgs.append(sFlag)
-
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
+
       # Add the include directories.
       for sDirPath in self._m_listIncludeDirs or []:
          listArgs.append('-I' + sDirPath)
@@ -335,14 +348,7 @@ class GxxCompiler(CxxCompiler):
 
 
    def _translate_abstract_flag(self, iFlag):
-      """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
-      implementation.
-
-      int iFlag
-         Abstract flag.
-      str return
-         Corresponding command-line argument.
-      """
+      """See CxxCompiler._translate_abstract_flag()."""
 
       return self._smc_dictAbstactToImplFlags.get(iFlag)
 
