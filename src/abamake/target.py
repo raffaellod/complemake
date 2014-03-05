@@ -498,14 +498,19 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
+      # Find the dependency target that generates the output we want to compare.
+      for tgt in self._m_setDeps or []:
+         if isinstance(tgt, ProcessedSourceTarget):
+            tgtToCompare = tgt
+            break
+
       bBuildNeeded, iterChangedFiles = self._is_build_needed(
-         mk, iterBlockingJobs, (self._m_sExpectedOutputFilePath, )
+         mk, iterBlockingJobs, (self._m_sExpectedOutputFilePath, tgtToCompare.file_path)
       )
       if not bBuildNeeded:
          return None
 
-      # TODO: supply the path of the tool’s output.
-      listArgs = ['cmp', '-s', '/tmp/test', self._m_sExpectedOutputFilePath]
+      listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
       return make.ExternalCommandJob(
          mk, iterBlockingJobs, ('CMP', self.name), iterChangedFiles, listArgs
       )
