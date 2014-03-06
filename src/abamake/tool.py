@@ -252,7 +252,7 @@ class CxxCompiler(Tool):
    _smc_sQuietName = 'C++'
 
    # Forces the compiler to only run the source file through the preprocessor.
-   CFLAG_PREPROCESS_ONLY = 1
+   CFLAG_PREPROCESS_ONLY = 2000
 
 
    def add_include_dir(self, sIncludeDirPath):
@@ -369,7 +369,7 @@ class Linker(Tool):
 
 
    # Tells the linker to generate a dynamic library instead of a stand-alone executable.
-   LDFLAG_DYNLIB = 1
+   LDFLAG_DYNLIB = 5000
 
 
    def add_input_lib(self, sInputLibFilePath):
