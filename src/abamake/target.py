@@ -120,6 +120,19 @@ class Target(object):
       return None
 
 
+   def _get_tool(self, mk):
+      """Instantiates and configures the tool to build the target. Not used by Target, but offers a
+      model for derived classes to follow.
+
+      Make mk
+         Make instance.
+      Tool return
+         Ready-to-use tool.
+      """
+
+      raise NotImplementedError('Target._get_tool() must be overridden')
+
+
    def _is_build_needed(self, mk, iterBlockingJobs, iterFilesToCheck):
       """Checks if a build of this target should be scheduled.
 
@@ -245,22 +258,6 @@ class ProcessedSourceTarget(Target):
       return os.path.join(mk.output_dir, 'int', self._m_sSourceFilePath)
 
 
-   def _get_tool(self, mk):
-      """Instantiates and prepares the tool to build the target.
-
-      Make mk
-         Make instance.
-      Tool return
-         Ready-to-use tool.
-      """
-
-      cxx = mk.cxxcompiler()
-      cxx.set_output(self.file_path, self.final_output_target)
-      cxx.add_input(self.source_file_path)
-      # TODO: add file-specific flags.
-      return cxx
-
-
    def _get_source_file_path(self):
       return self._m_sSourceFilePath
 
@@ -351,8 +348,7 @@ class ExecutableTarget(Target):
    def build(self, mk, iterBlockingJobs):
       """See Target.build()."""
 
-      lnk = mk.linker()
-      lnk.set_output(self.file_path, type(self))
+      lnk = self._get_tool(mk)
 
       # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
       # over that list only once, combine building the list of files to be checked for changes with
@@ -390,6 +386,15 @@ class ExecutableTarget(Target):
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
       return os.path.join(mk.output_dir, 'bin', '' + self.name + '')
+
+
+   def _get_tool(self, mk):
+      """See Target._get_tool()."""
+
+      lnk = mk.linker()
+      lnk.set_output(self.file_path, type(self))
+      # TODO: add file-specific flags.
+      return lnk
 
 
    def parse_makefile_child(self, mk, elt):
