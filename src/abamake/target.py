@@ -206,13 +206,13 @@ class ProcessedSourceTarget(Target):
    int/ directory relative to the output base directory.
    """
 
-   # See ProcessedSourceTarget.final_output_target.
-   _m_clsFinalOutputTarget = None
+   # Path to the file that this target’s output will be linked into.
+   _m_sFinalOutputFilePath = None
    # See ProcessedSourceTarget.source_file_path.
    _m_sSourceFilePath = None
 
 
-   def __init__(self, mk, sName, sSourceFilePath):
+   def __init__(self, mk, sName, sSourceFilePath, sFinalOutputFilePath = None):
       """Constructor. See Target.__init__().
 
       Make mk
@@ -221,9 +221,13 @@ class ProcessedSourceTarget(Target):
          See Target.name.
       str sSourceFilePath
          See ProcessedSourceTarget.source_file_path.
+      str sFinalOutputFilePath
+         Path to the file that this target’s output will be linked into. If omitted, no output-
+         driven configuration will be applied to the Tool instance generating this output.
       """
 
       self._m_sSourceFilePath = sSourceFilePath
+      self._m_sFinalOutputFilePath = sFinalOutputFilePath
       super().__init__(mk, sName)
 
 
@@ -238,18 +242,6 @@ class ProcessedSourceTarget(Target):
          return None
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
       return self._get_tool(mk).schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
-
-
-   def _get_final_output_target(self):
-      return self._m_clsFinalOutputTarget
-
-   def _set_final_output_target(self, clsFinalOutputTarget):
-      self._m_clsFinalOutputTarget = clsFinalOutputTarget
-
-   final_output_target = property(_get_final_output_target, _set_final_output_target, doc = """
-      Kind of output that ProcessedSourceTarget.build() will aim for when generating the object
-      file, e.g. by passing -fPIC for a C++ source file when compiling it for a shared object.
-   """)
 
 
    def _generate_file_path(self, mk):
@@ -311,8 +303,14 @@ class CxxObjectTarget(ObjectTarget):
       """See ObjectTarget._get_tool()."""
 
       cxx = mk.cxxcompiler()
-      cxx.set_output(self.file_path, self.final_output_target)
+      cxx.set_output(self.file_path)
       cxx.add_input(self.source_file_path)
+
+      if self._m_sFinalOutputFilePath:
+         # Let the final output configure the compiler.
+         tgtFinalOutput = mk.get_target_by_file_path(self._m_sFinalOutputFilePath)
+         tgtFinalOutput.configure_compiler(cxx)
+
       # TODO: add file-specific flags.
       return cxx
 
@@ -381,6 +379,18 @@ class ExecutableTarget(Target):
       return lnk.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
 
 
+   def configure_compiler(self, tool):
+      """Configures the specified Tool instance to generate code suitable for linking in this
+      Target.
+
+      Tool tool
+         Tool (compiler) to configure.
+      """
+
+      # TODO: e.g. configure Link Time Code Generation to match this Target.
+      pass
+
+
    def _generate_file_path(self, mk):
       """See Target._generate_file_path()."""
 
@@ -408,9 +418,7 @@ class ExecutableTarget(Target):
          else:
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, None, sFilePath)
-         # Add the target as a dependency to this target.
-         tgtObj.final_output_target = type(self)
+         tgtObj = clsObjTarget(mk, None, sFilePath, self.file_path)
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
          return True
@@ -446,6 +454,14 @@ class DynLibTarget(ExecutableTarget):
    """Dynamic library target. The output file will be placed in a lib/ directory relative to the
    output base directory.
    """
+
+   def configure_compiler(self, tool):
+      """See ExecutableTarget.configure_compiler()."""
+
+      if isinstance(tool, make.tool.CxxCompiler):
+         # Make sure we’re generating code suitable for a dynamic library.
+         tool.add_flags(make.tool.CxxCompiler.CFLAG_DYNLIB)
+
 
    def _generate_file_path(self, mk):
       """See ExecutableTarget._generate_file_path()."""
@@ -486,7 +502,6 @@ class DynLibTarget(ExecutableTarget):
 
 class UnitTestTarget(Target):
    """Generic unit test target."""
-
 
    def parse_makefile_child(self, mk, elt):
       """See Target.parse_makefile_child()."""
