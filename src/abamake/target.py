@@ -392,7 +392,7 @@ class ExecutableTarget(Target):
       """See Target._get_tool()."""
 
       lnk = mk.linker()
-      lnk.set_output(self.file_path, type(self))
+      lnk.set_output(self.file_path)
       # TODO: add file-specific flags.
       return lnk
 
@@ -452,6 +452,16 @@ class DynLibTarget(ExecutableTarget):
 
       # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
       return os.path.join(mk.output_dir, 'lib', 'lib' + self.name + '.so')
+
+
+   def _get_tool(self, mk):
+      """See ExecutableTarget._get_tool(). Overridden to tell the linker to generate a dynamic
+      library.
+      """
+
+      lnk = super()._get_tool(mk)
+      lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
+      return lnk
 
 
    def parse_makefile_child(self, mk, elt):
