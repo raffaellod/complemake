@@ -605,7 +605,8 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          # No need to block the unit test job with iterBlockingJobs: if jobBuild is None,
          # iterBlockingJobs must be None as well, or else we would’ve scheduled jobs in
          # Target.build().
-         assert(not iterBlockingJobs)
+         assert not iterBlockingJobs, \
+            'ExecutableTarget.build() returned no jobs, no dependencies should have scheduled jobs'
          tplBlockingJobs = None
          tplDeps = None
 

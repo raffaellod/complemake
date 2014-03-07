@@ -966,7 +966,8 @@ class Make(object):
          # If Target.build() did not return a job, there’s nothing to do for this target. This must
          # also mean that no dependencies scheduled any jobs.
          # TODO: how about phonies or “virtual targets”?
-         assert(not listBlockingJobs)
+         assert not listBlockingJobs, \
+            'Target.build() returned no jobs, no dependencies should have scheduled jobs'
       return job
 
 
