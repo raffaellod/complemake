@@ -217,11 +217,11 @@ class Job(object):
 class ExternalCommandJob(Job):
    """Models a job consisting in the invocation of an external program."""
 
-   # Command to be invoked, as a list of arguments.
-   _m_iterArgs = None
+   # Arguments to be passed to Popen’s constructor.
+   _m_dictPopenArgs = None
 
 
-   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate, iterArgs):
+   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate, dictPopenArgs):
       """Constructor. See Job.__init__().
 
       Make mk
@@ -232,24 +232,24 @@ class ExternalCommandJob(Job):
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       iterable(str*) iterMetadataToUpdate
          Paths to the files for which metadata should be updated when this job completes.
-      iterable(str+) iterArgs
-         Command-line arguments to execute this job.
+      dict(object+) dictPopenArgs
+         Arguments to be passed to Popen’s constructor to execute this job.
       """
 
       super().__init__(mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate)
-      self._m_iterArgs = iterArgs
+      self._m_dictPopenArgs = dictPopenArgs
 
 
    def get_verbose_command(self):
       """See Job.get_verbose_command()."""
 
-      return ' '.join(self._m_iterArgs)
+      return ' '.join(self._m_dictPopenArgs['args'])
 
 
    def start(self):
       """See Job.start()."""
 
-      return RunningPopenJob(subprocess.Popen(self._m_iterArgs))
+      return RunningPopenJob(subprocess.Popen(**self._m_dictPopenArgs))
 
 
 

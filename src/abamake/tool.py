@@ -210,7 +210,9 @@ class Tool(object):
       self._run_add_cmd_inputs(listArgs)
 
       return make.ExternalCommandJob(
-         mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, listArgs
+         mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, {
+            'args': listArgs,
+         }
       )
 
 

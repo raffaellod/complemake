@@ -544,9 +544,9 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          return None
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.ExternalCommandJob(
-         mk, iterBlockingJobs, ('CMP', self.name), iterChangedFiles, listArgs
-      )
+      return make.ExternalCommandJob(mk, iterBlockingJobs, ('CMP', self.name), iterChangedFiles, {
+         'args': listArgs,
+      })
 
 
    def parse_makefile_child(self, mk, elt):
@@ -614,7 +614,9 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          tplArgs = (self._m_sScriptFilePath, self.file_path)
       else:
          tplArgs = (self.file_path, )
-      return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self.name), tplDeps, tplArgs)
+      return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self.name), tplDeps, {
+         'args': tplArgs,
+      })
 
 
    def _generate_file_path(self, mk):
