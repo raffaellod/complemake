@@ -610,12 +610,31 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          tplBlockingJobs = None
          tplDeps = None
 
+      # Build the command line to invoke.
       if self._m_sScriptFilePath:
          tplArgs = (self._m_sScriptFilePath, self.file_path)
       else:
          tplArgs = (self.file_path, )
+
+      # If this target is linked to a library built by this same makefile, make sure we add
+      # output_dir/lib to the library path.
+      assert self._m_listLinkerInputs is not None, \
+         'a UnitTestTarget must have at least one dependency (the Target it tests)'
+      dictEnv = None
+      for oDep in self._m_listLinkerInputs:
+         if isinstance(oDep, DynLibTarget):
+            # TODO: move this env tweaking to a Platform class.
+            dictEnv = os.environ.copy()
+            sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
+            if sLibPath:
+               sLibPath = ':' + sLibPath
+            sLibPath += os.path.join(mk.output_dir, 'lib')
+            dictEnv['LD_LIBRARY_PATH'] = sLibPath
+            break
+
       return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self.name), tplDeps, {
          'args': tplArgs,
+         'env' : dictEnv,
       })
 
 
