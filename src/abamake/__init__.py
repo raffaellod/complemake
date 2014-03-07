@@ -130,11 +130,11 @@ class Job(object):
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
    _m_cBlocks = 0
-   # Command summary for Make to print out in quiet mode..
-   _m_iterQuietCmd = None
    # Paths to the input and output files for which we’ll need to update metadata after this job
    # completes.
    _m_iterMetadataToUpdate = None
+   # Command summary for Make to print out in quiet mode..
+   _m_iterQuietCmd = None
 
 
    def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate):
