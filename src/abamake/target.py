@@ -352,6 +352,7 @@ class ExecutableTarget(Target):
       # over that list only once, combine building the list of files to be checked for changes with
       # collecting linker inputs.
       listFilesToCheck = [self.file_path]
+      bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
          if isinstance(oDep, str):
@@ -367,7 +368,9 @@ class ExecutableTarget(Target):
                lnk.add_input_lib(oDep.name)
                # Since we’re linking to a library built by this makefile, make sure to add the
                # output lib/ directory to the library search path.
-               lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
+               if not bOutputLibPathAdded:
+                  lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
+                  bOutputLibPathAdded = True
             else:
                raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
