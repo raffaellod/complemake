@@ -560,11 +560,14 @@ class ComparisonUnitTestTarget(UnitTestTarget):
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +
                      'element').format(self.name)
                )
-         # Pick the correct target class based on the file name extension.
+         # Pick the correct target class based on the file name extension and the tool to use.
          sFilePath = elt.getAttribute('path')
-         # TODO: check .getAttribute('tool')
+         sTool = elt.getAttribute('tool')
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
-            clsObjTarget = CxxPreprocessedTarget
+            if sTool == 'preproc':
+               clsObjTarget = CxxPreprocessedTarget
+            else:
+               raise Exception('unknown tool “{}” for source file “{}”'.format(sTool, sFilePath))
          else:
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
