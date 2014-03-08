@@ -581,11 +581,7 @@ class Make(object):
 
    def _get_cxxcompiler(self):
       if self._m_clsCxxCompiler is None:
-         # TODO: what’s MSC’s output?
-         self._m_clsCxxCompiler = tool.Tool.detect((
-            (tool.GxxCompiler, ('g++', '--version'), r'^g\+\+ '),
-            (object,           ('cl',  '/?'       ), r' CL '   ),
-         ))
+         self._m_clsCxxCompiler = tool.CxxCompiler.detect()
       return self._m_clsCxxCompiler
 
    cxxcompiler = property(_get_cxxcompiler, doc = """
@@ -721,12 +717,7 @@ class Make(object):
 
    def _get_linker(self):
       if self._m_clsLinker is None:
-         # TODO: what’s MS Link’s output?
-         self._m_clsLinker = tool.Tool.detect((
-            (tool.GnuLinker, ('g++',  '-Wl,--version'), r'^GNU ld '),
-            (tool.GnuLinker, ('ld',   '--version'    ), r'^GNU ld '),
-            (object,         ('link', '/?'           ), r' Link '  ),
-         ))
+         self._m_clsLinker = tool.Linker.detect()
       return self._m_clsLinker
 
    linker = property(_get_linker, doc = """

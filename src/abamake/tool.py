@@ -83,11 +83,8 @@ class Tool(object):
       """Attempts to detect the presence of a tool’s executable from a list of supported ones,
       returning the corresponding class.
 
-      iterable(tuple(class, iterable(str*), str)*) iterSupported
-         Iterable containing a class wrapper for each supported tool of the type of interest, the
-         (arguments of the) command that shall be executed to determine whether a tool is avaiable,
-         and the last item is a string that will be used as a regular expression to determine
-         whether the tool output the expected identification string when invoked.
+      iterable(type*) iterSupported
+         Iterable containing a class wrapper for each supported tool of the type of interest.
       type return
          Class wrapping the first detected tool among these in iterSupported.
       """
@@ -96,7 +93,9 @@ class Tool(object):
       # TODO: apply a cross-compiler prefix.
 
       listTried = []
-      for clsTool, iterArgs, sOutMatch in iterSupported:
+      for clsTool in iterSupported:
+         iterArgs  = clsTool._smc_iterDetectArgs
+         sOutMatch = clsTool._smc_sDetectPattern
          # Make sure we have a US English environment dictionary.
          if cls._sm_dictUSEngEnv is None:
             # Copy the current environment and add to it a locale override for US English.
@@ -268,6 +267,11 @@ class CxxCompiler(Tool):
       self._m_listIncludeDirs.append(sIncludeDirPath)
 
 
+   @classmethod
+   def detect(cls):
+      return Tool.detect((GxxCompiler, MscCompiler))
+
+
    def _get_quiet_cmd(self):
       """See Tool._get_quiet_cmd(). This override substitutes the output file path with the inputs,
       to show the source file path instead of the intermediate one.
@@ -293,6 +297,10 @@ class GxxCompiler(CxxCompiler):
       CxxCompiler.CFLAG_DYNLIB         : '-fPIC',
       CxxCompiler.CFLAG_PREPROCESS_ONLY: '-E',
    }
+   # Arguments to invoke this tool with in order to detect its presence.
+   _smc_iterDetectArgs = ('g++', '--version')
+   # Pattern to compare the output of _smc_iterDetectArgs against.
+   _smc_sDetectPattern = r'^g\+\+.*(?P<ver>[.0-9]+)$'
 
 
    def __init__(self):
@@ -345,7 +353,13 @@ class GxxCompiler(CxxCompiler):
 # MscCompiler
 
 class MscCompiler(CxxCompiler):
-   """Microsoft C++ compiler (MSC)."""
+   """Microsoft C/C++ compiler (MSC)."""
+
+   # Arguments to invoke this tool with in order to detect its presence.
+   _smc_iterDetectArgs = ('cl', '/?')
+   # Pattern to compare the output of _smc_iterDetectArgs against.
+   _smc_sDetectPattern = r'^Microsoft \(R\).* Optimizing Compiler Version (?P<ver>[.0-9]+) for ' + \
+                         r'(?P<target>\S+)$'
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -394,6 +408,11 @@ class Linker(Tool):
       self._m_listLibPaths.append(sLibPath)
 
 
+   @classmethod
+   def detect(cls):
+      return Tool.detect((GnuLinker, MsLinker))
+
+
 
 ####################################################################################################
 # GnuLinker
@@ -405,6 +424,10 @@ class GnuLinker(Linker):
    _smc_dictAbstactToImplFlags = {
       Linker.LDFLAG_DYNLIB: '-shared',
    }
+   # Arguments to invoke this tool with in order to detect its presence.
+   _smc_iterDetectArgs = ('g++', '-Wl,--version')
+   # Pattern to compare the output of _smc_iterDetectArgs against.
+   _smc_sDetectPattern = r'^GNU ld .*?(?P<ver>[.0-9]+)$'
 
 
    def _run_add_cmd_flags(self, listArgs):
@@ -450,5 +473,8 @@ class GnuLinker(Linker):
 class MsLinker(Linker):
    """Microsoft linker (Link)."""
 
-   pass
+   # Arguments to invoke this tool with in order to detect its presence.
+   _smc_iterDetectArgs = ('link', '/?')
+   # Pattern to compare the output of _smc_iterDetectArgs against.
+   _smc_sDetectPattern = r'^Microsoft \(R\) Incremental Linker Version (?P<ver>[.0-9]+)$'
 

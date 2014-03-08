@@ -562,6 +562,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
                )
          # Pick the correct target class based on the file name extension.
          sFilePath = elt.getAttribute('path')
+         # TODO: check .getAttribute('tool')
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             clsObjTarget = CxxPreprocessedTarget
          else:
