@@ -283,7 +283,7 @@ class CxxCompiler(Tool):
 
 
 ####################################################################################################
-# GCC-driven GNU LD
+# GxxCompiler
 
 class GxxCompiler(CxxCompiler):
    """GNU C++ compiler (G++)."""
@@ -342,6 +342,17 @@ class GxxCompiler(CxxCompiler):
 
 
 ####################################################################################################
+# MscCompiler
+
+class MscCompiler(CxxCompiler):
+   """Microsoft C++ compiler (MSC)."""
+
+   # See CxxCompiler.object_suffix.
+   object_suffix = '.obj'
+
+
+
+####################################################################################################
 # Linker
 
 class Linker(Tool):
@@ -385,7 +396,7 @@ class Linker(Tool):
 
 
 ####################################################################################################
-# GCC-driven GNU LD
+# GnuLinker
 
 class GnuLinker(Linker):
    """GCC-driven GNU object code linker (LD)."""
@@ -430,4 +441,14 @@ class GnuLinker(Linker):
       """See Linker._translate_abstract_flag()."""
 
       return self._smc_dictAbstactToImplFlags.get(iFlag)
+
+
+
+####################################################################################################
+# MsLinker
+
+class MsLinker(Linker):
+   """Microsoft linker (Link)."""
+
+   pass
 
