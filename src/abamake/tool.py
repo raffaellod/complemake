@@ -144,7 +144,7 @@ class Tool(object):
       """Builds the flags portion of the tool’s command line.
 
       The default implementation applies the flags added with Tool.add_flags() after translating
-      them using Tool._translate_abstract_flag(), which in its default implementation returns None.
+      them using Tool._translate_abstract_flag().
 
       list(str*) listArgs
          Arguments list.
@@ -153,12 +153,7 @@ class Tool(object):
       # Add any additional abstract flags, translating them to arguments understood by GCC.
       if self._m_setAbstractFlags:
          for iFlag in self._m_setAbstractFlags:
-            sFlag = self._translate_abstract_flag(iFlag)
-            if sFlag is None:
-               raise NotImplementedError('{} does not implement abstract flag {}'.format(
-                  type(self), iFlag
-               ))
-            listArgs.append(sFlag)
+            listArgs.append(self._translate_abstract_flag(iFlag))
 
 
    def _run_add_cmd_inputs(self, listArgs):
@@ -234,7 +229,7 @@ class Tool(object):
          Corresponding command-line argument.
       """
 
-      return None
+      raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), iFlag))
 
 
 
@@ -316,10 +311,6 @@ class CxxCompiler(Tool):
       if self._m_dictMacros:
          # Get the compiler-specific command-line argument to define a macro.
          sDefineFormat = self._translate_abstract_flag(self.CFLAG_DEFINE_FORMAT)
-         if sDefineFormat is None:
-            raise Exception(
-               '{} must implement abstract flag CxxCompiler.CFLAG_DEFINE_FORMAT'.format(type(self))
-            )
          for sName, sExpansion in self._m_dictMacros.items():
             listArgs.append(sDefineFormat.format(name = sName, expansion = sExpansion))
 
@@ -327,12 +318,6 @@ class CxxCompiler(Tool):
       if self._m_listIncludeDirs:
          # Get the compiler-specific command-line argument to define a macro.
          sAddIncludeDirFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
-         if sAddIncludeDirFormat is None:
-            raise Exception(
-               '{} must implement abstract flag CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT'.format(
-                  type(self)
-               )
-            )
          for sDir in self._m_listIncludeDirs:
             listArgs.append(sAddIncludeDirFormat.format(dir = sDir))
 
@@ -396,7 +381,10 @@ class GxxCompiler(CxxCompiler):
    def _translate_abstract_flag(self, iFlag):
       """See CxxCompiler._translate_abstract_flag()."""
 
-      return self._smc_dictAbstactToImplFlags.get(iFlag)
+      sFlag = self._smc_dictAbstactToImplFlags.get(iFlag)
+      if sFlag is None:
+         sFlag = super()._translate_abstract_flag(iFlag)
+      return sFlag
 
 
 
@@ -514,7 +502,10 @@ class GnuLinker(Linker):
    def _translate_abstract_flag(self, iFlag):
       """See Linker._translate_abstract_flag()."""
 
-      return self._smc_dictAbstactToImplFlags.get(iFlag)
+      sFlag = self._smc_dictAbstactToImplFlags.get(iFlag)
+      if sFlag is None:
+         sFlag = super()._translate_abstract_flag(iFlag)
+      return sFlag
 
 
 
