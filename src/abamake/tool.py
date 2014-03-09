@@ -50,6 +50,10 @@ class Tool(object):
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
 
+   # Specifies an output file path. Must be in str.format() syntax and include a replacement “path”
+   # with the intuitive meaning.
+   FLAG_OUTPUT_PATH_FORMAT = 1000
+
 
    def add_flags(self, *args):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
@@ -200,6 +204,13 @@ class Tool(object):
       # Build the arguments list.
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
       self._run_add_cmd_flags(listArgs)
+
+      # Add the output file path.
+      if self._m_sOutputFilePath:
+         # Get the compiler-specific command-line argument to specify an output file path.
+         sOutPathFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
+         listArgs.append(sOutPathFormat.format(path = self._m_sOutputFilePath))
+
       self._run_add_cmd_inputs(listArgs)
 
       return make.ExternalCommandJob(
@@ -334,6 +345,7 @@ class GxxCompiler(CxxCompiler):
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT            : '-o{path}',
       CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT: '-I{dir}',
       CxxCompiler.CFLAG_DEFINE_FORMAT         : '-D{name}={expansion}',
       CxxCompiler.CFLAG_DYNLIB                : '-fPIC',
@@ -375,10 +387,6 @@ class GxxCompiler(CxxCompiler):
       ])
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
-
-      # Add the output file path.
-      listArgs.append('-o')
-      listArgs.append(self._m_sOutputFilePath)
 
 
 
@@ -480,6 +488,7 @@ class GnuLinker(Linker):
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT    : '-o{path}',
       Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '-L{dir}',
       Linker.LDFLAG_ADD_LIB_FORMAT    : '-l{lib}',
       Linker.LDFLAG_DYNLIB            : '-shared',
@@ -498,9 +507,6 @@ class GnuLinker(Linker):
       listArgs.append('-Wl,--as-needed')
       listArgs.append('-ggdb')
       # TODO: add support for os.environ['LDFLAGS'] ?
-      # Add the output file path.
-      listArgs.append('-o')
-      listArgs.append(self._m_sOutputFilePath)
 
 
    def _run_add_cmd_inputs(self, listArgs):
