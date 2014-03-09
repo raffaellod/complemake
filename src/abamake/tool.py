@@ -258,6 +258,9 @@ class CxxCompiler(Tool):
    # Defines a preprocessor macro. Must be in str.format() syntax and include replacements “name”
    # and “expansion”, each with its respective intuitive meaning.
    CFLAG_DEFINE_FORMAT = 2002
+   # Adds in directory to the include search path. Must be in str.format() syntax and include a
+   # replacement “dir” with the intuitive meaning.
+   CFLAG_ADD_INCLUDE_DIR_FORMAT = 2003
 
 
    def add_include_dir(self, sIncludeDirPath):
@@ -308,6 +311,7 @@ class CxxCompiler(Tool):
       """See Tool._run_add_cmd_flags()."""
 
       super()._run_add_cmd_flags(listArgs)
+
       # Add any preprocessor macros.
       if self._m_dictMacros:
          # Get the compiler-specific command-line argument to define a macro.
@@ -317,10 +321,20 @@ class CxxCompiler(Tool):
                '{} must implement abstract flag CxxCompiler.CFLAG_DEFINE_FORMAT'.format(type(self))
             )
          for sName, sExpansion in self._m_dictMacros.items():
-            listArgs.append(sDefineFormat.format(
-               name      = sName,
-               expansion = sExpansion,
-            ))
+            listArgs.append(sDefineFormat.format(name = sName, expansion = sExpansion))
+
+      # Add any additional include directories.
+      if self._m_listIncludeDirs:
+         # Get the compiler-specific command-line argument to define a macro.
+         sAddIncludeDirFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
+         if sAddIncludeDirFormat is None:
+            raise Exception(
+               '{} must implement abstract flag CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT'.format(
+                  type(self)
+               )
+            )
+         for sDir in self._m_listIncludeDirs:
+            listArgs.append(sAddIncludeDirFormat.format(dir = sDir))
 
 
 
@@ -332,9 +346,10 @@ class GxxCompiler(CxxCompiler):
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
-      CxxCompiler.CFLAG_DYNLIB         : '-fPIC',
-      CxxCompiler.CFLAG_DEFINE_FORMAT  : '-D{name}={expansion}',
-      CxxCompiler.CFLAG_PREPROCESS_ONLY: '-E',
+      CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT: '-I{dir}',
+      CxxCompiler.CFLAG_DEFINE_FORMAT         : '-D{name}={expansion}',
+      CxxCompiler.CFLAG_DYNLIB                : '-fPIC',
+      CxxCompiler.CFLAG_PREPROCESS_ONLY       : '-E',
    }
    # Arguments to invoke this tool with in order to detect its presence.
    _smc_iterDetectArgs = ('g++', '--version')
@@ -373,9 +388,6 @@ class GxxCompiler(CxxCompiler):
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
-      # Add the include directories.
-      for sDirPath in self._m_listIncludeDirs or []:
-         listArgs.append('-I' + sDirPath)
       # Add the output file path.
       listArgs.append('-o')
       listArgs.append(self._m_sOutputFilePath)
