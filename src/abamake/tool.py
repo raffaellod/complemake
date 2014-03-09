@@ -141,7 +141,7 @@ class Tool(object):
          sQuietName = os.path.basename(self._sm_dictToolFilePaths[type(self)])
       else:
          sQuietName = self._smc_sQuietName
-      return sQuietName, self._m_sOutputFilePath
+      return sQuietName, (self._m_sOutputFilePath or '')
 
 
    def _run_add_cmd_flags(self, listArgs):
@@ -194,21 +194,21 @@ class Tool(object):
          Last job scheduled.
       """
 
-      # Make sure that the output directory exists.
-      if self._m_sOutputFilePath:
-         os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
-
-      # Make sure to update the metadata for the output file once the job completes.
-      iterMetadataToUpdate = [self._m_sOutputFilePath] + (iterMetadataToUpdate or [])
-
       # Build the arguments list.
       listArgs = [self._sm_dictToolFilePaths[type(self)]]
+
       self._run_add_cmd_flags(listArgs)
 
-      # Add the output file path.
       if self._m_sOutputFilePath:
+         # Make sure that the output directory exists.
+         os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
+         # Make sure to update the metadata for the output file once the job completes.
+         if iterMetadataToUpdate is None:
+            iterMetadataToUpdate = []
+         iterMetadataToUpdate.append(self._m_sOutputFilePath)
          # Get the compiler-specific command-line argument to specify an output file path.
          sOutPathFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
+         # Add the output file path.
          listArgs.append(sOutPathFormat.format(path = self._m_sOutputFilePath))
 
       self._run_add_cmd_inputs(listArgs)
