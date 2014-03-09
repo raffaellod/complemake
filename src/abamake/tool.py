@@ -253,7 +253,7 @@ class CxxCompiler(Tool):
    # Defines a preprocessor macro. Must be in str.format() syntax and include replacements “name”
    # and “expansion”, each with its respective intuitive meaning.
    CFLAG_DEFINE_FORMAT = 2002
-   # Adds in directory to the include search path. Must be in str.format() syntax and include a
+   # Adds a directory to the include search path. Must be in str.format() syntax and include a
    # replacement “dir” with the intuitive meaning.
    CFLAG_ADD_INCLUDE_DIR_FORMAT = 2003
 
@@ -316,7 +316,7 @@ class CxxCompiler(Tool):
 
       # Add any additional include directories.
       if self._m_listIncludeDirs:
-         # Get the compiler-specific command-line argument to define a macro.
+         # Get the compiler-specific command-line argument to add an include directory.
          sAddIncludeDirFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
          for sDir in self._m_listIncludeDirs:
             listArgs.append(sAddIncludeDirFormat.format(dir = sDir))
@@ -421,6 +421,12 @@ class Linker(Tool):
 
    # Tells the linker to generate a dynamic library instead of a stand-alone executable.
    LDFLAG_DYNLIB = 5000
+   # Adds a directory to the library search path. Must be in str.format() syntax and include a
+   # replacement “dir” with the intuitive meaning.
+   LDFLAG_ADD_LIB_DIR_FORMAT = 5001
+   # Adds a library to link to. Must be in str.format() syntax and include a replacement “lib” with
+   # the intuitive meaning.
+   LDFLAG_ADD_LIB_FORMAT = 5002
 
 
    def add_input_lib(self, sInputLibFilePath):
@@ -452,6 +458,25 @@ class Linker(Tool):
       return Tool.detect((GnuLinker, MsLinker))
 
 
+   def _run_add_cmd_inputs(self, listArgs):
+      """See Tool._run_add_cmd_inputs()."""
+
+      super()._run_add_cmd_inputs(listArgs)
+
+      # Add the library search directories.
+      if self._m_listLibPaths:
+         # Get the compiler-specific command-line argument to add a library directory.
+         sAddLibDirFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_DIR_FORMAT)
+         for sDir in self._m_listLibPaths:
+            listArgs.append(sAddLibDirFormat.format(dir = sDir))
+      # Add the libraries.
+      if self._m_listInputLibs:
+         # Get the compiler-specific command-line argument to add a library.
+         sAddLibFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_FORMAT)
+         for sLib in self._m_listInputLibs:
+            listArgs.append(sAddLibFormat.format(lib = sLib))
+
+
 
 ####################################################################################################
 # GnuLinker
@@ -461,7 +486,9 @@ class GnuLinker(Linker):
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
-      Linker.LDFLAG_DYNLIB: '-shared',
+      Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '-L{dir}',
+      Linker.LDFLAG_ADD_LIB_FORMAT    : '-l{lib}',
+      Linker.LDFLAG_DYNLIB            : '-shared',
    }
    # Arguments to invoke this tool with in order to detect its presence.
    _smc_iterDetectArgs = ('g++', '-Wl,--version')
@@ -485,18 +512,12 @@ class GnuLinker(Linker):
    def _run_add_cmd_inputs(self, listArgs):
       """See Linker._run_add_cmd_inputs()."""
 
-      # TODO: should not assume that GNU LD will only be used to build for POSIX.
+      # TODO: should not assume that GNU LD will only be used to build for POSIX; the default
+      # libraries list should come from a Platform class.
       self.add_input_lib('dl')
       self.add_input_lib('pthread')
 
       super()._run_add_cmd_inputs(listArgs)
-
-      # Add the library search directories.
-      for sDir in self._m_listLibPaths or []:
-         listArgs.append('-L' + sDir)
-      # Add the libraries.
-      for sLib in self._m_listInputLibs or []:
-         listArgs.append('-l' + sLib)
 
 
    def _translate_abstract_flag(self, iFlag):
