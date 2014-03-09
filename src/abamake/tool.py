@@ -221,7 +221,7 @@ class Tool(object):
 
    def _translate_abstract_flag(self, iFlag):
       """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
-      implementation.
+      implementation using a class-specific _smc_dictAbstactToImplFlags dictionary.
 
       int iFlag
          Abstract flag.
@@ -229,7 +229,10 @@ class Tool(object):
          Corresponding command-line argument.
       """
 
-      raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), iFlag))
+      sFlag = type(self)._smc_dictAbstactToImplFlags.get(iFlag)
+      if sFlag is None:
+         raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), iFlag))
+      return sFlag
 
 
 
@@ -378,15 +381,6 @@ class GxxCompiler(CxxCompiler):
       listArgs.append(self._m_sOutputFilePath)
 
 
-   def _translate_abstract_flag(self, iFlag):
-      """See CxxCompiler._translate_abstract_flag()."""
-
-      sFlag = self._smc_dictAbstactToImplFlags.get(iFlag)
-      if sFlag is None:
-         sFlag = super()._translate_abstract_flag(iFlag)
-      return sFlag
-
-
 
 ####################################################################################################
 # MscCompiler
@@ -518,15 +512,6 @@ class GnuLinker(Linker):
       self.add_input_lib('pthread')
 
       super()._run_add_cmd_inputs(listArgs)
-
-
-   def _translate_abstract_flag(self, iFlag):
-      """See Linker._translate_abstract_flag()."""
-
-      sFlag = self._smc_dictAbstactToImplFlags.get(iFlag)
-      if sFlag is None:
-         sFlag = super()._translate_abstract_flag(iFlag)
-      return sFlag
 
 
 
