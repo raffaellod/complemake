@@ -246,6 +246,8 @@ class CxxCompiler(Tool):
 
    # Additional include directories.
    _m_listIncludeDirs = None
+   # Macros defined via command-line arguments.
+   _m_dictMacros = None
    # See Tool._smc_sQuietName.
    _smc_sQuietName = 'C++'
 
@@ -253,6 +255,9 @@ class CxxCompiler(Tool):
    CFLAG_PREPROCESS_ONLY = 2000
    # Causes the compiler to generate code suitable for a dynamic library.
    CFLAG_DYNLIB = 2001
+   # Defines a preprocessor macro. Must be in str.format() syntax and include replacements “name”
+   # and “expansion”, each with its respective intuitive meaning.
+   CFLAG_DEFINE_FORMAT = 2002
 
 
    def add_include_dir(self, sIncludeDirPath):
@@ -265,6 +270,20 @@ class CxxCompiler(Tool):
       if self._m_listIncludeDirs is None:
          self._m_listIncludeDirs = []
       self._m_listIncludeDirs.append(sIncludeDirPath)
+
+
+   def add_macro(self, sName, sExpansion):
+      """Adds a macro definition to the compiler’s command line.
+
+      str sName
+         Name of the macro.
+      str sExpansion
+         Expansion (value) of the macro.
+      """
+
+      if self._m_dictMacros is None:
+         self._m_dictMacros = {}
+      self._m_dictMacros[sName] = sExpansion
 
 
    @classmethod
@@ -285,6 +304,25 @@ class CxxCompiler(Tool):
    object_suffix = None
 
 
+   def _run_add_cmd_flags(self, listArgs):
+      """See Tool._run_add_cmd_flags()."""
+
+      super()._run_add_cmd_flags(listArgs)
+      # Add any preprocessor macros.
+      if self._m_dictMacros:
+         # Get the compiler-specific command-line argument to define a macro.
+         sDefineFormat = self._translate_abstract_flag(self.CFLAG_DEFINE_FORMAT)
+         if sDefineFormat is None:
+            raise Exception(
+               '{} must implement abstract flag CxxCompiler.CFLAG_DEFINE_FORMAT'.format(type(self))
+            )
+         for sName, sExpansion in self._m_dictMacros.items():
+            listArgs.append(sDefineFormat.format(
+               name      = sName,
+               expansion = sExpansion,
+            ))
+
+
 
 ####################################################################################################
 # GxxCompiler
@@ -295,6 +333,7 @@ class GxxCompiler(CxxCompiler):
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
       CxxCompiler.CFLAG_DYNLIB         : '-fPIC',
+      CxxCompiler.CFLAG_DEFINE_FORMAT  : '-D{name}={expansion}',
       CxxCompiler.CFLAG_PREPROCESS_ONLY: '-E',
    }
    # Arguments to invoke this tool with in order to detect its presence.
