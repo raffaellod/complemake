@@ -303,7 +303,7 @@ class CxxObjectTarget(ObjectTarget):
       """See ObjectTarget._get_tool()."""
 
       cxx = mk.cxxcompiler()
-      cxx.set_output(self.file_path)
+      cxx.output_file_path = self.file_path
       cxx.add_input(self.source_file_path)
 
       if self._m_sFinalOutputFilePath:
@@ -405,7 +405,7 @@ class ExecutableTarget(Target):
       """See Target._get_tool()."""
 
       lnk = mk.linker()
-      lnk.set_output(self.file_path)
+      lnk.output_file_path = self.file_path
       # TODO: add file-specific flags.
       return lnk
 
