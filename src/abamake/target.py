@@ -261,7 +261,7 @@ class ProcessedSourceTarget(Target):
 
       # TODO: check for additional changed external dependencies.
       bBuildNeeded, iterChangedFiles = self._is_build_needed(
-         mk, iterBlockingJobs, (self.file_path, self.source_file_path)
+         mk, iterBlockingJobs, (self._m_sFilePath, self._m_sSourceFilePath)
       )
       if not bBuildNeeded:
          return None
@@ -328,8 +328,8 @@ class CxxObjectTarget(ObjectTarget):
       """See ObjectTarget._get_tool()."""
 
       cxx = mk.cxxcompiler()
-      cxx.output_file_path = self.file_path
-      cxx.add_input(self.source_file_path)
+      cxx.output_file_path = self._m_sFilePath
+      cxx.add_input(self._m_sSourceFilePath)
 
       if self._m_sFinalOutputFilePath:
          # Let the final output configure the compiler.
@@ -376,7 +376,7 @@ class ExecutableTarget(Target):
       # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
       # over that list only once, combine building the list of files to be checked for changes with
       # collecting linker inputs.
-      listFilesToCheck = [self.file_path]
+      listFilesToCheck = [self._m_sFilePath]
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
@@ -430,7 +430,7 @@ class ExecutableTarget(Target):
       """See Target._get_tool()."""
 
       lnk = mk.linker()
-      lnk.output_file_path = self.file_path
+      lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
       return lnk
 
@@ -446,7 +446,7 @@ class ExecutableTarget(Target):
          else:
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, None, sFilePath, self.file_path)
+         tgtObj = clsObjTarget(mk, None, sFilePath, self._m_sFilePath)
          self.add_dependency(tgtObj)
          self.add_linker_input(tgtObj)
          return True
@@ -670,7 +670,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
       # the jobs’ output is updated and that the unit test execution depends on the build job(s).
       if jobBuild:
          tplBlockingJobs = (jobBuild, )
-         tplDeps = (self.file_path, )
+         tplDeps = (self._m_sFilePath, )
       else:
          # No need to block the unit test job with iterBlockingJobs: if jobBuild is None,
          # iterBlockingJobs must be None as well, or else we would’ve scheduled jobs in
@@ -682,9 +682,9 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
 
       # Build the command line to invoke.
       if self._m_sScriptFilePath:
-         tplArgs = (self._m_sScriptFilePath, self.file_path)
+         tplArgs = (self._m_sScriptFilePath, self._m_sFilePath)
       else:
-         tplArgs = (self.file_path, )
+         tplArgs = (self._m_sFilePath, )
 
       # If this target is linked to a library built by this same makefile, make sure we add
       # output_dir/lib to the library path.
