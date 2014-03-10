@@ -370,14 +370,11 @@ class GxxCompiler(CxxCompiler):
    def _run_add_cmd_flags(self, listArgs):
       """See CxxCompiler._run_add_cmd_flags()."""
 
-      # Add flags.
-      listArgs.extend([
-         '-c', '-std=c++0x', '-fnon-call-exceptions', '-fvisibility=hidden'
-      ])
+      listArgs.extend(['-c', '-std=c++0x', '-fnon-call-exceptions', '-fvisibility=hidden'])
+
       super()._run_add_cmd_flags(listArgs)
-      listArgs.extend([
-         '-ggdb', '-O0', '-DDEBUG=1'
-      ])
+
+      listArgs.extend(['-ggdb', '-O0', '-DDEBUG=1'])
       listArgs.extend([
          '-Wall', '-Wextra', '-pedantic', '-Wundef', '-Wshadow', '-Wconversion',
          '-Wsign-conversion', '-Wlogical-op', '-Wmissing-declarations', '-Wpacked',
@@ -394,6 +391,14 @@ class GxxCompiler(CxxCompiler):
 class MscCompiler(CxxCompiler):
    """Microsoft C/C++ compiler (MSC)."""
 
+   # Mapping table between abstract (*FLAG_*) flags
+   _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT            : '/Fo{path}',
+      CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT: '/I{dir}',
+      CxxCompiler.CFLAG_DEFINE_FORMAT         : '/D{name}={expansion}',
+      CxxCompiler.CFLAG_DYNLIB                : '/LD',
+      CxxCompiler.CFLAG_PREPROCESS_ONLY       : '/P',
+   }
    # Arguments to invoke this tool with in order to detect its presence.
    _smc_iterDetectArgs = ('cl', '/?')
    # Pattern to compare the output of _smc_iterDetectArgs against.
@@ -402,6 +407,17 @@ class MscCompiler(CxxCompiler):
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
+
+
+   def _run_add_cmd_flags(self, listArgs):
+      """See CxxCompiler._run_add_cmd_flags()."""
+
+      listArgs.extend(['/nologo', '/c', '/TP', '/EHa'])
+
+      super()._run_add_cmd_flags(listArgs)
+
+      listArgs.extend(['/Zi', '/Od', '/DDEBUG=1'])
+      listArgs.extend(['/Wall'])
 
 
 
@@ -504,6 +520,7 @@ class GnuLinker(Linker):
 
       listArgs.append('-Wl,--as-needed')
       listArgs.append('-ggdb')
+
       # TODO: add support for os.environ['LDFLAGS'] ?
 
 
@@ -525,8 +542,26 @@ class GnuLinker(Linker):
 class MsLinker(Linker):
    """Microsoft linker (Link)."""
 
+   # Mapping table between abstract (*FLAG_*) flags
+   _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT    : '/OUT:{path}',
+      Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '/LIBPATH:{dir}',
+      Linker.LDFLAG_ADD_LIB_FORMAT    : '{lib}',
+      Linker.LDFLAG_DYNLIB            : '/DLL',
+   }
    # Arguments to invoke this tool with in order to detect its presence.
    _smc_iterDetectArgs = ('link', '/?')
    # Pattern to compare the output of _smc_iterDetectArgs against.
    _smc_sDetectPattern = r'^Microsoft \(R\) Incremental Linker Version (?P<ver>[.0-9]+)$'
+
+
+   def _run_add_cmd_flags(self, listArgs):
+      """See Linker._run_add_cmd_flags()."""
+
+      listArgs.extend(['/nologo'])
+
+      super()._run_add_cmd_flags(listArgs)
+
+      sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
+      listArgs.extend(['/DEBUG', '/PDB:' + sPdbFilePath])
 
