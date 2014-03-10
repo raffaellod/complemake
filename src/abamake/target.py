@@ -398,7 +398,7 @@ class ExecutableTarget(Target):
       """See Target._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'bin', '' + self.name + '')
+      return os.path.join(mk.output_dir, 'bin', '' + self._m_sName + '')
 
 
    def _get_tool(self, mk):
@@ -470,7 +470,7 @@ class DynLibTarget(ExecutableTarget):
       """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'lib', 'lib' + self.name + '.so')
+      return os.path.join(mk.output_dir, 'lib', 'lib' + self._m_sName + '.so')
 
 
    def _get_tool(self, mk):
@@ -544,9 +544,9 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          return None
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.ExternalCommandJob(mk, iterBlockingJobs, ('CMP', self.name), iterChangedFiles, {
-         'args': listArgs,
-      })
+      return make.ExternalCommandJob(
+         mk, iterBlockingJobs, ('CMP', self._m_sName), iterChangedFiles, {'args': listArgs,}
+      )
 
 
    def parse_makefile_child(self, mk, elt):
@@ -558,7 +558,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             if isinstance(tgt, ProcessedSourceTarget):
                raise Exception(
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +
-                     'element').format(self.name)
+                     'element').format(self._m_sName)
                )
          # Pick the correct target class based on the file name extension and the tool to use.
          sFilePath = elt.getAttribute('path')
@@ -636,7 +636,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
             dictEnv['LD_LIBRARY_PATH'] = sLibPath
             break
 
-      return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self.name), tplDeps, {
+      return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self._m_sName), tplDeps, {
          'args': tplArgs,
          'env' : dictEnv,
       })
@@ -646,7 +646,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
       """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'bin', 'unittest', '' + self.name + '')
+      return os.path.join(mk.output_dir, 'bin', 'unittest', '' + self._m_sName + '')
 
 
    def parse_makefile_child(self, mk, elt):
