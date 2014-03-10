@@ -215,9 +215,9 @@ class Tool(object):
             iterMetadataToUpdate = []
          iterMetadataToUpdate.append(self._m_sOutputFilePath)
          # Get the compiler-specific command-line argument to specify an output file path.
-         sOutPathFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
+         sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
          # Add the output file path.
-         listArgs.append(sOutPathFormat.format(path = self._m_sOutputFilePath))
+         listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
 
       self._run_add_cmd_inputs(listArgs)
 
@@ -322,16 +322,16 @@ class CxxCompiler(Tool):
       # Add any preprocessor macros.
       if self._m_dictMacros:
          # Get the compiler-specific command-line argument to define a macro.
-         sDefineFormat = self._translate_abstract_flag(self.CFLAG_DEFINE_FORMAT)
+         sFormat = self._translate_abstract_flag(self.CFLAG_DEFINE_FORMAT)
          for sName, sExpansion in self._m_dictMacros.items():
-            listArgs.append(sDefineFormat.format(name = sName, expansion = sExpansion))
+            listArgs.append(sFormat.format(name = sName, expansion = sExpansion))
 
       # Add any additional include directories.
       if self._m_listIncludeDirs:
          # Get the compiler-specific command-line argument to add an include directory.
-         sAddIncludeDirFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
+         sFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
          for sDir in self._m_listIncludeDirs:
-            listArgs.append(sAddIncludeDirFormat.format(dir = sDir))
+            listArgs.append(sFormat.format(dir = sDir))
 
 
 
@@ -466,15 +466,15 @@ class Linker(Tool):
       # Add the library search directories.
       if self._m_listLibPaths:
          # Get the compiler-specific command-line argument to add a library directory.
-         sAddLibDirFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_DIR_FORMAT)
+         sFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_DIR_FORMAT)
          for sDir in self._m_listLibPaths:
-            listArgs.append(sAddLibDirFormat.format(dir = sDir))
+            listArgs.append(sFormat.format(dir = sDir))
       # Add the libraries.
       if self._m_listInputLibs:
          # Get the compiler-specific command-line argument to add a library.
-         sAddLibFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_FORMAT)
+         sFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_FORMAT)
          for sLib in self._m_listInputLibs:
-            listArgs.append(sAddLibFormat.format(lib = sLib))
+            listArgs.append(sFormat.format(lib = sLib))
 
 
 
