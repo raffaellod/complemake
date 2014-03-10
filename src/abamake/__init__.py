@@ -788,18 +788,8 @@ class Make(object):
             sName = eltTarget.getAttribute('name')
             if not sName:
                raise Exception('missing target name')
-            sType = eltTarget.getAttribute('type')
             # Pick a Target-derived class for this target type.
-            if sType == 'unittest':
-               # In order to know which UnitTestTarget-derived class to instantiate, we have to
-               # look-ahead into the <target> element.
-               clsTarget = target.UnitTestTarget.select_subclass(eltTarget)
-            elif sType == 'exe':
-               clsTarget = target.ExecutableTarget
-            elif sType == 'dynlib':
-               clsTarget = target.DynLibTarget
-            else:
-               raise Exception('unsupported target type: {}'.format(sType))
+            clsTarget = target.Target.select_subclass(eltTarget)
             # Instantiate the Target-derived class, assigning it its name.
             tgt = clsTarget(self, sName)
             listNodesAndTargets.append((tgt, eltTarget))

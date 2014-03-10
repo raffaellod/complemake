@@ -197,6 +197,31 @@ class Target(object):
       return False
 
 
+   @classmethod
+   def select_subclass(cls, eltTarget):
+      """Returns the Target-derived class that should be instantiated to model the specified
+      <target> element.
+
+      xml.dom.Element eltTarget
+         Element to parse.
+      type return
+         Model class for eltTarget.
+      """
+
+      sType = eltTarget.getAttribute('type')
+      if sType == 'unittest':
+         # In order to know which UnitTestTarget-derived class to instantiate, we have to look-ahead
+         # into the <target> element.
+         cls = UnitTestTarget.select_subclass(eltTarget)
+      elif sType == 'exe':
+         cls = ExecutableTarget
+      elif sType == 'dynlib':
+         cls = DynLibTarget
+      else:
+         raise Exception('unsupported target type: {}'.format(sType))
+      return cls
+
+
 
 ####################################################################################################
 # ProcessedSourceTarget
@@ -516,8 +541,8 @@ class UnitTestTarget(Target):
 
    @classmethod
    def select_subclass(cls, eltTarget):
-      """Returns the Target-derived class that should be instantiated to model the specified
-      <target> element.
+      """Returns the UnitTestTarget-derived class that should be instantiated to model the specified
+      <target> element. Logically similar to Target.select_subclass(), but not an override.
 
       xml.dom.Element eltTarget
          Element to parse.
