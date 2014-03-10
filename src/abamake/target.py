@@ -514,6 +514,47 @@ class UnitTestTarget(Target):
       return super().parse_makefile_child(mk, elt)
 
 
+   @classmethod
+   def select_subclass(cls, eltTarget):
+      """Returns the Target-derived class that should be instantiated to model the specified
+      <target> element.
+
+      xml.dom.Element eltTarget
+         Element to parse.
+      type return
+         Model class for eltTarget.
+      """
+
+      cls = None
+      sName = eltTarget.getAttribute('name')
+      for ndChild in eltTarget.childNodes:
+         if ndChild.nodeType != ndChild.ELEMENT_NODE:
+            continue
+         # Determine what class should be instantiated according to the current node (ndChild).
+         clsCurr = None
+         if ndChild.nodeName == 'source':
+            if ndChild.hasAttribute('tool'):
+               # A <target> with a <source> with tool="…" override is not going to generate an
+               # executable.
+               clsCurr = ComparisonUnitTestTarget
+            else:
+               # A <target> with <source> (default tool) will generate an executable.
+               clsCurr = ExecutableUnitTestTarget
+         elif ndChild.nodeName == 'dynlib' or ndChild.nodeName == 'script':
+            # Linking to dynamic libraries or using execution scripts is a prerogative of executable
+            # unit tests only.
+            clsCurr = ExecutableUnitTestTarget
+         if clsCurr:
+            # If we already picked cls, make sure it was the same as clsCurr.
+            if cls and cls is not clsCurr:
+               raise SyntaxError(
+                  'unit test target “{}” specifies conflicting execution modes'.format(sName)
+               )
+            cls = clsCurr
+      if cls is None:
+         raise SyntaxError('invalid empty unit test target “{}” element'.format(sName))
+      return cls
+
 
 ####################################################################################################
 # ComparisonUnitTestTarget

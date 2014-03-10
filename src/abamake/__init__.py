@@ -793,34 +793,7 @@ class Make(object):
             if sType == 'unittest':
                # In order to know which UnitTestTarget-derived class to instantiate, we have to
                # look-ahead into the <target> element.
-               clsTarget = None
-               for ndInTarget in eltTarget.childNodes:
-                  if ndInTarget.nodeType != xml.dom.Node.ELEMENT_NODE:
-                     continue
-                  clsNewTarget = None
-                  if ndInTarget.nodeName == 'source':
-                     if ndInTarget.hasAttribute('tool'):
-                        # A <target> with a <source> with tool="…" override is not going to generate
-                        # an executable.
-                        clsNewTarget = target.ComparisonUnitTestTarget
-                     else:
-                        # A <target> with <source> (default tool) will generate an executable.
-                        clsNewTarget = target.ExecutableUnitTestTarget
-                  elif ndInTarget.nodeName == 'dynlib' or ndInTarget.nodeName == 'script':
-                     # Linking to dynamic libraries or using execution scripts is a prerogative of
-                     # executable unit tests only.
-                     clsNewTarget = target.ExecutableUnitTestTarget
-                  if clsNewTarget:
-                     # If we already picked clsTarget, make sure it was the same as clsNewTarget.
-                     if clsTarget and clsTarget is not clsNewTarget:
-                        raise SyntaxError(
-                           'unit test target “{}” specifies conflicting execution modes'.format(
-                              sName
-                           )
-                        )
-                     clsTarget = clsNewTarget
-               if clsTarget is None:
-                  raise SyntaxError('invalid empty unit test target “{}” element'.format(sName))
+               clsTarget = target.UnitTestTarget.select_subclass(eltTarget)
             elif sType == 'exe':
                clsTarget = target.ExecutableTarget
             elif sType == 'dynlib':
