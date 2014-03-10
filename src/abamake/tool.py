@@ -282,7 +282,7 @@ class CxxCompiler(Tool):
       self._m_listIncludeDirs.append(sIncludeDirPath)
 
 
-   def add_macro(self, sName, sExpansion):
+   def add_macro(self, sName, sExpansion = ''):
       """Adds a macro definition to the compiler’s command line.
 
       str sName
