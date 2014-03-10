@@ -481,6 +481,9 @@ class DynLibTarget(ExecutableTarget):
       if isinstance(tool, make.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
          tool.add_flags(make.tool.CxxCompiler.CFLAG_DYNLIB)
+         # Allow building both a dynamic library and its clients using the same header file, by
+         # changing “import” to “export” when this macro is defined.
+         tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
 
 
    def _generate_file_path(self, mk):
