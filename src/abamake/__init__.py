@@ -785,6 +785,9 @@ class Make(object):
             raise SyntaxError('expected <target>, found: {}'.format(eltTarget.nodeName))
 
          if eltTarget.nodeName == 'target':
+            sName = eltTarget.getAttribute('name')
+            if not sName:
+               raise Exception('missing target name')
             sType = eltTarget.getAttribute('type')
             # Pick a Target-derived class for this target type.
             if sType == 'unittest':
@@ -812,14 +815,12 @@ class Make(object):
                      if clsTarget and clsTarget is not clsNewTarget:
                         raise SyntaxError(
                            'unit test target “{}” specifies conflicting execution modes'.format(
-                              eltTarget.getAttribute('name')
+                              sName
                            )
                         )
                      clsTarget = clsNewTarget
                if clsTarget is None:
-                  raise SyntaxError('invalid empty unit test target “{}” element'.format(
-                     eltTarget.getAttribute('name')
-                  ))
+                  raise SyntaxError('invalid empty unit test target “{}” element'.format(sName))
             elif sType == 'exe':
                clsTarget = target.ExecutableTarget
             elif sType == 'dynlib':
@@ -827,7 +828,7 @@ class Make(object):
             else:
                raise Exception('unsupported target type: {}'.format(sType))
             # Instantiate the Target-derived class, assigning it its name.
-            tgt = clsTarget(self, eltTarget.getAttribute('name'))
+            tgt = clsTarget(self, sName)
             listNodesAndTargets.append((tgt, eltTarget))
          else:
             raise SyntaxError('expected <target>; found: <{}>'.format(eltTarget.nodeName))
