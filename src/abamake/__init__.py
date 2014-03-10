@@ -601,7 +601,18 @@ class Make(object):
    """)
 
 
-   def file_metadata_changed(self, iterFilePaths):
+   def _get_force_build(self):
+      return self._m_bForceBuild
+
+   def _set_force_build(self, bForceBuild):
+      self._m_bForceBuild = bForceBuild
+
+   force_build = property(_get_force_build, _set_force_build, doc = """
+      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
+   """)
+
+
+   def get_changed_files(self, iterFilePaths):
       """Checks the specified files for changes, returning a list containing any files that appear
       to have changed. After the target dependent on these files has been built, the metadata should
       be refreshed by passing the return value to Make.update_file_metadata().
@@ -615,24 +626,13 @@ class Make(object):
       listChanged = []
       for sFilePath in iterFilePaths:
          if self._m_mds.file_changed(sFilePath):
-            if self.verbosity >= Make.VERBOSITY_HIGH:
-               sys.stdout.write('Metadata changed for {}\n'.format(sFilePath))
+            if self.verbosity >= self.VERBOSITY_HIGH:
+               sys.stdout.write('metadata: changes detected: {}\n'.format(sFilePath))
             listChanged.append(sFilePath)
          else:
-            if self.verbosity >= Make.VERBOSITY_HIGH:
-               sys.stdout.write('Metadata unchanged for {}\n'.format(sFilePath))
+            if self.verbosity >= self.VERBOSITY_HIGH:
+               sys.stdout.write('metadata: no changes: {}\n'.format(sFilePath))
       return listChanged or None
-
-
-   def _get_force_build(self):
-      return self._m_bForceBuild
-
-   def _set_force_build(self, bForceBuild):
-      self._m_bForceBuild = bForceBuild
-
-   force_build = property(_get_force_build, _set_force_build, doc = """
-      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
-   """)
 
 
    def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
@@ -755,11 +755,11 @@ class Make(object):
          self._parse_doc(doc)
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata.xml')
       self._m_mds = MetadataStore(sMetadataFilePath)
-      if self.verbosity >= Make.VERBOSITY_HIGH:
+      if self.verbosity >= self.VERBOSITY_HIGH:
          if self._m_mds:
-            sys.stdout.write('MetadataStore loaded from {}\n'.format(sMetadataFilePath))
+            sys.stdout.write('metadata: store loaded: {}\n'.format(sMetadataFilePath))
          else:
-            sys.stdout.write('MetadataStore empty or missing: {}\n'.format(sMetadataFilePath))
+            sys.stdout.write('metadata: empty or missing store: {}\n'.format(sMetadataFilePath))
 
 
    def _parse_doc(self, doc):
@@ -866,8 +866,8 @@ class Make(object):
 
       # Write any new metadata.
       if self._m_mds and not self.dry_run:
-         if self.verbosity >= Make.VERBOSITY_HIGH:
-            sys.stdout.write('Writing MetadataStore\n')
+         if self.verbosity >= self.VERBOSITY_HIGH:
+            sys.stdout.write('metadata: updating\n')
          self._m_mds.write()
       self._m_mds = None
 
@@ -954,8 +954,8 @@ class Make(object):
       """
 
       for sFilePath in iterFilePaths:
-         if self.verbosity >= Make.VERBOSITY_HIGH:
-            sys.stdout.write('Updating metadata for {}\n'.format(sFilePath))
+         if self.verbosity >= self.VERBOSITY_HIGH:
+            sys.stdout.write('metadata: updating: {}\n'.format(sFilePath))
          self._m_mds.update(sFilePath)
 
 

@@ -149,7 +149,7 @@ class Target(object):
 
       # Get a list of changed files.
       if iterFilesToCheck:
-         iterChangedFiles = mk.file_metadata_changed(iterFilesToCheck)
+         iterChangedFiles = mk.get_changed_files(iterFilesToCheck)
       else:
          iterChangedFiles = None
 
