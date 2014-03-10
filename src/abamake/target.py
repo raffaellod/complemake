@@ -233,7 +233,7 @@ class ProcessedSourceTarget(Target):
 
    # Path to the file that this target’s output will be linked into.
    _m_sFinalOutputFilePath = None
-   # See ProcessedSourceTarget.source_file_path.
+   # Source from which the target is built.
    _m_sSourceFilePath = None
 
 
@@ -245,7 +245,7 @@ class ProcessedSourceTarget(Target):
       str sName
          See Target.name.
       str sSourceFilePath
-         See ProcessedSourceTarget.source_file_path.
+         Source from which the target is built.
       str sFinalOutputFilePath
          Path to the file that this target’s output will be linked into. If omitted, no output-
          driven configuration will be applied to the Tool instance generating this output.
@@ -273,14 +273,6 @@ class ProcessedSourceTarget(Target):
       """See Target._generate_file_path()."""
 
       return os.path.join(mk.output_dir, 'int', self._m_sSourceFilePath)
-
-
-   def _get_source_file_path(self):
-      return self._m_sSourceFilePath
-
-   source_file_path = property(_get_source_file_path, doc = """
-      Source from which the target is built.
-   """)
 
 
 
