@@ -370,15 +370,36 @@ class GxxCompiler(CxxCompiler):
    def _run_add_cmd_flags(self, listArgs):
       """See CxxCompiler._run_add_cmd_flags()."""
 
-      listArgs.extend(['-c', '-std=c++0x', '-fnon-call-exceptions', '-fvisibility=hidden'])
+      listArgs.extend([
+         '-c',                     # Compile without linking.
+         '-std=c++0x',             # Select C++11 language standard.
+         '-fnon-call-exceptions',  # Allow trapping instructions to throw exceptions.
+         '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
+      ])
 
       super()._run_add_cmd_flags(listArgs)
 
-      listArgs.extend(['-ggdb', '-O0', '-DDEBUG=1'])
       listArgs.extend([
-         '-Wall', '-Wextra', '-pedantic', '-Wundef', '-Wshadow', '-Wconversion',
-         '-Wsign-conversion', '-Wlogical-op', '-Wmissing-declarations', '-Wpacked',
-         '-Wunreachable-code', '-Winline'
+         '-ggdb',                  # Generate debug info compatible with GDB.
+         '-O0',                    # Disable code optimization.
+         '-DDEBUG=1',              # Enable debug code.
+      ])
+      listArgs.extend([
+         '-Wall',                  # Enable more warnings.
+         '-Wextra',                # Enable extra warnings not enabled by -Wall.
+         '-pedantic',              # Issue all the warnings demanded by strict ISO C++.
+         '-Wconversion',           # Warn for implicit conversions that may alter a value.
+         '-Winline',               # Warn if a function declared as inline cannot be inlined.
+         '-Wlogical-op',           # Warn about suspicious uses of logical operators in expressions.
+         '-Wmissing-declarations', # Warn if a global function is defined without a previous
+                                   # declaration.
+         '-Wpacked',               # Warn if a struct has “packed” attribute but that has no effect
+                                   # on its layout or size.
+         '-Wshadow',               # Warn when a local symbol shadows another symbol.
+         '-Wsign-conversion',      # Warn for implicit conversions that may change the sign of an
+                                   # integer value.
+         '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
+         '-Wunreachable-code',     # TODO: remove.
       ])
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
@@ -412,12 +433,23 @@ class MscCompiler(CxxCompiler):
    def _run_add_cmd_flags(self, listArgs):
       """See CxxCompiler._run_add_cmd_flags()."""
 
-      listArgs.extend(['/nologo', '/c', '/TP', '/EHa'])
+      listArgs.extend([
+         '/nologo',   # Suppress brand banner display.
+         '/c',        # Compile without linking.
+         '/TP',       # Force all sources to be compiled as C++.
+         '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
+      ])
 
       super()._run_add_cmd_flags(listArgs)
 
-      listArgs.extend(['/Zi', '/Od', '/DDEBUG=1'])
-      listArgs.extend(['/Wall'])
+      listArgs.extend([
+         '/Zi',       # Generate debug info for PDB.
+         '/Od',       # Disable code optimization.
+         '/DDEBUG=1', # Enable debug code.
+      ])
+      listArgs.extend([
+         '/Wall',     # Enable all warnings.
+      ])
 
 
 
@@ -518,8 +550,12 @@ class GnuLinker(Linker):
 
       super()._run_add_cmd_flags(listArgs)
 
-      listArgs.append('-Wl,--as-needed')
-      listArgs.append('-ggdb')
+      listArgs.extend([
+         '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
+      ])
+      listArgs.extend([
+         '-ggdb',           # Generate debug info compatible with GDB.
+      ])
 
       # TODO: add support for os.environ['LDFLAGS'] ?
 
@@ -558,10 +594,15 @@ class MsLinker(Linker):
    def _run_add_cmd_flags(self, listArgs):
       """See Linker._run_add_cmd_flags()."""
 
-      listArgs.extend(['/nologo'])
+      listArgs.extend([
+         '/nologo',              # Suppress brand banner display.
+      ])
 
       super()._run_add_cmd_flags(listArgs)
 
       sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
-      listArgs.extend(['/DEBUG', '/PDB:' + sPdbFilePath])
+      listArgs.extend([
+         '/DEBUG',               # Keep debug info.
+         '/PDB:' + sPdbFilePath, # Create a program database file (PDB).
+      ])
 
