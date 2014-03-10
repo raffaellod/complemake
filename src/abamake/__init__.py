@@ -24,13 +24,11 @@ Target and its derived classes (make.target.*) and Tool and its derived classes 
 This file contains Make and other core classes.
 """
 
-from datetime import datetime
 import os
 import re
 import subprocess
 import sys
 import time
-import xml.dom
 import xml.dom.minidom
 
 import make.metadata as metadata
@@ -516,9 +514,9 @@ class Make(object):
          True if nd is a whitespace or comment node, or False otherwise.
       """
 
-      if nd.nodeType == xml.dom.Node.COMMENT_NODE:
+      if nd.nodeType == nd.COMMENT_NODE:
          return True
-      if nd.nodeType == xml.dom.Node.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
+      if nd.nodeType == nd.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
          return True
       return False
 
@@ -602,7 +600,7 @@ class Make(object):
          if self._is_node_whitespace(eltTarget):
             # Skip whitespace/comment nodes.
             continue
-         if eltTarget.nodeType != xml.dom.Node.ELEMENT_NODE:
+         if eltTarget.nodeType != eltTarget.ELEMENT_NODE:
             raise SyntaxError('expected <target>, found: {}'.format(eltTarget.nodeName))
 
          if eltTarget.nodeName == 'target':
@@ -623,7 +621,7 @@ class Make(object):
             if self._is_node_whitespace(nd):
                # Skip whitespace/comment nodes.
                continue
-            if nd.nodeType != xml.dom.Node.ELEMENT_NODE:
+            if nd.nodeType != nd.ELEMENT_NODE:
                raise SyntaxError('expected element node, found: '.format(nd.nodeName))
             if not tgt.parse_makefile_child(self, nd):
                # Target.parse_makefile_child() returns False when it doesn’t know how to handle the
