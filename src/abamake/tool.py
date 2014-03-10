@@ -399,7 +399,6 @@ class GxxCompiler(CxxCompiler):
          '-Wsign-conversion',      # Warn for implicit conversions that may change the sign of an
                                    # integer value.
          '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
-         '-Wunreachable-code',     # TODO: remove.
       ])
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
