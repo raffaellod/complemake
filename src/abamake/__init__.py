@@ -959,7 +959,7 @@ class Make(object):
          self._m_mds.update(sFilePath)
 
 
-   # True if the exact commands invoked should be printed to stdout, of False if only a short
-   # description should.
+   # Selects a verbosity level (Make.VERBOSITY_*), affecting what is displayed about the operations
+   # executed.
    verbosity = None
 
