@@ -209,7 +209,7 @@ class Target(object):
          Model class for eltTarget.
       """
 
-      sType = eltTarget.getAttribute('type')
+      sType = eltTarget.nodeName
       if sType == 'unittest':
          # In order to know which UnitTestTarget-derived class to instantiate, we have to look-ahead
          # into the <target> element.
@@ -219,7 +219,7 @@ class Target(object):
       elif sType == 'dynlib':
          cls = DynLibTarget
       else:
-         raise Exception('unsupported target type: {}'.format(sType))
+         raise Exception('unsupported target type <{}>'.format(sType))
       return cls
 
 

@@ -82,7 +82,7 @@ class Make(object):
    # See Make.output_dir.
    _m_sOutputDir = ''
    # All targets specified by the parsed makefile (file path -> Target), including implicit and
-   # intermediate targets not explicitly declared with a <target> element.
+   # intermediate targets not explicitly declared with a named target element.
    _m_dictTargets = None
 
    # Special value used with get_target_by_*() to indicate that a target not found should result in
@@ -323,19 +323,16 @@ class Make(object):
             # Skip whitespace/comment nodes.
             continue
          if eltTarget.nodeType != eltTarget.ELEMENT_NODE:
-            raise SyntaxError('expected <target>, found: {}'.format(eltTarget.nodeName))
-
-         if eltTarget.nodeName == 'target':
-            sName = eltTarget.getAttribute('name')
-            if not sName:
-               raise Exception('missing target name')
-            # Pick a Target-derived class for this target type.
-            clsTarget = target.Target.select_subclass(eltTarget)
-            # Instantiate the Target-derived class, assigning it its name.
-            tgt = clsTarget(self, sName)
-            listNodesAndTargets.append((tgt, eltTarget))
-         else:
-            raise SyntaxError('expected <target>; found: <{}>'.format(eltTarget.nodeName))
+            raise SyntaxError('expected target, found: {}'.format(eltTarget.nodeName))
+         # Every target must have a name attribute.
+         sName = eltTarget.getAttribute('name')
+         if not sName:
+            raise Exception('missing target name')
+         # Pick a Target-derived class for this target type.
+         clsTarget = target.Target.select_subclass(eltTarget)
+         # Instantiate the Target-derived class, assigning it its name.
+         tgt = clsTarget(self, sName)
+         listNodesAndTargets.append((tgt, eltTarget))
 
       # Now that all the targets have been instantiated, we can have them parse their definitions.
       for tgt, eltTarget in listNodesAndTargets:
@@ -358,7 +355,7 @@ class Make(object):
       for sName, tgt in self._m_dictNamedTargets.items():
          print('Target “{}” {}'.format(sName, tgt.file_path))
       # All targets specified by the parsed makefile (file path -> Target), including implicit and
-      # intermediate targets not explicitly declared with a <target> element.
+      # intermediate targets not explicitly declared with a named target element.
       for sFilePath, tgt in self._m_dictTargets.items():
          print('Target {}'.format(tgt.file_path))
 
