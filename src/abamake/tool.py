@@ -27,6 +27,7 @@ import re
 import subprocess
 
 import make
+import make.job
 
 
 
@@ -193,12 +194,12 @@ class Tool(object):
 
       Make mk
          Make instance.
-      iterable(make.Job*) iterBlockingJobs
+      iterable(make.job.Job*) iterBlockingJobs
          Jobs that should block the first one scheduled for this execution of the tool (Tool
          instance).
       iterable(str*) iterMetadataToUpdate
          Paths to the files for which metadata should be updated when this job completes.
-      make.Job return
+      make.job.Job return
          Last job scheduled.
       """
 
@@ -221,7 +222,7 @@ class Tool(object):
 
       self._run_add_cmd_inputs(listArgs)
 
-      return make.ExternalCommandJob(
+      return make.job.ExternalCommandJob(
          mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, {
             'args': listArgs,
          }

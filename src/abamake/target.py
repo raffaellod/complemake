@@ -25,6 +25,7 @@ import re
 import sys
 
 import make
+import make.job
 
 
 
@@ -605,7 +606,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          return None
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.ExternalCommandJob(
+      return make.job.ExternalCommandJob(
          mk, iterBlockingJobs, ('CMP', self._m_sName), iterChangedFiles, {'args': listArgs,}
       )
 
@@ -697,7 +698,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
             dictEnv['LD_LIBRARY_PATH'] = sLibPath
             break
 
-      return make.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self._m_sName), tplDeps, {
+      return make.job.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self._m_sName), tplDeps, {
          'args': tplArgs,
          'env' : dictEnv,
       })
