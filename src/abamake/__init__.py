@@ -69,7 +69,7 @@ class Make(object):
    _m_bForceBuild = False
    # See Make.ignore_errors.
    _m_bIgnoreErrors = False
-   # Job scheduler/controller.
+   # See Make.job_controller.
    _m_jc = None
    # See Make.keep_going.
    _m_bKeepGoing = False
@@ -235,6 +235,12 @@ class Make(object):
       if nd.nodeType == nd.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
          return True
       return False
+
+
+   def _get_job_controller(self):
+      return self._m_jc
+
+   job_controller = property(_get_job_controller, doc = """Job scheduler/controller.""")
 
 
    def _get_keep_going(self):

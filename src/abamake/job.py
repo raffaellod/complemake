@@ -149,7 +149,7 @@ class Job(object):
             jobDep._m_setBlockedJobs.add(self)
          self._m_cBlocks = len(iterBlockingJobs)
       # Schedule this job.
-      mk._m_jc.schedule_job(self)
+      mk.job_controller.schedule_job(self)
 
 
    def _get_blocked(self):
