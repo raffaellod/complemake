@@ -39,7 +39,10 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
-   # Path to this tool’s executable. Detected and set by Tool.detect().
+   # Default derived class to instantiate when a specific one is not required. Detected and set by
+   # calling Tool._detect() on a subclass and passing a list of its own subclasses as argument.
+   _sm_clsDefaultDerived = None
+   # Path to this tool’s executable. Detected and set by Tool._detect().
    _sm_sFilePath = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
@@ -84,10 +87,13 @@ class Tool(object):
 
 
    @classmethod
-   def detect(cls, iterSupported):
+   def _detect(cls, clsAbstract, iterSupported):
       """Attempts to detect the presence of a tool’s executable from a list of supported ones,
-      returning the corresponding class.
+      returning the corresponding class. If the classes in the list derive from the specified
+      abstract class, the chosen one will be stored as the base class’ default implementation.
 
+      type clsAbstract
+         Abstract class, base of all the ones in iterSupported.
       iterable(type*) iterSupported
          Iterable containing a class wrapper for each supported tool of the type of interest.
       type return
@@ -120,6 +126,10 @@ class Tool(object):
             if re.search(sOutMatch, sOut, re.MULTILINE):
                # Permanently associate the tool to the file path.
                clsTool._sm_sFilePath = iterArgs[0]
+               # If clsAbstract is a base of clsTool (they’re e.g. CxxCompiler and GxxCompiler),
+               # store clsTool as clsAbstract’s default implementation.
+               if issubclass(clsTool, clsAbstract):
+                  clsAbstract._sm_clsDefaultDerived = clsTool
                # Return the selection.
                return clsTool
 
@@ -128,6 +138,22 @@ class Tool(object):
 
       # No executable matched any of the supported ones.
       raise Exception('unable to detect tool; expected one of: ' + ', '.join(listTried))
+
+
+   @classmethod
+   def get_default_impl(cls):
+      """Returns the default implementation for this base class.
+
+      type return
+         Default implementation of this class.
+      """
+
+      # Tool itself cannot have a default implementation.
+      return None
+
+      # TODO: automatically discover derived classes, so this doesn’t need to be re-implemented by
+      # derived classes.
+      # TODO: once that’s done, merge this with Tool._detect().
 
 
    def _get_quiet_cmd(self):
@@ -298,8 +324,12 @@ class CxxCompiler(Tool):
 
 
    @classmethod
-   def detect(cls):
-      return Tool.detect((GxxCompiler, MscCompiler))
+   def get_default_impl(cls):
+      """See Tool.get_default_impl()."""
+
+      if cls._sm_clsDefaultDerived is None:
+         Tool._detect(cls, (GxxCompiler, MscCompiler))
+      return cls._sm_clsDefaultDerived
 
 
    def _get_quiet_cmd(self):
@@ -497,8 +527,12 @@ class Linker(Tool):
 
 
    @classmethod
-   def detect(cls):
-      return Tool.detect((GnuLinker, MsLinker))
+   def get_default_impl(cls):
+      """See Tool.get_default_impl()."""
+
+      if cls._sm_clsDefaultDerived is None:
+         Tool._detect(cls, (GnuLinker, MsLinker))
+      return cls._sm_clsDefaultDerived
 
 
    def _run_add_cmd_inputs(self, listArgs):

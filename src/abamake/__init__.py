@@ -61,8 +61,6 @@ class Make(object):
    # Like VERBOSITY_MED, and also show all the files that are being checked for changes.
    VERBOSITY_HIGH = 4
 
-   # See Make.cxxcompiler.
-   _m_clsCxxCompiler = None
    # See Make.dry_run.
    _m_bDryRun = False
    # See Make.force_build.
@@ -73,8 +71,6 @@ class Make(object):
    _m_jc = None
    # See Make.keep_going.
    _m_bKeepGoing = False
-   # See Make.linker.
-   _m_clsLinker = None
    # Metadata store.
    _m_mds = None
    # Targets explicitly declared in the parsed makefile (name -> Target).
@@ -112,16 +108,6 @@ class Make(object):
       sName = tgt.name
       if sName:
          self._m_dictNamedTargets[sName] = tgt
-
-
-   def _get_cxxcompiler(self):
-      if self._m_clsCxxCompiler is None:
-         self._m_clsCxxCompiler = tool.CxxCompiler.detect()
-      return self._m_clsCxxCompiler
-
-   cxxcompiler = property(_get_cxxcompiler, doc = """
-      C++ compiler class to be used to build CxxObjectTarget instances.
-   """)
 
 
    def _get_dry_run(self):
@@ -253,16 +239,6 @@ class Make(object):
       If True, scheduled jobs will continue to be run even after a failed job, as long as they don’t
       depend on a failed job. If False, a failed job causes execution to stop as soon as any other
       running jobs complete.
-   """)
-
-
-   def _get_linker(self):
-      if self._m_clsLinker is None:
-         self._m_clsLinker = tool.Linker.detect()
-      return self._m_clsLinker
-
-   linker = property(_get_linker, doc = """
-      Linker class to be used to build ExecutableTarget instances.
    """)
 
 

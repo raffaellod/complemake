@@ -26,6 +26,7 @@ import sys
 
 import make
 import make.job
+import make.tool
 
 
 
@@ -307,7 +308,8 @@ class ObjectTarget(ProcessedSourceTarget):
    def _generate_file_path(self, mk):
       """See ProcessedSourceTarget._generate_file_path()."""
 
-      return super()._generate_file_path(mk) + mk.cxxcompiler.object_suffix
+      return super()._generate_file_path(mk) + \
+         make.tool.CxxCompiler.get_default_impl().object_suffix
 
 
 
@@ -320,7 +322,7 @@ class CxxObjectTarget(ObjectTarget):
    def _get_tool(self, mk):
       """See ObjectTarget._get_tool()."""
 
-      cxx = mk.cxxcompiler()
+      cxx = make.tool.CxxCompiler.get_default_impl()()
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -422,7 +424,7 @@ class ExecutableTarget(Target):
    def _get_tool(self, mk):
       """See Target._get_tool()."""
 
-      lnk = mk.linker()
+      lnk = make.tool.Linker.get_default_impl()()
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
       return lnk
