@@ -318,6 +318,9 @@ class CxxCompiler(Tool):
    def _run_add_cmd_flags(self, listArgs):
       """See Tool._run_add_cmd_flags()."""
 
+      # TODO: remove hardcoded dirs.
+      self.add_include_dir('include')
+
       super()._run_add_cmd_flags(listArgs)
 
       # Add any preprocessor macros.
@@ -354,14 +357,6 @@ class GxxCompiler(CxxCompiler):
    _smc_iterDetectArgs = ('g++', '--version')
    # Pattern to compare the output of _smc_iterDetectArgs against.
    _smc_sDetectPattern = r'^g\+\+.*(?P<ver>[.0-9]+)$'
-
-
-   def __init__(self):
-      """Constructor. See Linker.__init__()."""
-
-      super().__init__()
-      # TODO: remove hardcoded dirs.
-      self.add_include_dir('include')
 
 
    # See CxxCompiler.object_suffix.
