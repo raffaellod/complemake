@@ -361,16 +361,21 @@ class Make(object):
 
 
    def run_scheduled_jobs(self):
-      """Executes any scheduled jobs."""
+      """Executes any scheduled jobs.
 
-      cFailedJobsTotal = self._m_jc.run_scheduled_jobs(self)
+      int return
+         Count of jobs that completed in failure.
+      """
 
-      # Write any new metadata.
-      if self._m_mds and not self.dry_run:
-         if self.verbosity >= self.VERBOSITY_HIGH:
-            sys.stdout.write('metadata: updating\n')
-         self._m_mds.write()
-      self._m_mds = None
+      try:
+         cFailedJobsTotal = self._m_jc.run_scheduled_jobs(self)
+      finally:
+         # Write any new metadata.
+         if self._m_mds and not self.dry_run:
+            if self.verbosity >= self.VERBOSITY_HIGH:
+               sys.stdout.write('metadata: updating\n')
+            self._m_mds.write()
+         self._m_mds = None
 
       return cFailedJobsTotal
 
