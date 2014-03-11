@@ -39,6 +39,8 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
+   # Path to this tool’s executable. Detected and set by Tool.detect().
+   _sm_sFilePath = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
    # See Tool.output_file_path.
@@ -46,8 +48,6 @@ class Tool(object):
    # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
    # displayed.
    _smc_sQuietName = None
-   # Associates a Tool-derived class to its executable file name.
-   _sm_dictToolFilePaths = {}
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
 
@@ -119,7 +119,7 @@ class Tool(object):
          else:
             if re.search(sOutMatch, sOut, re.MULTILINE):
                # Permanently associate the tool to the file path.
-               cls._sm_dictToolFilePaths[clsTool] = iterArgs[0]
+               clsTool._sm_sFilePath = iterArgs[0]
                # Return the selection.
                return clsTool
 
@@ -139,7 +139,7 @@ class Tool(object):
       """
 
       if self._smc_sQuietName is None:
-         sQuietName = os.path.basename(self._sm_dictToolFilePaths[type(self)])
+         sQuietName = os.path.basename(self._sm_sFilePath)
       else:
          sQuietName = self._smc_sQuietName
       return sQuietName, (self._m_sOutputFilePath or '')
@@ -204,7 +204,7 @@ class Tool(object):
       """
 
       # Build the arguments list.
-      listArgs = [self._sm_dictToolFilePaths[type(self)]]
+      listArgs = [self._sm_sFilePath]
 
       self._run_add_cmd_flags(listArgs)
 
