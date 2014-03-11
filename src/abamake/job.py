@@ -20,6 +20,7 @@
 
 """Job scheduling and execution classes."""
 
+import multiprocessing
 import subprocess
 import sys
 import time
@@ -252,7 +253,7 @@ class Controller(object):
    # Running jobs (Popen -> Job).
    _m_dictRunningJobs = None
    # Maximum count of running jobs, i.e. degree of parallelism.
-   _m_cRunningJobsMax = 8
+   _m_cRunningJobsMax = None
    # Scheduled jobs.
    _m_setScheduledJobs = None
    # “Last” scheduled jobs (Target -> Job that completes it), i.e. jobs that are the last in a chain
@@ -265,6 +266,7 @@ class Controller(object):
       """Constructor."""
 
       self._m_dictRunningJobs = {}
+      self._m_cRunningJobsMax = multiprocessing.cpu_count()
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
 
