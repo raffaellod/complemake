@@ -53,22 +53,42 @@ def _main(iterArgs):
             mk.dry_run = True
          elif sArg == '--ignore-errors':
             mk.ignore_errors = True
+         elif sArg.startswith('--jobs'):
+            if sArg[len('--jobs')] == '=':
+               cJobs = int(sArg[len('--jobs') + 1:])
+            else:
+               cJobs = 999999
+            mk.job_controller.running_jobs_max = cJobs
          elif sArg == '--keep-going':
             mk.keep_going = True
          elif sArg == '--verbose':
             mk.verbosity += 1
       elif sArg.startswith('-'):
-         for sArgChar in sArg:
+         ich = 1
+         ichEnd = len(sArg)
+         while ich < ichEnd:
+            sArgChar = sArg[ich]
             if sArgChar == 'f':
                mk.force_build = True
             elif sArgChar == 'i':
                mk.ignore_errors = True
+            elif sArgChar == 'j':
+               # TODO: make this parsing more generic and more flexible.
+               ichNumberLast = ich + 1
+               while ichNumberLast < ichEnd and sArg[ichNumberLast] in '0123456789':
+                  ichNumberLast += 1
+               if ichNumberLast > ich + 1:
+                  cJobs = int(sArg[ich + 1:ichNumberLast])
+               else:
+                  cJobs = 999999
+               mk.job_controller.running_jobs_max = cJobs
             elif sArgChar == 'k':
                mk.keep_going = True
             elif sArgChar == 'n':
                mk.dry_run = True
             elif sArgChar == 'v':
                mk.verbosity += 1
+            ich += 1
       else:
          break
       iArg += 1

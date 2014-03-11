@@ -252,8 +252,6 @@ class Controller(object):
 
    # Running jobs (Popen -> Job).
    _m_dictRunningJobs = None
-   # Maximum count of running jobs, i.e. degree of parallelism.
-   _m_cRunningJobsMax = None
    # Scheduled jobs.
    _m_setScheduledJobs = None
    # “Last” scheduled jobs (Target -> Job that completes it), i.e. jobs that are the last in a chain
@@ -266,7 +264,7 @@ class Controller(object):
       """Constructor."""
 
       self._m_dictRunningJobs = {}
-      self._m_cRunningJobsMax = multiprocessing.cpu_count()
+      self.running_jobs_max = multiprocessing.cpu_count()
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
 
@@ -361,7 +359,7 @@ class Controller(object):
          # Make sure any completed jobs are collected.
          cFailedJobs = self._collect_completed_jobs(mk, 0)
          # Make sure we have at least one free job slot.
-         while len(self._m_dictRunningJobs) == self._m_cRunningJobsMax:
+         while len(self._m_dictRunningJobs) == self.running_jobs_max:
             # Wait for one or more jobs slots to free up.
             cFailedJobs += self._collect_completed_jobs(mk, 1)
 
@@ -393,6 +391,11 @@ class Controller(object):
       cFailedJobsTotal += self._collect_completed_jobs(mk, len(self._m_dictRunningJobs))
 
       return cFailedJobsTotal
+
+
+   # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors
+   # in the system.
+   running_jobs_max = None
 
 
    def schedule_job(self, job):
