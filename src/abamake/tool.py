@@ -148,12 +148,10 @@ class Tool(object):
          Default implementation of this class.
       """
 
-      # Tool itself cannot have a default implementation.
-      return None
-
-      # TODO: automatically discover derived classes, so this doesn’t need to be re-implemented by
-      # derived classes.
-      # TODO: once that’s done, merge this with Tool._detect().
+      if cls._sm_clsDefaultDerived is None:
+         # TODO: merge Tool._detect() here?
+         Tool._detect(cls, cls.__subclasses__())
+      return cls._sm_clsDefaultDerived
 
 
    def _get_quiet_cmd(self):
@@ -321,15 +319,6 @@ class CxxCompiler(Tool):
       if self._m_dictMacros is None:
          self._m_dictMacros = {}
       self._m_dictMacros[sName] = sExpansion
-
-
-   @classmethod
-   def get_default_impl(cls):
-      """See Tool.get_default_impl()."""
-
-      if cls._sm_clsDefaultDerived is None:
-         Tool._detect(cls, (GxxCompiler, MscCompiler))
-      return cls._sm_clsDefaultDerived
 
 
    def _get_quiet_cmd(self):
@@ -524,15 +513,6 @@ class Linker(Tool):
       if self._m_listLibPaths is None:
          self._m_listLibPaths = []
       self._m_listLibPaths.append(sLibPath)
-
-
-   @classmethod
-   def get_default_impl(cls):
-      """See Tool.get_default_impl()."""
-
-      if cls._sm_clsDefaultDerived is None:
-         Tool._detect(cls, (GnuLinker, MsLinker))
-      return cls._sm_clsDefaultDerived
 
 
    def _run_add_cmd_inputs(self, listArgs):
