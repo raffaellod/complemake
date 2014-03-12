@@ -217,8 +217,9 @@ class Tool(object):
       self._run_add_cmd_flags(listArgs)
 
       if self._m_sOutputFilePath:
-         # Make sure that the output directory exists.
-         os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
+         if not mk.dry_run:
+            # Make sure that the output directory exists.
+            os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
          # Make sure to update the metadata for the output file once the job completes.
          if iterMetadataToUpdate is None:
             iterMetadataToUpdate = []
