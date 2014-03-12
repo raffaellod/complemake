@@ -28,10 +28,10 @@ import xml.dom.minidom
 
 
 ####################################################################################################
-# FileMetadata
+# FileSignature
 
-class FileMetadata(object):
-   """Metadata for a single file."""
+class FileSignature(object):
+   """Signature metadata for a single file."""
 
    __slots__ = (
       # Date/time of the file’s last modification.
@@ -43,7 +43,7 @@ class FileMetadata(object):
       """Constructor.
 
       str sFilePath
-         Path to the file of which to collect metadata.
+         Path to the file for which a signature should be generated.
       """
 
       self._m_dtMTime = datetime.fromtimestamp(os.path.getmtime(sFilePath))
@@ -71,15 +71,15 @@ class FileMetadata(object):
 
 
 ####################################################################################################
-# FileMetadataPair
+# FileSignaturesPair
 
-class FileMetadataPair(object):
-   """Stores Handles storage and retrieval of file metadata."""
+class FileSignaturesPair(object):
+   """Handles storage and retrieval of file signatures."""
 
    __slots__ = (
-      # Stored file metadata, or None if the file’s metadata was never collected.
+      # Stored file signature, or None if the file’s signature was never collected.
       'stored',
-      # Current file metadata, or None if the file’s metadata has not yet been refreshed.
+      # Current file signature, or None if the file’s signature has not yet been refreshed.
       'current',
    )
 
@@ -96,87 +96,95 @@ class FileMetadataPair(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
-   # Metadata for each file (str -> FileMetadata).
+   # True if any changes occurred, which means that the metadata file should be updated.
    _m_bDirty = False
    # Persistent storage file path.
    _m_sFilePath = None
-   # Metadata for each file (str -> FileMetadata).
-   _m_dictMetadataPairs = None
-
-
-   def __init__(self, sFilePath):
-      """Constructor. Loads metadata from the specified file.
-
-      str sFilePath
-         Metadata storage file.
-      """
-
-      self._m_sFilePath = sFilePath
-      self._m_dictMetadataPairs = {}
-      try:
-         with xml.dom.minidom.parse(sFilePath) as doc:
-            doc.documentElement.normalize()
-            for eltFile in doc.documentElement.childNodes:
-               # Skip unimportant nodes.
-               if eltFile.nodeType != eltFile.ELEMENT_NODE or eltFile.nodeName != 'file':
-                  continue
-               # Parse this <file> element into the “stored” FileMetadata member of a new
-               # FileMetadataPair instance.
-               fmdp = FileMetadataPair()
-               fmdp.stored = FileMetadata.__new__(FileMetadata)
-               fmdp.stored.__setstate__(eltFile.attributes)
-               self._m_dictMetadataPairs[eltFile.getAttribute('path')] = fmdp
-      except FileNotFoundError:
-         # If we can’t load the persistent metadata store, start it over.
-         pass
-
-
-   def __bool__(self):
-      return bool(self._m_dictMetadataPairs)
+   # Signature for each file (str -> FileSignaturesPair).
+   _m_dictSigPairs = None
 
 
    def file_changed(self, sFilePath):
-      """Compares the metadata stored for the specified file against the file’s current metadata.
+      """Compares the signature stored for the specified file against the file’s current signature.
 
       str sFilePath
-         Path to the file of which to compare metadata.
+         Path to the file of which to compare signatures.
       bool return
          True if the file is determined to have changed, or False otherwise.
       """
 
-      fmdp = self._m_dictMetadataPairs.get(sFilePath)
-      # If we have no metadata to compare, report the file as changed.
-      if fmdp is None or fmdp.stored is None:
+      fsigp = self._m_dictSigPairs.get(sFilePath)
+      # If we have no stored signature to compare to, report the file as changed.
+      if fsigp is None or fsigp.stored is None:
          return True
-      # If we still haven’t read the file’s current metadata, retrieve it now.
-      if fmdp.current is None:
+      # If we still haven’t read the file’s current signature, generate one now.
+      if fsigp.current is None:
          try:
-            fmdp.current = FileMetadata(sFilePath)
+            fsigp.current = FileSignature(sFilePath)
          except FileNotFoundError:
             # If the file doesn’t exist (anymore), consider it changed.
             return True
 
-      # Compare stored vs. current metadata.
-      return fmdp.current != fmdp.stored
+      # Compare stored vs. current signature.
+      return fsigp.current != fsigp.stored
 
 
-   def update(self, sFilePath):
-      """Creates or updates metadata for the specified file.
+   def read(self, sFilePath):
+      """Reads metadata from the specified file.
 
       str sFilePath
-         Path to the file of which to update metadata.
+         Metadata storage file.
+      bool return
+         True if the file was successfully loaded, or False if the metadata was not read; in the
+         latter case, the store will remain empty, but it will memorize its file path.
       """
 
-      fmdp = self._m_dictMetadataPairs.get(sFilePath)
-      # Make sure the metadata pair is in the dictionary.
-      if fmdp is None:
-         fmdp = FileMetadataPair()
-         self._m_dictMetadataPairs[sFilePath] = fmdp
-      # Always re-read the file metadata because if we obtained it during scheduling, the file might
+      self._m_sFilePath = sFilePath
+      self._m_dictSigPairs = {}
+      try:
+         doc = xml.dom.minidom.parse(sFilePath)
+      except FileNotFoundError:
+         # If we can’t load the persistent metadata store, start it anew.
+         return False
+
+      # Parse the metadata.
+      doc.documentElement.normalize()
+      with doc.documentElement as eltRoot:
+         for eltTop in eltRoot.childNodes:
+            # Skip unimportant nodes.
+            if eltTop.nodeType != eltTop.ELEMENT_NODE:
+               continue
+            if eltTop.nodeName == 'signatures':
+               for eltFile in eltTop.childNodes:
+                  # Skip unimportant nodes.
+                  if eltFile.nodeType != eltFile.ELEMENT_NODE or eltFile.nodeName != 'file':
+                     continue
+                  # Parse this <file> element into the “stored” FileSignature member of a new
+                  # FileSignaturesPair instance.
+                  fsigp = FileSignaturesPair()
+                  fsigp.stored = FileSignature.__new__(FileSignature)
+                  fsigp.stored.__setstate__(eltFile.attributes)
+                  self._m_dictSigPairs[eltFile.getAttribute('path')] = fsigp
+      return True
+
+
+   def update_file_signature(self, sFilePath):
+      """Creates or updates the signature for the specified file.
+
+      str sFilePath
+         Path to the file the signature of which should be updated.
+      """
+
+      fsigp = self._m_dictSigPairs.get(sFilePath)
+      # Make sure the signature pair is in the dictionary.
+      if fsigp is None:
+         fsigp = FileSignaturesPair()
+         self._m_dictSigPairs[sFilePath] = fsigp
+      # Always re-read the file signature because if we obtained it during scheduling, the file may
       # have been regenerated now that jobs have been run.
-      fmdp.current = FileMetadata(sFilePath)
-      # Replace the stored metadata.
-      fmdp.stored = fmdp.current
+      fsigp.current = FileSignature(sFilePath)
+      # Replace the stored signature.
+      fsigp.stored = fsigp.current
       self._m_bDirty = True
 
 
@@ -193,15 +201,17 @@ class MetadataStore(object):
          qualifiedName = None,
       )
       eltRoot = doc.appendChild(doc.createElement('metadata'))
-      # Add metadata for each file.
-      for sFilePath, fmdp in self._m_dictMetadataPairs.items():
-         eltFile = eltRoot.appendChild(doc.createElement('file'))
+
+      # Add the signatures section.
+      eltSigs = eltRoot.appendChild(doc.createElement('signatures'))
+      for sFilePath, fsigp in self._m_dictSigPairs.items():
+         eltFile = eltSigs.appendChild(doc.createElement('file'))
          eltFile.setAttribute('path', sFilePath)
          # Add the metadata as attributes for this <file> element.
-         for sName, oValue in fmdp.stored.__getstate__().items():
+         for sName, oValue in fsigp.stored.__getstate__().items():
             eltFile.setAttribute(sName, str(oValue))
+
       # Write the document to file.
-      os.makedirs(os.path.dirname(self._m_sFilePath), 0o755, True)
       with open(self._m_sFilePath, 'w') as fileMetadata:
          doc.writexml(fileMetadata, addindent = '   ', newl = '\n')
 

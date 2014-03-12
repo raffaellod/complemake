@@ -270,10 +270,11 @@ class Make(object):
 
       with xml.dom.minidom.parse(sFilePath) as doc:
          self._parse_doc(doc)
-      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk', 'metadata.xml')
-      self._m_mds = metadata.MetadataStore(sMetadataFilePath)
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
+      self._m_mds = metadata.MetadataStore()
+      bRead = self._m_mds.read(sMetadataFilePath)
       if self.verbosity >= self.VERBOSITY_HIGH:
-         if self._m_mds:
+         if bRead:
             sys.stdout.write('metadata: store loaded: {}\n'.format(sMetadataFilePath))
          else:
             sys.stdout.write('metadata: empty or missing store: {}\n'.format(sMetadataFilePath))
@@ -411,7 +412,7 @@ class Make(object):
       for sFilePath in iterFilePaths:
          if self.verbosity >= self.VERBOSITY_HIGH:
             sys.stdout.write('metadata: updating: {}\n'.format(sFilePath))
-         self._m_mds.update(sFilePath)
+         self._m_mds.update_file_signature(sFilePath)
 
 
    # Selects a verbosity level (Make.VERBOSITY_*), affecting what is displayed about the operations
