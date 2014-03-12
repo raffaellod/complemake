@@ -94,25 +94,26 @@ def _main(iterArgs):
       iArg += 1
 
    # Check for a makefile name.
+   sMakefilePath = None
    if iArg < iArgEnd:
       sArg = iterArgs[iArg]
       if sArg.endswith('.abcmk'):
          # Save the argument as the makefile path and consume it.
          sMakefilePath = sArg
          iArg += 1
-   else:
+   # No makefile specified?
+   if not sMakefilePath:
       # Check if the current directory contains a single ABC makefile.
-      sMakefilePath = None
       for sFilePath in os.listdir():
          if sFilePath.endswith('.abcmk') and len(sFilePath) > len('.abcmk'):
-            if sMakefilePath is None:
-               sMakefilePath = sFilePath
-            else:
+            if sMakefilePath:
                sys.stderr.write(
                   'error: multiple makefiles found in the current directory, please specify one ' +
                      'explicitly\n'
                )
                return 1
+            sMakefilePath = sFilePath
+      # Still no makefile?
       if not sMakefilePath:
          sys.stderr.write('error: no makefile specified\n')
          return 1
@@ -126,7 +127,7 @@ def _main(iterArgs):
       iterTargets = []
       while iArg < iArgEnd:
          sArg = iterArgs[iArg]
-         iterTargets.add(mk.get_target_by_name(sArg, None) or mk.get_target_by_file_path(sArg))
+         iterTargets.append(mk.get_target_by_name(sArg, None) or mk.get_target_by_file_path(sArg))
          iArg += 1
    else:
       iterTargets = mk.named_targets
