@@ -87,70 +87,54 @@ class Tool(object):
 
 
    @classmethod
-   def _detect(cls, clsAbstract, iterSupported):
-      """Attempts to detect the presence of a tool’s executable from a list of supported ones,
-      returning the corresponding class. If the classes in the list derive from the specified
-      abstract class, the chosen one will be stored as the base class’ default implementation.
-
-      type clsAbstract
-         Abstract class, base of all the ones in iterSupported.
-      iterable(type*) iterSupported
-         Iterable containing a class wrapper for each supported tool of the type of interest.
-      type return
-         Class wrapping the first detected tool among these in iterSupported.
-      """
-
-      # TODO: accept paths provided via command line.
-      # TODO: apply a cross-compiler prefix.
-
-      listTried = []
-      for clsTool in iterSupported:
-         iterArgs  = clsTool._smc_iterDetectArgs
-         sOutMatch = clsTool._smc_sDetectPattern
-         # Make sure we have a US English environment dictionary.
-         if cls._sm_dictUSEngEnv is None:
-            # Copy the current environment and add to it a locale override for US English.
-            cls._sm_dictUSEngEnv = os.environ.copy()
-            cls._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
-
-         try:
-            with subprocess.Popen(
-               iterArgs, env = cls._sm_dictUSEngEnv,
-               stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True
-            ) as procTool:
-               sOut, sErr = procTool.communicate()
-         except FileNotFoundError:
-            # This just means that the program is not installed; move on to the next candidate.
-            pass
-         else:
-            if re.search(sOutMatch, sOut, re.MULTILINE):
-               # Permanently associate the tool to the file path.
-               clsTool._sm_sFilePath = iterArgs[0]
-               # If clsAbstract is a base of clsTool (they’re e.g. CxxCompiler and GxxCompiler),
-               # store clsTool as clsAbstract’s default implementation.
-               if issubclass(clsTool, clsAbstract):
-                  clsAbstract._sm_clsDefaultDerived = clsTool
-               # Return the selection.
-               return clsTool
-
-         # Remember we tried this executable name.
-         listTried.append(iterArgs[0])
-
-      # No executable matched any of the supported ones.
-      raise Exception('unable to detect tool; expected one of: ' + ', '.join(listTried))
-
-
-   @classmethod
    def get_default_impl(cls):
-      """Returns the default implementation for this base class.
+      """Returns the default implementation for this base class. For example, if GCC is detected,
+      CxxCompiler.get_default_impl() will return GxxCompiler as CxxCompiler’s default implementation
+      class.
 
       type return
          Default implementation of this class.
       """
 
       if cls._sm_clsDefaultDerived is None:
-         # TODO: merge Tool._detect() here?
-         Tool._detect(cls, cls.__subclasses__())
+         # Attempt to detect the presence of a derived class’s executable.
+         # TODO: accept paths provided via command line.
+         # TODO: apply a cross-compiler prefix.
+
+         # Make sure we have a US English environment dictionary.
+         if Tool._sm_dictUSEngEnv is None:
+            # Copy the current environment and add to it a locale override for US English.
+            Tool._sm_dictUSEngEnv = os.environ.copy()
+            Tool._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
+
+         for clsDeriv in cls.__subclasses__():
+            iterArgs  = clsDeriv._smc_iterDetectArgs
+            sOutMatch = clsDeriv._smc_sDetectPattern
+            try:
+               with subprocess.Popen(
+                  iterArgs, env = Tool._sm_dictUSEngEnv,
+                  stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True
+               ) as procTool:
+                  sOut, sErr = procTool.communicate()
+            except FileNotFoundError:
+               # This just means that the program is not installed; move on to the next candidate.
+               continue
+            if re.search(sOutMatch, sOut, re.MULTILINE):
+               # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
+               clsDeriv._sm_sFilePath = iterArgs[0]
+               cls._sm_clsDefaultDerived = clsDeriv
+               break
+         else:
+            # No supported executable found: raise an exception with a list of possibilities.
+            raise Exception(
+               'unable to detect default implementation for {}; expected one of:\n'.format(
+                  cls.__name__
+               ) +
+               '\n'.join(['  {:7}  {}'.format(
+                  clsDeriv._smc_iterDetectArgs[0], clsDeriv.__doc__.lstrip('.')
+               ) for clsDeriv in cls.__subclasses__()])
+            )
+
       return cls._sm_clsDefaultDerived
 
 
