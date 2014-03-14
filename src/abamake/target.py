@@ -23,6 +23,7 @@
 import os
 import re
 import sys
+import weakref
 
 import make
 import make.job
@@ -40,6 +41,8 @@ class Target(object):
    _m_setDeps = None
    # See Target.file_path.
    _m_sFilePath = None
+   # Weak ref to the owning make instance.
+   _m_mk = None
    # See Target.name.
    _m_sName = None
 
@@ -55,7 +58,8 @@ class Target(object):
       """
 
       self._m_sName = sName
-      self._m_sFilePath = self._generate_file_path(mk)
+      self._m_mk = weakref.ref(mk)
+      self._m_sFilePath = self._generate_file_path()
       # Add self to any applicable targets lists.
       mk._add_target(self)
 
@@ -72,12 +76,10 @@ class Target(object):
       self._m_setDeps.add(tgtDep)
 
 
-   def build(self, mk, iterBlockingJobs):
+   def build(self, iterBlockingJobs):
       """Builds the output, using the facilities provided by the specified Make instance and
       returning the last job scheduled.
 
-      Make mk
-         Make instance.
       iterable(Job*) iterBlockingJobs
          Jobs that should block the first one scheduled to build this target.
       Job return
@@ -106,14 +108,12 @@ class Target(object):
    file_path = property(_get_file_path, doc = """Target file path.""")
 
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """Generates and returns a file path for the target, based on other member varialbes set
       beforehand and the configuration of the provided Make instance. Called by Target.__init__().
 
       The default implementation doesn’t generate a file path because no output file is assumed.
 
-      Make mk
-         Make instance.
       str return
          Target file path; same as Target.file_path.
       """
@@ -122,12 +122,10 @@ class Target(object):
       return None
 
 
-   def _get_tool(self, mk):
+   def _get_tool(self):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
 
-      Make mk
-         Make instance.
       Tool return
          Ready-to-use tool.
       """
@@ -135,17 +133,15 @@ class Target(object):
       raise NotImplementedError('Target._get_tool() must be overridden')
 
 
-   def is_build_needed(self, mk):
+   def is_build_needed(self):
       """Checks if the target should be (re)built or if it’s up-to-date.
 
-      Make mk
-         Make instance.
       bool return
          True if a build is needed, or False otherwise.
       """
 
       # Now compare the metadata with what’s in the store.
-      return mk._m_mds.compare_target_snapshot(self)
+      return self._m_mk()._m_mds.compare_target_snapshot(self)
 
 
    def _get_name(self):
@@ -154,11 +150,9 @@ class Target(object):
    name = property(_get_name, doc = """Name of the target.""")
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """Validates and processes the specified child element of the target’s <target> element.
 
-      Make mk
-         Make instance.
       xml.dom.Element elt
          Element to parse.
       bool return
@@ -230,17 +224,17 @@ class ProcessedSourceTarget(Target):
       # TODO: add other external dependencies.
 
 
-   def build(self, mk, iterBlockingJobs):
+   def build(self, iterBlockingJobs):
       """See Target.build()."""
 
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool(mk).schedule_jobs(mk, self, iterBlockingJobs)
+      return self._get_tool().schedule_jobs(self._m_mk(), self, iterBlockingJobs)
 
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See Target._generate_file_path()."""
 
-      return os.path.join(mk.output_dir, 'int', self._m_sSourceFilePath)
+      return os.path.join(self._m_mk().output_dir, 'int', self._m_sSourceFilePath)
 
 
 
@@ -250,16 +244,16 @@ class ProcessedSourceTarget(Target):
 class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See ProcessedSourceTarget._generate_file_path()."""
 
-      return super()._generate_file_path(mk) + '.i'
+      return super()._generate_file_path() + '.i'
 
 
-   def _get_tool(self, mk):
+   def _get_tool(self):
       """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
 
-      cxx = CxxObjectTarget._get_tool(self, mk)
+      cxx = CxxObjectTarget._get_tool(self)
       cxx.add_flags(make.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
@@ -271,10 +265,10 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 class ObjectTarget(ProcessedSourceTarget):
    """Intermediate object target."""
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See ProcessedSourceTarget._generate_file_path()."""
 
-      return super()._generate_file_path(mk) + \
+      return super()._generate_file_path() + \
          make.tool.CxxCompiler.get_default_impl().object_suffix
 
 
@@ -285,7 +279,7 @@ class ObjectTarget(ProcessedSourceTarget):
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
-   def _get_tool(self, mk):
+   def _get_tool(self):
       """See ObjectTarget._get_tool()."""
 
       cxx = make.tool.CxxCompiler.get_default_impl()()
@@ -294,7 +288,7 @@ class CxxObjectTarget(ObjectTarget):
 
       if self._m_sFinalOutputFilePath:
          # Let the final output configure the compiler.
-         tgtFinalOutput = mk.get_target_by_file_path(self._m_sFinalOutputFilePath)
+         tgtFinalOutput = self._m_mk().get_target_by_file_path(self._m_sFinalOutputFilePath)
          tgtFinalOutput.configure_compiler(cxx)
 
       # TODO: add file-specific flags.
@@ -329,10 +323,11 @@ class ExecutableTarget(Target):
       self._m_listLinkerInputs.append(oLib)
 
 
-   def build(self, mk, iterBlockingJobs):
+   def build(self, iterBlockingJobs):
       """See Target.build()."""
 
-      lnk = self._get_tool(mk)
+      mk = self._m_mk()
+      lnk = self._get_tool()
 
       # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
       # over that list only once, combine building the list of files to be checked for changes with
@@ -374,14 +369,14 @@ class ExecutableTarget(Target):
       pass
 
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See Target._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'bin', '' + self._m_sName + '')
+      return os.path.join(self._m_mk().output_dir, 'bin', '' + self._m_sName + '')
 
 
-   def _get_tool(self, mk):
+   def _get_tool(self):
       """See Target._get_tool()."""
 
       lnk = make.tool.Linker.get_default_impl()()
@@ -390,9 +385,10 @@ class ExecutableTarget(Target):
       return lnk
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """See Target.parse_makefile_child()."""
 
+      mk = self._m_mk()
       if elt.nodeName == 'source':
          # Pick the correct target class based on the file name extension.
          sFilePath = elt.getAttribute('path')
@@ -426,7 +422,7 @@ class ExecutableTarget(Target):
             )
          tgtUnitTest.add_dependency(self)
          return True
-      return super().parse_makefile_child(mk, elt)
+      return super().parse_makefile_child(elt)
 
 
 
@@ -449,28 +445,29 @@ class DynLibTarget(ExecutableTarget):
          tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
 
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'lib', 'lib' + self._m_sName + '.so')
+      return os.path.join(self._m_mk().output_dir, 'lib', 'lib' + self._m_sName + '.so')
 
 
-   def _get_tool(self, mk):
+   def _get_tool(self):
       """See ExecutableTarget._get_tool(). Overridden to tell the linker to generate a dynamic
       library.
       """
 
-      lnk = super()._get_tool(mk)
+      lnk = super()._get_tool()
       lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """See ExecutableTarget.parse_makefile_child()."""
 
+      mk = self._m_mk()
       # This implementation does not allow more element types than the base class’ version.
-      if not super().parse_makefile_child(mk, elt):
+      if not super().parse_makefile_child(elt):
          return False
       # Apply additional logic on the recognized element.
       if elt.nodeName == 'unittest':
@@ -489,18 +486,18 @@ class DynLibTarget(ExecutableTarget):
 class UnitTestTarget(Target):
    """Generic unit test target."""
 
-   def _is_build_needed(self, mk):
+   def _is_build_needed(self):
       """See Target.is_build_needed()."""
 
       return True
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """See Target.parse_makefile_child()."""
 
       if elt.nodeName == 'unittest':
          raise SyntaxError('<unittest> not allowed in <target type="unittest">')
-      return super().parse_makefile_child(mk, elt)
+      return super().parse_makefile_child(elt)
 
 
    @classmethod
@@ -557,7 +554,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
    _m_sExpectedOutputFilePath = None
 
 
-   def build(self, mk, iterBlockingJobs):
+   def build(self, iterBlockingJobs):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
@@ -569,13 +566,14 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
       return make.job.ExternalCommandJob(
-         mk, self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
+         self._m_mk(), self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
       )
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """See UnitTestTarget.parse_makefile_child()."""
 
+      mk = self._m_mk()
       if elt.nodeName == 'source':
          # Check if we already found a <source> child element (dependency).
          for tgt in self._m_setDeps or []:
@@ -603,7 +601,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          self._m_sExpectedOutputFilePath = elt.getAttribute('path')
          self.add_dependency(self._m_sExpectedOutputFilePath)
          return True
-      return super().parse_makefile_child(mk, elt)
+      return super().parse_makefile_child(elt)
 
 
 
@@ -619,12 +617,13 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
    _m_sScriptFilePath = None
 
 
-   def build(self, mk, iterBlockingJobs):
+   def build(self, iterBlockingJobs):
       """See ExecutableTarget.build(). In addition to building the unit test, it also schedules its
       execution.
       """
 
-      jobBuild = super().build(mk, iterBlockingJobs)
+      mk = self._m_mk()
+      jobBuild = super().build(iterBlockingJobs)
       # If to build the unit test executable we scheduled any jobs, make sure that the metadata for
       # the jobs’ output is updated and that the unit test execution depends on the build job(s).
       if jobBuild:
@@ -667,14 +666,14 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
       })
 
 
-   def _generate_file_path(self, mk):
+   def _generate_file_path(self):
       """See ExecutableTarget._generate_file_path()."""
 
       # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(mk.output_dir, 'bin', 'unittest', '' + self._m_sName + '')
+      return os.path.join(self._m_mk().output_dir, 'bin', 'unittest', '' + self._m_sName + '')
 
 
-   def parse_makefile_child(self, mk, elt):
+   def parse_makefile_child(self, elt):
       """See ExecutableTarget.parse_makefile_child() and UnitTestTarget.parse_makefile_child()."""
 
       if elt.nodeName == 'script':
@@ -683,7 +682,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          return True
-      if ExecutableTarget.parse_makefile_child(self, mk, elt):
+      if ExecutableTarget.parse_makefile_child(self, elt):
          return True
-      return UnitTestTarget.parse_makefile_child(self, mk, elt)
+      return UnitTestTarget.parse_makefile_child(self, elt)
 

@@ -379,7 +379,7 @@ class Controller(object):
             if not job.blocked:
                # Execute this job.
                sTgt = job._m_tgt._m_sFilePath or job._m_tgt._m_sName
-               bBuild = job._m_tgt.is_build_needed(mk)
+               bBuild = job._m_tgt.is_build_needed()
                if bBuild:
                   log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', sTgt)
                elif mk.force_build:

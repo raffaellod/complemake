@@ -345,7 +345,7 @@ class Make(object):
                continue
             if nd.nodeType != nd.ELEMENT_NODE:
                raise SyntaxError('expected element node, found: '.format(nd.nodeName))
-            if not tgt.parse_makefile_child(self, nd):
+            if not tgt.parse_makefile_child(nd):
                # Target.parse_makefile_child() returns False when it doesn’t know how to handle the
                # specified element.
                raise SyntaxError('unexpected element: <{}>'.format(nd.nodeName))
@@ -411,7 +411,7 @@ class Make(object):
 
          # Visit the node: give the target a chance to schedule jobs, letting it know which of its
          # dependencies scheduled jobs to be rebuilt, if any.
-         job = tgt.build(self, listBlockingJobs)
+         job = tgt.build(listBlockingJobs)
          # Store the job even if None.
          self._m_jc.set_target_jobs(tgt, job)
 
