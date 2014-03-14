@@ -37,6 +37,52 @@ import make.tool as tool
 
 
 ####################################################################################################
+# Logger
+
+class Logger(object):
+   """Logger with multiple verbosity levels."""
+
+   # Error-only verbosity, i.e. only errors will be output. When used with Logger.__call__(), this
+   # specifies an error.
+   ERROR = 0
+   # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
+   # executed, instead of its command-line.
+   QUIET = 1
+   # Print each job’s command-line as-is instead of a short summary.
+   LOW = 2
+   # Like LOW, and also describe what triggers the (re)building of each target.
+   MEDIUM = 3
+   # Like MED, and also show all the files that are being checked for changes.
+   HIGH = 4
+
+
+   def __init__(self):
+      """Constructor."""
+
+      self.verbosity = self.QUIET
+
+
+   def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
+      """Writes a formatted string to the level matching iLevel.
+
+      TODO: comment.
+      """
+
+      if self.verbosity >= iLevel:
+         s = sFormat.format(*iterArgs, **dictKwArgs)
+         if iLevel == self.ERROR:
+            sys.stderr.write(s)
+         else:
+            sys.stdout.write(s)
+
+
+   # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
+   # executed.
+   verbosity = None
+
+
+
+####################################################################################################
 # Make
 
 class Make(object):
@@ -71,6 +117,8 @@ class Make(object):
    _m_jc = None
    # See Make.keep_going.
    _m_bKeepGoing = False
+   # See Make.log.
+   _m_log = None
    # Metadata store.
    _m_mds = None
    # Targets explicitly declared in the parsed makefile (name -> Target).
@@ -90,6 +138,7 @@ class Make(object):
       """Constructor."""
 
       self._m_jc = job.Controller(self)
+      self._m_log = Logger()
       self._m_dictNamedTargets = {}
       self._m_dictTargets = {}
       self.verbosity = Make.VERBOSITY_NONE
@@ -219,6 +268,12 @@ class Make(object):
    """)
 
 
+   def _get_log(self):
+      return self._m_log
+
+   log = property(_get_log, doc = """Output log.""")
+
+
    def _get_named_targets(self):
       return self._m_dictNamedTargets.values()
 
@@ -250,11 +305,10 @@ class Make(object):
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self)
       bRead = self._m_mds.read(sMetadataFilePath)
-      if self.verbosity >= self.VERBOSITY_HIGH:
-         if bRead:
-            sys.stdout.write('metadata: store loaded: {}\n'.format(sMetadataFilePath))
-         else:
-            sys.stdout.write('metadata: empty or missing store: {}\n'.format(sMetadataFilePath))
+      if bRead:
+         self._m_log(self._m_log.HIGH, 'metadata: store loaded: {}\n', sMetadataFilePath)
+      else:
+         self._m_log(self._m_log.HIGH, 'metadata: empty or missing store: {}\n', sMetadataFilePath)
 
 
    def _parse_doc(self, doc):
@@ -326,8 +380,7 @@ class Make(object):
       finally:
          # Write any new metadata.
          if self._m_mds and not self.dry_run:
-            if self.verbosity >= self.VERBOSITY_HIGH:
-               sys.stdout.write('metadata: updating\n')
+            self._m_log(self._m_log.HIGH, 'metadata: updating\n')
             self._m_mds.write()
          self._m_mds = None
 
