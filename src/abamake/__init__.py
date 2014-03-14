@@ -119,7 +119,7 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_jc = job.Controller(self)
+      self._m_jc = job.JobController(self)
       self._m_log = Logger()
       self._m_dictNamedTargets = {}
       self._m_dictTargets = {}

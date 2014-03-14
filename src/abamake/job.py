@@ -243,20 +243,20 @@ class ExternalCommandJob(Job):
 
 
 ####################################################################################################
-# Controller
+# JobController
 
-class Controller(object):
+class JobController(object):
    """Schedules any jobs necessary to build targets in an ABC makefile (.abcmk), running them with
    the selected degree of parallelism.
    """
 
-   # See Controller.dry_run.
+   # See JobController.dry_run.
    _m_bDryRun = False
-   # See Controller.force_build.
+   # See JobController.force_build.
    _m_bForceBuild = False
-   # See Controller.ignore_errors.
+   # See JobController.ignore_errors.
    _m_bIgnoreErrors = False
-   # See Controller.keep_going.
+   # See JobController.keep_going.
    _m_bKeepGoing = False
    # Weak reference to the owning make.Make instance.
    _m_mk = None
