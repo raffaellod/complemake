@@ -24,6 +24,7 @@ import multiprocessing
 import subprocess
 import sys
 import time
+import weakref
 
 
 
@@ -249,6 +250,8 @@ class Controller(object):
    the selected degree of parallelism.
    """
 
+   # Weak reference to the owning make.Make instance.
+   _m_mk = None
    # Running jobs (Popen -> Job).
    _m_dictRunningJobs = None
    # Scheduled jobs.
@@ -259,16 +262,21 @@ class Controller(object):
    _m_dictTargetLastScheduledJobs = None
 
 
-   def __init__(self):
-      """Constructor."""
+   def __init__(self, mk):
+      """Constructor.
 
+      make.Make mk
+         Make instance.
+      """
+
+      self._m_mk = weakref.ref(mk)
       self._m_dictRunningJobs = {}
       self.running_jobs_max = multiprocessing.cpu_count()
       self._m_setScheduledJobs = set()
       self._m_dictTargetLastScheduledJobs = {}
 
 
-   def _collect_completed_jobs(self, mk, cJobsToComplete):
+   def _collect_completed_jobs(self, cJobsToComplete):
       """Returns only after the specified number of jobs completes and the respective cleanup
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
@@ -276,14 +284,13 @@ class Controller(object):
       Returns the count of failed jobs, unless Make.ignore_errors is True, in which case it will
       always return 0.
 
-      Make mk
-         Make instance.
       int cJobsToComplete
          Count of jobs to wait for.
       int return
          Count of jobs that completed in failure.
       """
 
+      mk = self._m_mk()
       # This loop alternates poll loop and sleeping.
       cCompletedJobs = 0
       cFailedJobs = 0
@@ -341,11 +348,9 @@ class Controller(object):
       return self._m_dictTargetLastScheduledJobs.get(tgt)
 
 
-   def run_scheduled_jobs(self, mk):
+   def run_scheduled_jobs(self):
       """Executes any scheduled jobs.
 
-      Make mk
-         Make instance.
       int return
          Count of jobs that completed in failure.
       """
@@ -353,14 +358,15 @@ class Controller(object):
       # This is the earliest point we know we can reset this.
       self._m_dictTargetLastScheduledJobs.clear()
 
+      mk = self._m_mk()
       cFailedJobsTotal = 0
       while self._m_setScheduledJobs:
          # Make sure any completed jobs are collected.
-         cFailedJobs = self._collect_completed_jobs(mk, 0)
+         cFailedJobs = self._collect_completed_jobs(0)
          # Make sure we have at least one free job slot.
          while len(self._m_dictRunningJobs) == self.running_jobs_max:
             # Wait for one or more jobs slots to free up.
-            cFailedJobs += self._collect_completed_jobs(mk, 1)
+            cFailedJobs += self._collect_completed_jobs(1)
 
          cFailedJobsTotal += cFailedJobs
          # Stop starting jobs in case of failed errors – unless overridden by the user.
@@ -387,7 +393,7 @@ class Controller(object):
                # outer while loop will get back here, eventually.
                break
       # There are no more scheduled jobs, just wait for the running ones to complete.
-      cFailedJobsTotal += self._collect_completed_jobs(mk, len(self._m_dictRunningJobs))
+      cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
 
       return cFailedJobsTotal
 

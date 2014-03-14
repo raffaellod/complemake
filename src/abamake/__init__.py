@@ -89,7 +89,7 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_jc = job.Controller()
+      self._m_jc = job.Controller(self)
       self._m_dictNamedTargets = {}
       self._m_dictTargets = {}
       self.verbosity = Make.VERBOSITY_NONE
@@ -322,7 +322,7 @@ class Make(object):
       """
 
       try:
-         cFailedJobsTotal = self._m_jc.run_scheduled_jobs(self)
+         cFailedJobsTotal = self._m_jc.run_scheduled_jobs()
       finally:
          # Write any new metadata.
          if self._m_mds and not self.dry_run:
