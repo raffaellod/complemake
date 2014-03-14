@@ -47,10 +47,10 @@ def _main(iterArgs):
    while iArg < iArgEnd:
       sArg = iterArgs[iArg]
       if sArg.startswith('--'):
-         if sArg == '--force-build':
-            mk.job_controller.force_build = True
-         elif sArg == '--dry-run':
+         if sArg == '--dry-run':
             mk.job_controller.dry_run = True
+         elif sArg == '--force-build':
+            mk.job_controller.force_build = True
          elif sArg == '--ignore-errors':
             mk.job_controller.ignore_errors = True
          elif sArg.startswith('--jobs'):
