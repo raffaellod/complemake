@@ -135,13 +135,13 @@ class Target(object):
       raise NotImplementedError('Target._get_tool() must be overridden')
 
 
-   def _is_build_needed(self, mk, iterFilesToCheck):
+   def _is_build_needed(self, mk, iterDepsFilePaths):
       """Checks if a build of this target should be scheduled.
 
       Make mk
          Make instance.
-      iterable(str*) iterFilesToCheck
-         List of file paths to be checked for changes.
+      iterable(str*) iterDepsFilePaths
+         List of file paths on which this target depends, to check their signatures for changes.
       bool return
          True if a build is needed, or False otherwise.
       """
@@ -149,7 +149,7 @@ class Target(object):
       # Choose a name to use for self, for logging purposes.
       sSelf = self._m_sFilePath or self._m_sName
 
-      if mk._m_mds.compare_target_snapshot(self, iterFilesToCheck):
+      if mk._m_mds.compare_target_snapshot(self, iterDepsFilePaths):
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write(sSelf + ': rebuilding due to detected changes\n')
          return True

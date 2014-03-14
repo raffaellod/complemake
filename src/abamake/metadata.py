@@ -180,9 +180,9 @@ class MetadataStore(object):
       self._m_dictStoredTargetSnapshots = {}
 
 
-   def compare_target_snapshot(self, tgt, iterDepFilePaths):
+   def compare_target_snapshot(self, tgt, iterDepsFilePaths):
       """Checks if the specified target needs to be rebuilt: compares the current signature of the
-      dependency files in iterDepFilePaths with the signature stored in the target’s snapshot,
+      dependency files in iterDepsFilePaths with the signature stored in the target’s snapshot,
       returning True if any differences are detected.
 
       The new signatures are stored internally, and will be used to update the target’s snapshot
@@ -190,7 +190,7 @@ class MetadataStore(object):
 
       make.target.Target tgt
          Target for which to get a new snapshot to compare with the stored one.
-      iter(str*) iterDepFilePaths
+      iter(str*) iterDepsFilePaths
          File path of each dependency for tgt.
       bool return
          True if any files have changed since the last build, or False otherwise.
@@ -202,7 +202,7 @@ class MetadataStore(object):
       if not tssCurr:
          # Generate signatures for all the specified dependencies.
          dictDepsSignatures = {}
-         for sFilePath in iterDepFilePaths:
+         for sFilePath in iterDepsFilePaths:
             fs = self._m_dictSignatures.get(sFilePath)
             if not fs:
                # If we still haven’t read this file’s current signature, generate it now.
