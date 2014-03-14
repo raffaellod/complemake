@@ -303,7 +303,7 @@ class MetadataStore(object):
          namespaceURI  = None,
          qualifiedName = None,
       )
-      eltRoot = doc.appendChild(doc.createElement('metadata'))
+      eltRoot = doc.appendChild(doc.createElement('abcmk-metadata'))
 
       # Add the signatures section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
