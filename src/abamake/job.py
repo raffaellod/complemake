@@ -298,7 +298,7 @@ class Controller(object):
          Count of jobs that completed in failure.
       """
 
-      mk = self._m_mk()
+      mds = self._m_mk()._m_mds
       # This loop alternates poll loop and sleeping.
       cCompletedJobs = 0
       cFailedJobs = 0
@@ -320,7 +320,7 @@ class Controller(object):
                      job.release_blocked()
                      # If the job was successfully executed, update any files’ metadata.
                      if iRet == 0 and not self._m_bDryRun:
-                        mk._m_mds.update_target_snapshot(job._m_tgt)
+                        mds.update_target_snapshot(job._m_tgt)
                   else:
                      if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
@@ -414,8 +414,7 @@ class Controller(object):
       # This is the earliest point we know we can reset this.
       self._m_dictTargetLastScheduledJobs.clear()
 
-      mk = self._m_mk()
-      log = mk.log
+      log = self._m_mk().log
       cFailedJobsTotal = 0
       while self._m_setScheduledJobs:
          # Make sure any completed jobs are collected.
