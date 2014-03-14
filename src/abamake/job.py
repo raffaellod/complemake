@@ -250,6 +250,14 @@ class Controller(object):
    the selected degree of parallelism.
    """
 
+   # See Controller.dry_run.
+   _m_bDryRun = False
+   # See Controller.force_build.
+   _m_bForceBuild = False
+   # See Controller.ignore_errors.
+   _m_bIgnoreErrors = False
+   # See Controller.keep_going.
+   _m_bKeepGoing = False
    # Weak reference to the owning make.Make instance.
    _m_mk = None
    # Running jobs (Popen -> Job).
@@ -281,8 +289,8 @@ class Controller(object):
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
 
-      Returns the count of failed jobs, unless Make.ignore_errors is True, in which case it will
-      always return 0.
+      Returns the count of failed jobs, unless ignore_errors is True, in which case it will always
+      return 0.
 
       int cJobsToComplete
          Count of jobs to wait for.
@@ -306,15 +314,15 @@ class Controller(object):
                   # Remove the job from the running jobs.
                   job = self._m_dictRunningJobs.pop(rj)
                   cCompletedJobs += 1
-                  if iRet == 0 or mk.ignore_errors:
+                  if iRet == 0 or self._m_bIgnoreErrors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
                      job.release_blocked()
                      # If the job was successfully executed, update any files’ metadata.
-                     if iRet == 0 and not mk.dry_run:
+                     if iRet == 0 and not self._m_bDryRun:
                         mk._m_mds.update_target_snapshot(job._m_tgt)
                   else:
-                     if mk.keep_going:
+                     if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
                         if job._m_setBlockedJobs:
@@ -330,10 +338,33 @@ class Controller(object):
          # If we freed up the requested count of slots, there’s nothing left to do.
          if cCompletedJobs >= cJobsToComplete:
             return cFailedJobs
-         if not mk.dry_run:
+         if not self._m_bDryRun:
             # Wait a small amount of time.
             # TODO: proper event-based waiting.
             time.sleep(0.1)
+
+
+   def _get_dry_run(self):
+      return self._m_bDryRun
+
+   def _set_dry_run(self, bDryRun):
+      self._m_bDryRun = bDryRun
+
+   dry_run = property(_get_dry_run, _set_dry_run, doc = """
+      If True, commands will only be printed, not executed; if False, they will be printed and
+      executed.
+   """)
+
+
+   def _get_force_build(self):
+      return self._m_bForceBuild
+
+   def _set_force_build(self, bForceBuild):
+      self._m_bForceBuild = bForceBuild
+
+   force_build = property(_get_force_build, _set_force_build, doc = """
+      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
+   """)
 
 
    def get_target_jobs(self, tgt):
@@ -346,6 +377,31 @@ class Controller(object):
       """
 
       return self._m_dictTargetLastScheduledJobs.get(tgt)
+
+
+   def _get_ignore_errors(self):
+      return self._m_bIgnoreErrors
+
+   def _set_ignore_errors(self, bIgnoreErrors):
+      self._m_bIgnoreErrors = bIgnoreErrors
+
+   ignore_errors = property(_get_ignore_errors, _set_ignore_errors, doc = """
+      If True, scheduled jobs will continue to be run even after a job they depend on fails. If
+      False, a failed job causes execution to stop according to the value of keep_going.
+   """)
+
+
+   def _get_keep_going(self):
+      return self._m_bKeepGoing
+
+   def _set_keep_going(self, bKeepGoing):
+      self._m_bKeepGoing = bKeepGoing
+
+   keep_going = property(_get_keep_going, _set_keep_going, doc = """
+      If True, scheduled jobs will continue to be run even after a failed job, as long as they don’t
+      depend on a failed job. If False, a failed job causes execution to stop as soon as any other
+      running jobs complete.
+   """)
 
 
    def run_scheduled_jobs(self):
@@ -371,7 +427,7 @@ class Controller(object):
 
          cFailedJobsTotal += cFailedJobs
          # Stop starting jobs in case of failed errors – unless overridden by the user.
-         if cFailedJobs > 0 and not mk.keep_going:
+         if cFailedJobs > 0 and not self._m_bKeepGoing:
             break
 
          # Find a job that is ready to be executed.
@@ -382,7 +438,7 @@ class Controller(object):
                bBuild = job._m_tgt.is_build_needed()
                if bBuild:
                   log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', sTgt)
-               elif mk.force_build:
+               elif self._m_bForceBuild:
                   log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', sTgt)
                   bBuild = True
                if bBuild:
@@ -393,7 +449,7 @@ class Controller(object):
                      sys.stdout.write(
                         '{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:]))
                      )
-                  if mk.dry_run:
+                  if self._m_bDryRun:
                      # Don’t actually start the job.
                      bBuild = False
                else:

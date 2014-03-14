@@ -217,7 +217,7 @@ class Tool(object):
       self._run_add_cmd_flags(listArgs)
 
       if self._m_sOutputFilePath:
-         if not mk.dry_run:
+         if not mk.job_controller.dry_run:
             # Make sure that the output directory exists.
             os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
          # Get the compiler-specific command-line argument to specify an output file path.

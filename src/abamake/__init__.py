@@ -97,16 +97,8 @@ class Make(object):
       mk.run_scheduled_jobs()
    """
 
-   # See Make.dry_run.
-   _m_bDryRun = False
-   # See Make.force_build.
-   _m_bForceBuild = False
-   # See Make.ignore_errors.
-   _m_bIgnoreErrors = False
    # See Make.job_controller.
    _m_jc = None
-   # See Make.keep_going.
-   _m_bKeepGoing = False
    # See Make.log.
    _m_log = None
    # Metadata store.
@@ -148,29 +140,6 @@ class Make(object):
          self._m_dictNamedTargets[sName] = tgt
 
 
-   def _get_dry_run(self):
-      return self._m_bDryRun
-
-   def _set_dry_run(self, bDryRun):
-      self._m_bDryRun = bDryRun
-
-   dry_run = property(_get_dry_run, _set_dry_run, doc = """
-      If True, commands will only be printed, not executed; if False, they will be printed and
-      executed.
-   """)
-
-
-   def _get_force_build(self):
-      return self._m_bForceBuild
-
-   def _set_force_build(self, bForceBuild):
-      self._m_bForceBuild = bForceBuild
-
-   force_build = property(_get_force_build, _set_force_build, doc = """
-      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
-   """)
-
-
    def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a target given its path, raising an exception if no such target exists and no
       fallback value was provided.
@@ -209,18 +178,6 @@ class Make(object):
       return tgt
 
 
-   def _get_ignore_errors(self):
-      return self._m_bIgnoreErrors
-
-   def _set_ignore_errors(self, bIgnoreErrors):
-      self._m_bIgnoreErrors = bIgnoreErrors
-
-   ignore_errors = property(_get_ignore_errors, _set_ignore_errors, doc = """
-      If True, scheduled jobs will continue to be run even after a job they depend on fails. If
-      False, a failed job causes execution to stop according to the value of Make.keep_going.
-   """)
-
-
    @staticmethod
    def _is_node_whitespace(nd):
       """Returns True if a node is whitespace or a comment.
@@ -242,19 +199,6 @@ class Make(object):
       return self._m_jc
 
    job_controller = property(_get_job_controller, doc = """Job scheduler/controller.""")
-
-
-   def _get_keep_going(self):
-      return self._m_bKeepGoing
-
-   def _set_keep_going(self, bKeepGoing):
-      self._m_bKeepGoing = bKeepGoing
-
-   keep_going = property(_get_keep_going, _set_keep_going, doc = """
-      If True, scheduled jobs will continue to be run even after a failed job, as long as they don’t
-      depend on a failed job. If False, a failed job causes execution to stop as soon as any other
-      running jobs complete.
-   """)
 
 
    def _get_log(self):
@@ -363,7 +307,7 @@ class Make(object):
          cFailedJobsTotal = self._m_jc.run_scheduled_jobs()
       finally:
          # Write any new metadata.
-         if self._m_mds and not self.dry_run:
+         if self._m_mds and not self._m_jc.dry_run:
             self._m_log(self._m_log.HIGH, 'metadata: updating\n')
             self._m_mds.write()
          self._m_mds = None

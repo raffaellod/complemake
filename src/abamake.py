@@ -48,11 +48,11 @@ def _main(iterArgs):
       sArg = iterArgs[iArg]
       if sArg.startswith('--'):
          if sArg == '--force-build':
-            mk.force_build = True
+            mk.job_controller.force_build = True
          elif sArg == '--dry-run':
-            mk.dry_run = True
+            mk.job_controller.dry_run = True
          elif sArg == '--ignore-errors':
-            mk.ignore_errors = True
+            mk.job_controller.ignore_errors = True
          elif sArg.startswith('--jobs'):
             if sArg[len('--jobs')] == '=':
                cJobs = int(sArg[len('--jobs') + 1:])
@@ -60,7 +60,7 @@ def _main(iterArgs):
                cJobs = 999999
             mk.job_controller.running_jobs_max = cJobs
          elif sArg == '--keep-going':
-            mk.keep_going = True
+            mk.job_controller.keep_going = True
          elif sArg == '--verbose':
             mk.log.verbosity += 1
       elif sArg.startswith('-'):
@@ -69,9 +69,9 @@ def _main(iterArgs):
          while ich < ichEnd:
             sArgChar = sArg[ich]
             if sArgChar == 'f':
-               mk.force_build = True
+               mk.job_controller.force_build = True
             elif sArgChar == 'i':
-               mk.ignore_errors = True
+               mk.job_controller.ignore_errors = True
             elif sArgChar == 'j':
                # TODO: make this parsing more generic and more flexible.
                ichNumberLast = ich + 1
@@ -83,9 +83,9 @@ def _main(iterArgs):
                   cJobs = 999999
                mk.job_controller.running_jobs_max = cJobs
             elif sArgChar == 'k':
-               mk.keep_going = True
+               mk.job_controller.keep_going = True
             elif sArgChar == 'n':
-               mk.dry_run = True
+               mk.job_controller.dry_run = True
             elif sArgChar == 'v':
                mk.log.verbosity += 1
             ich += 1
