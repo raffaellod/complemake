@@ -62,7 +62,6 @@ def _main(iterArgs):
          elif sArg == '--keep-going':
             mk.keep_going = True
          elif sArg == '--verbose':
-            mk.verbosity += 1
             mk.log.verbosity += 1
       elif sArg.startswith('-'):
          ich = 1
@@ -88,7 +87,6 @@ def _main(iterArgs):
             elif sArgChar == 'n':
                mk.dry_run = True
             elif sArgChar == 'v':
-               mk.verbosity += 1
                mk.log.verbosity += 1
             ich += 1
       else:

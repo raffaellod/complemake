@@ -97,16 +97,6 @@ class Make(object):
       mk.run_scheduled_jobs()
    """
 
-   # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
-   # executed, instead of its command-line.
-   VERBOSITY_NONE = 1
-   # Print each job’s command-line as-is instead of a short summary.
-   VERBOSITY_LOW = 2
-   # Like VERBOSITY_LOW, and also describe what triggers the (re)building of each target.
-   VERBOSITY_MEDIUM = 3
-   # Like VERBOSITY_MED, and also show all the files that are being checked for changes.
-   VERBOSITY_HIGH = 4
-
    # See Make.dry_run.
    _m_bDryRun = False
    # See Make.force_build.
@@ -141,7 +131,6 @@ class Make(object):
       self._m_log = Logger()
       self._m_dictNamedTargets = {}
       self._m_dictTargets = {}
-      self.verbosity = Make.VERBOSITY_NONE
 
 
    def _add_target(self, tgt):
@@ -422,9 +411,4 @@ class Make(object):
          assert not listBlockingJobs, \
             'Target.build() returned no jobs, no dependencies should have scheduled jobs'
       return job
-
-
-   # Selects a verbosity level (Make.VERBOSITY_*), affecting what is displayed about the operations
-   # executed.
-   verbosity = None
 
