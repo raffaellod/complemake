@@ -203,7 +203,7 @@ class MetadataStore(object):
                   for eltTarget in eltTop.childNodes:
                      # Skip unimportant nodes.
                      if eltTarget.nodeType != eltTarget.ELEMENT_NODE or \
-                        eltTarget.nodeName != 'target'
+                        eltTarget.nodeName != 'target' \
                      :
                         continue
                      sFilePath = eltTarget.getAttribute('path')

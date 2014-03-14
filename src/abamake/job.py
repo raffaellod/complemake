@@ -359,6 +359,7 @@ class Controller(object):
       self._m_dictTargetLastScheduledJobs.clear()
 
       mk = self._m_mk()
+      log = mk.log
       cFailedJobsTotal = 0
       while self._m_setScheduledJobs:
          # Make sure any completed jobs are collected.
@@ -380,14 +381,12 @@ class Controller(object):
                sTgt = job._m_tgt._m_sFilePath or job._m_tgt._m_sName
                bBuild = job._m_tgt.is_build_needed(mk)
                if bBuild:
-                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                     sys.stdout.write(sTgt + ': rebuilding due to detected changes\n')
+                  log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', sTgt)
                elif mk.force_build:
-                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                     sys.stdout.write(sTgt + ': up-to-date, but rebuild forced\n')
+                  log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', sTgt)
                   bBuild = True
                if bBuild:
-                  if mk.verbosity >= mk.VERBOSITY_LOW:
+                  if log.verbosity >= log.LOW:
                      sys.stdout.write(job.get_verbose_command() + '\n')
                   else:
                      iterQuietCmd = job.get_quiet_command()
@@ -398,8 +397,7 @@ class Controller(object):
                      # Don’t actually start the job.
                      bBuild = False
                else:
-                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-                     sys.stdout.write(sTgt + ': up-to-date\n')
+                  log(log.MEDIUM, 'controller: {}: up-to-date\n', sTgt)
                if bBuild:
                   rj = job.start()
                else:
