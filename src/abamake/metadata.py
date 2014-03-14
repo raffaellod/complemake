@@ -23,7 +23,6 @@
 from datetime import datetime
 import os
 import sys
-import weakref
 import xml.dom
 import xml.dom.minidom
 
@@ -162,25 +161,61 @@ class MetadataStore(object):
    _m_bDirty = False
    # Persistent storage file path.
    _m_sFilePath = None
-   # Weak reference to the owning make.Make instance.
-   _m_mk = None
+   # Output log.
+   _m_log = None
    # Signature for each file (str -> FileSignature).
    _m_dictSignatures = None
    # Target snapshots as stored in the metadata file (make.target.Target -> TargetSnapshot).
    _m_dictStoredTargetSnapshots = None
 
 
-   def __init__(self, mk):
-      """Constructor.
+   def __init__(self, mk, sFilePath):
+      """Constructor. Reads metadata from the specified file.
 
       make.Make mk
          Make instance.
+      str sFilePath
+         Metadata storage file.
       """
 
       self._m_dictCurrTargetSnapshots = {}
-      self._m_mk = weakref.ref(mk)
+      self._m_sFilePath = sFilePath
+      self._m_log = mk.log
       self._m_dictSignatures = {}
       self._m_dictStoredTargetSnapshots = {}
+
+      try:
+         doc = xml.dom.minidom.parse(sFilePath)
+      except FileNotFoundError:
+         # If we can’t load the persistent metadata store, start it anew.
+         self._m_log(self._m_log.HIGH, 'metadata: empty or missing store: {}\n', sFilePath)
+      else:
+         self._m_log(self._m_log.HIGH, 'metadata: loading store: {}\n', sFilePath)
+         # Parse the metadata.
+         doc.documentElement.normalize()
+         with doc.documentElement as eltRoot:
+            for eltTop in eltRoot.childNodes:
+               # Skip unimportant nodes.
+               if eltTop.nodeType != eltTop.ELEMENT_NODE:
+                  continue
+               if eltTop.nodeName == 'target-snapshots':
+                  # Parse all target snapshots.
+                  for eltTarget in eltTop.childNodes:
+                     # Skip unimportant nodes.
+                     if eltTarget.nodeType != eltTarget.ELEMENT_NODE or \
+                        eltTarget.nodeName != 'target'
+                     :
+                        continue
+                     sFilePath = eltTarget.getAttribute('path')
+                     sName = eltTarget.getAttribute('name')
+                     # It’s possible that no such target exists. Maybe it used to, but not anymore.
+                     tgt = mk.get_target_by_name(sName, None) or \
+                           mk.get_target_by_file_path(sFilePath, None)
+                     if tgt:
+                        self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
+                           tgt, eltTarget = eltTarget
+                        )
+         self._m_log(self._m_log.HIGH, 'metadata: store loaded: {}\n', sFilePath)
 
 
    def compare_target_snapshot(self, tgt):
@@ -206,14 +241,14 @@ class MetadataStore(object):
 
       # Compare current and stored snapshots.
       if tssCurr != tssStored:
-         if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
-            sys.stdout.write(
-               'metadata: {} needs to be (re)built\n'.format(tgt.name or tgt.file_path)
-            )
+         self._m_log(
+            self._m_log.HIGH, 'metadata: {} needs to be (re)built\n', tgt.name or tgt.file_path
+         )
          return True
       else:
-         if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
-            sys.stdout.write('metadata: {} is up-to-date\n'.format(tgt.name or tgt.file_path))
+         self._m_log(
+            self._m_log.HIGH, 'metadata: {} is up-to-date\n', tgt.name or tgt.file_path
+         )
          return False
 
 
@@ -257,49 +292,6 @@ class MetadataStore(object):
       return tssCurr
 
 
-   def read(self, sFilePath):
-      """Reads metadata from the specified file.
-
-      str sFilePath
-         Metadata storage file.
-      bool return
-         True if the file was successfully loaded, or False if the metadata was not read; in the
-         latter case, the store will remain empty, but it will memorize its file path.
-      """
-
-      self._m_sFilePath = sFilePath
-      try:
-         doc = xml.dom.minidom.parse(sFilePath)
-      except FileNotFoundError:
-         # If we can’t load the persistent metadata store, start it anew.
-         return False
-
-      mk = self._m_mk()
-      # Parse the metadata.
-      doc.documentElement.normalize()
-      with doc.documentElement as eltRoot:
-         for eltTop in eltRoot.childNodes:
-            # Skip unimportant nodes.
-            if eltTop.nodeType != eltTop.ELEMENT_NODE:
-               continue
-            if eltTop.nodeName == 'target-snapshots':
-               # Parse all target snapshots.
-               for eltTarget in eltTop.childNodes:
-                  # Skip unimportant nodes.
-                  if eltTarget.nodeType != eltTarget.ELEMENT_NODE or eltTarget.nodeName != 'target':
-                     continue
-                  sFilePath = eltTarget.getAttribute('path')
-                  sName = eltTarget.getAttribute('name')
-                  # It’s possible that no such target exists. Maybe it did in the past, but not now.
-                  tgt = mk.get_target_by_name(sName, None) or \
-                        mk.get_target_by_file_path(sFilePath, None)
-                  if tgt:
-                     self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
-                        tgt, eltTarget = eltTarget
-                     )
-      return True
-
-
    def update_target_snapshot(self, tgt):
       """Updates the snapshot for the specified target.
 
@@ -307,10 +299,9 @@ class MetadataStore(object):
          Target for which to update the snapshot.
       """
 
-      if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
-         sys.stdout.write(
-            'metadata: updating target snapshot: {}\n'.format(tgt.name or tgt.file_path)
-         )
+      self._m_log(
+         self._m_log.HIGH, 'metadata: updating target snapshot: {}\n', tgt.name or tgt.file_path
+      )
       self._m_dictStoredTargetSnapshots[tgt] = self._get_curr_target_snapshot(tgt)
       self._m_bDirty = True
 

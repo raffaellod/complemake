@@ -303,12 +303,7 @@ class Make(object):
       with xml.dom.minidom.parse(sFilePath) as doc:
          self._parse_doc(doc)
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
-      self._m_mds = metadata.MetadataStore(self)
-      bRead = self._m_mds.read(sMetadataFilePath)
-      if bRead:
-         self._m_log(self._m_log.HIGH, 'metadata: store loaded: {}\n', sMetadataFilePath)
-      else:
-         self._m_log(self._m_log.HIGH, 'metadata: empty or missing store: {}\n', sMetadataFilePath)
+      self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
 
 
    def _parse_doc(self, doc):
