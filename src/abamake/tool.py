@@ -191,7 +191,7 @@ class Tool(object):
          listArgs.extend(self._m_listInputFilePaths)
 
 
-   def schedule_jobs(self, mk, iterBlockingJobs, iterMetadataToUpdate):
+   def schedule_jobs(self, mk, tgt, iterBlockingJobs):
       """Schedules one or more jobs that, when run, result in the execution of the tool.
 
       An implementation will create one or more chained Job instances, blocking the first with
@@ -200,13 +200,13 @@ class Tool(object):
       The default implementation schedules a single job, the command line of which is composed by
       calling Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
 
-      Make mk
+      make.Make mk
          Make instance.
+      make.target.Target tgt
+         Target that this job will build.
       iterable(make.job.Job*) iterBlockingJobs
          Jobs that should block the first one scheduled for this execution of the tool (Tool
          instance).
-      iterable(str*) iterMetadataToUpdate
-         Paths to the files for which metadata should be updated when this job completes.
       make.job.Job return
          Last job scheduled.
       """
@@ -220,10 +220,6 @@ class Tool(object):
          if not mk.dry_run:
             # Make sure that the output directory exists.
             os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
-         # Make sure to update the metadata for the output file once the job completes.
-         if iterMetadataToUpdate is None:
-            iterMetadataToUpdate = []
-         iterMetadataToUpdate.append(self._m_sOutputFilePath)
          # Get the compiler-specific command-line argument to specify an output file path.
          sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
          # Add the output file path.
@@ -231,11 +227,9 @@ class Tool(object):
 
       self._run_add_cmd_inputs(listArgs)
 
-      return make.job.ExternalCommandJob(
-         mk, iterBlockingJobs, self._get_quiet_cmd(), iterMetadataToUpdate, {
-            'args': listArgs,
-         }
-      )
+      return make.job.ExternalCommandJob(mk, tgt, iterBlockingJobs, self._get_quiet_cmd(), {
+         'args': listArgs,
+      })
 
 
    def _translate_abstract_flag(self, iFlag):

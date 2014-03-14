@@ -22,6 +22,7 @@
 
 from datetime import datetime
 import os
+import weakref
 import xml.dom
 import xml.dom.minidom
 
@@ -39,26 +40,52 @@ class FileSignature(object):
    )
 
 
-   def __init__(self, sFilePath):
-      """Constructor.
+   def __init__(self):
+      """Constructor."""
+
+      self._m_dtMTime = None
+
+
+   @classmethod
+   def generate(cls, sFilePath):
+      """Generates a signature for the specified file.
 
       str sFilePath
          Path to the file for which a signature should be generated.
+      FileSignature return
+         Generated signature.
       """
 
+      self = cls()
       self._m_dtMTime = datetime.fromtimestamp(os.path.getmtime(sFilePath))
+      return self
 
 
-   def __getstate__(self):
-      return {
-         'mtime': self._m_dtMTime.isoformat(' '),
-      }
+   @classmethod
+   def parse(cls, eltFile):
+      """Loads a signature from the specified <file> element.
 
+      xml.dom.Element eltFile
+         <file> element to parse.
+      FileSignature return
+         Loaded signature.
+      """
 
-   def __setstate__(self, dictState):
-      for sName, sValue in dictState.items():
+      self = cls()
+      for sName, sValue in eltFile.attributes.items():
          if sName == 'mtime':
             self._m_dtMTime = datetime.strptime(sValue, '%Y-%m-%d %H:%M:%S.%f')
+      return self
+
+
+   def save(self, eltFile):
+      """Saves the signature as attributes for the specified XML element.
+
+      xml.dom.Element eltFile
+         <file> element on which to set metadata attributes.
+      """
+
+      eltFile.setAttribute('mtime', self._m_dtMTime.isoformat(' '))
 
 
    def __eq__(self, other):
@@ -71,22 +98,52 @@ class FileSignature(object):
 
 
 ####################################################################################################
-# FileSignaturesPair
+# TargetSnapshot
 
-class FileSignaturesPair(object):
-   """Handles storage and retrieval of file signatures."""
+class TargetSnapshot(object):
+   """Captures information about a target at a specific time. Used to detect changes that should
+   trigger a rebuild.
+   """
 
    __slots__ = (
-      # Stored file signature, or None if the file’s signature was never collected.
-      'stored',
-      # Current file signature, or None if the file’s signature has not yet been refreshed.
-      'current',
+      # Signature of each dependency of this target.
+      '_m_dictDepsSignatures',
+      # Target.
+      '_m_tgt',
    )
 
 
-   def __init__(self):
-      self.stored = None
-      self.current = None
+   def __init__(self, tgt, dictDepsSignatures = None, eltTarget = None):
+      """Constructor.
+
+      make.target.Target tgt
+         Target.
+      dict(str, FileSignature) dictDepsSignatures
+         File paths associated to their signature; one for each dependency of the target.
+      xml.dom.Element eltTarget
+         XML Element to parse to load the target dependencies’ signatures.
+      """
+
+      self._m_tgt = tgt
+      if eltTarget:
+         self._m_dictDepsSignatures = {}
+         # Parse the contents of the <target-snapshot> element.
+         for eltFile in eltTarget.childNodes:
+            if eltFile.nodeType != eltFile.ELEMENT_NODE or eltFile.nodeName != 'file':
+               continue
+            # Parse this <file> into a FileSignature and store that as a dependency signature.
+            self._m_dictDepsSignatures[eltFile.getAttribute('path')] = FileSignature.parse(eltFile)
+      elif dictDepsSignatures:
+         self._m_dictDepsSignatures = dictDepsSignatures
+
+
+   def __eq__(self, other):
+      return self._m_tgt == other._m_tgt and \
+             self._m_dictDepsSignatures == other._m_dictDepsSignatures
+
+
+   def __ne__(self, other):
+      return not self.__eq__(other)
 
 
 
@@ -96,37 +153,84 @@ class FileSignaturesPair(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
+   # Freshly-read target snapshots (make.target.Target -> TargetSnapshot).
+   _m_dictCurrTargetSnapshots = None
    # True if any changes occurred, which means that the metadata file should be updated.
    _m_bDirty = False
    # Persistent storage file path.
    _m_sFilePath = None
-   # Signature for each file (str -> FileSignaturesPair).
-   _m_dictSigPairs = None
+   # Weak reference to the owning make.Make instance.
+   _m_mk = None
+   # Signature for each file (str -> FileSignature).
+   _m_dictSignatures = None
+   # Target snapshots as stored in the metadata file (make.target.Target -> TargetSnapshot).
+   _m_dictStoredTargetSnapshots = None
 
 
-   def file_changed(self, sFilePath):
-      """Compares the signature stored for the specified file against the file’s current signature.
+   def __init__(self, mk):
+      """Constructor.
 
-      str sFilePath
-         Path to the file of which to compare signatures.
-      bool return
-         True if the file is determined to have changed, or False otherwise.
+      make.Make mk
+         Make instance.
       """
 
-      fsigp = self._m_dictSigPairs.get(sFilePath)
-      # If we have no stored signature to compare to, report the file as changed.
-      if fsigp is None or fsigp.stored is None:
-         return True
-      # If we still haven’t read the file’s current signature, generate one now.
-      if fsigp.current is None:
-         try:
-            fsigp.current = FileSignature(sFilePath)
-         except FileNotFoundError:
-            # If the file doesn’t exist (anymore), consider it changed.
-            return True
+      self._m_dictCurrTargetSnapshots = {}
+      self._m_mk = weakref.ref(mk)
+      self._m_dictSignatures = {}
+      self._m_dictStoredTargetSnapshots = {}
 
-      # Compare stored vs. current signature.
-      return fsigp.current != fsigp.stored
+
+   def compare_target_snapshot(self, tgt, iterDepFilePaths):
+      """Checks if the specified target needs to be rebuilt: compares the current signature of the
+      dependency files in iterDepFilePaths with the signature stored in the target’s snapshot,
+      returning True if any differences are detected.
+
+      The new signatures are stored internally, and will be used to update the target’s snapshot
+      once MetadataStore.update_target_snapshot() is called.
+
+      make.target.Target tgt
+         Target for which to get a new snapshot to compare with the stored one.
+      iter(str*) iterDepFilePaths
+         File path of each dependency for tgt.
+      bool return
+         True if any files have changed since the last build, or False otherwise.
+      """
+
+      tssStored = self._m_dictStoredTargetSnapshots.get(tgt)
+      tssCurr = self._m_dictCurrTargetSnapshots.get(tgt)
+
+      if not tssCurr:
+         # Generate signatures for all the specified dependencies.
+         dictDepsSignatures = {}
+         for sFilePath in iterDepFilePaths:
+            fs = self._m_dictSignatures.get(sFilePath)
+            if not fs:
+               # If we still haven’t read this file’s current signature, generate it now.
+               fs = FileSignature.generate(sFilePath)
+               # Store this signature, in case other targets also need it.
+               self._m_dictSignatures[sFilePath] = fs
+            dictDepsSignatures[sFilePath] = fs
+         # Instantiate the current snapshot.
+         tssCurr = TargetSnapshot(
+            tgt, dictDepsSignatures = dictDepsSignatures
+         )
+         self._m_dictCurrTargetSnapshots[tgt] = tssCurr
+
+      # If we have no stored snapshot to compare to, report the build as necessary.
+      if not tssStored:
+         return True
+
+      # Compare current and stored snapshots.
+      if tssCurr != tssStored:
+         if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
+            sys.stdout.write(
+               'metadata: {} needs to be (re)built\n'.format(tgt.name or tgt.file_path)
+            )
+         return True
+      else:
+         if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
+            sys.stdout.write('metadata: {} is up-to-date\n'.format(tgt.name or tgt.file_path))
+         return False
 
 
    def read(self, sFilePath):
@@ -140,13 +244,13 @@ class MetadataStore(object):
       """
 
       self._m_sFilePath = sFilePath
-      self._m_dictSigPairs = {}
       try:
          doc = xml.dom.minidom.parse(sFilePath)
       except FileNotFoundError:
          # If we can’t load the persistent metadata store, start it anew.
          return False
 
+      mk = self._m_mk()
       # Parse the metadata.
       doc.documentElement.normalize()
       with doc.documentElement as eltRoot:
@@ -154,37 +258,36 @@ class MetadataStore(object):
             # Skip unimportant nodes.
             if eltTop.nodeType != eltTop.ELEMENT_NODE:
                continue
-            if eltTop.nodeName == 'signatures':
-               for eltFile in eltTop.childNodes:
+            if eltTop.nodeName == 'target-snapshots':
+               # Parse all target snapshots.
+               for eltTarget in eltTop.childNodes:
                   # Skip unimportant nodes.
-                  if eltFile.nodeType != eltFile.ELEMENT_NODE or eltFile.nodeName != 'file':
+                  if eltTarget.nodeType != eltTarget.ELEMENT_NODE or eltTarget.nodeName != 'target':
                      continue
-                  # Parse this <file> element into the “stored” FileSignature member of a new
-                  # FileSignaturesPair instance.
-                  fsigp = FileSignaturesPair()
-                  fsigp.stored = FileSignature.__new__(FileSignature)
-                  fsigp.stored.__setstate__(eltFile.attributes)
-                  self._m_dictSigPairs[eltFile.getAttribute('path')] = fsigp
+                  sFilePath = eltTarget.getAttribute('path')
+                  sName = eltTarget.getAttribute('name')
+                  # It’s possible that no such target exists. Maybe it did in the past, but not now.
+                  tgt = mk.get_target_by_name(sName, None) or \
+                        mk.get_target_by_file_path(sFilePath, None)
+                  if tgt:
+                     self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
+                        tgt, eltTarget = eltTarget
+                     )
       return True
 
 
-   def update_file_signature(self, sFilePath):
-      """Creates or updates the signature for the specified file.
+   def update_target_snapshot(self, tgt):
+      """Updates the snapshot for the specified target.
 
-      str sFilePath
-         Path to the file the signature of which should be updated.
+      make.target.Target tgt
+         Target for which to update the snapshot.
       """
 
-      fsigp = self._m_dictSigPairs.get(sFilePath)
-      # Make sure the signature pair is in the dictionary.
-      if fsigp is None:
-         fsigp = FileSignaturesPair()
-         self._m_dictSigPairs[sFilePath] = fsigp
-      # Always re-read the file signature because if we obtained it during scheduling, the file may
-      # have been regenerated now that jobs have been run.
-      fsigp.current = FileSignature(sFilePath)
-      # Replace the stored signature.
-      fsigp.stored = fsigp.current
+      if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
+         sys.stdout.write(
+            'metadata: updating target snapshot: {}\n'.format(tgt.name or tgt.file_path)
+         )
+      self._m_dictStoredTargetSnapshots[tgt] = self._m_dictCurrTargetSnapshots[tgt]
       self._m_bDirty = True
 
 
@@ -203,13 +306,17 @@ class MetadataStore(object):
       eltRoot = doc.appendChild(doc.createElement('metadata'))
 
       # Add the signatures section.
-      eltSigs = eltRoot.appendChild(doc.createElement('signatures'))
-      for sFilePath, fsigp in self._m_dictSigPairs.items():
-         eltFile = eltSigs.appendChild(doc.createElement('file'))
-         eltFile.setAttribute('path', sFilePath)
-         # Add the metadata as attributes for this <file> element.
-         for sName, oValue in fsigp.stored.__getstate__().items():
-            eltFile.setAttribute(sName, str(oValue))
+      eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
+      for tgt, tgtsnap in self._m_dictCurrTargetSnapshots.items():
+         eltTarget = eltTgtSnaps.appendChild(doc.createElement('target'))
+         if tgt.name:
+            eltTarget.setAttribute('name', tgt.name)
+         elif tgt.file_path:
+            eltTarget.setAttribute('path', tgt.file_path)
+         for sFilePath, fsig in tgtsnap._m_dictDepsSignatures.items():
+            eltFile = eltTarget.appendChild(doc.createElement('file'))
+            eltFile.setAttribute('path', sFilePath)
+            fsig.save(eltFile)
 
       # Write the document to file.
       with open(self._m_sFilePath, 'w') as fileMetadata:

@@ -135,47 +135,34 @@ class Target(object):
       raise NotImplementedError('Target._get_tool() must be overridden')
 
 
-   def _is_build_needed(self, mk, iterBlockingJobs, iterFilesToCheck):
+   def _is_build_needed(self, mk, iterFilesToCheck):
       """Checks if a build of this target should be scheduled.
 
       Make mk
          Make instance.
-      iterable(Job*) iterBlockingJobs
-         Jobs that should block the first one scheduled to build this target.
       iterable(str*) iterFilesToCheck
          List of file paths to be checked for changes.
-      tuple(bool, iterable(str*)) return
-         Tuple containing the response (True if a build is needed, or False otherwise) and a list of
-         changed files (or None if no file changes are detected).
+      bool return
+         True if a build is needed, or False otherwise.
       """
-
-      # Get a list of changed files.
-      if iterFilesToCheck:
-         iterChangedFiles = mk.get_changed_files(iterFilesToCheck)
-      else:
-         iterChangedFiles = None
 
       # Choose a name to use for self, for logging purposes.
       sSelf = self._m_sFilePath or self._m_sName
 
-      # See if this build is really necessary.
-      if iterBlockingJobs:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(sSelf + ': rebuilding due to dependencies being rebuilt\n')
-      elif iterChangedFiles:
+      if mk._m_mds.compare_target_snapshot(self, iterFilesToCheck):
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write(sSelf + ': rebuilding due to detected changes\n')
-      elif mk.force_build:
+         return True
+
+      if mk.force_build:
          if mk.verbosity >= mk.VERBOSITY_MEDIUM:
             sys.stdout.write(sSelf + ': up-to-date, but rebuild forced\n')
-      else:
-         # No dependencies being rebuilt, source up-to-date: no need to rebuild.
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(sSelf + ': up-to-date\n')
-         return False, None
+         return True
 
-      # Build needed.
-      return True, iterChangedFiles
+      # Still here? No need to rebuild.
+      if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+         sys.stdout.write(sSelf + ': up-to-date\n')
+      return False
 
 
    def _get_name(self):
@@ -262,13 +249,10 @@ class ProcessedSourceTarget(Target):
       """See Target.build()."""
 
       # TODO: check for additional changed external dependencies.
-      bBuildNeeded, iterChangedFiles = self._is_build_needed(
-         mk, iterBlockingJobs, (self._m_sFilePath, self._m_sSourceFilePath)
-      )
-      if not bBuildNeeded:
+      if not self._is_build_needed(mk, (self._m_sSourceFilePath, )):
          return None
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool(mk).schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
+      return self._get_tool(mk).schedule_jobs(mk, self, iterBlockingJobs)
 
 
    def _generate_file_path(self, mk):
@@ -371,7 +355,7 @@ class ExecutableTarget(Target):
       # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
       # over that list only once, combine building the list of files to be checked for changes with
       # collecting linker inputs.
-      listFilesToCheck = [self._m_sFilePath]
+      listFilesToCheck = []
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
@@ -395,11 +379,10 @@ class ExecutableTarget(Target):
                raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
       # TODO: check for additional changed external dependencies.
-      bBuildNeeded, iterChangedFiles = self._is_build_needed(mk, iterBlockingJobs, listFilesToCheck)
-      if not bBuildNeeded:
+      if not self._is_build_needed(mk, listFilesToCheck):
          return None
 
-      return lnk.schedule_jobs(mk, iterBlockingJobs, iterChangedFiles)
+      return lnk.schedule_jobs(mk, self, iterBlockingJobs)
 
 
    def configure_compiler(self, tool):
@@ -601,15 +584,12 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             tgtToCompare = tgt
             break
 
-      bBuildNeeded, iterChangedFiles = self._is_build_needed(
-         mk, iterBlockingJobs, (self._m_sExpectedOutputFilePath, tgtToCompare.file_path)
-      )
-      if not bBuildNeeded:
+      if not self._is_build_needed(mk, (self._m_sExpectedOutputFilePath, tgtToCompare.file_path)):
          return None
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
       return make.job.ExternalCommandJob(
-         mk, iterBlockingJobs, ('CMP', self._m_sName), iterChangedFiles, {'args': listArgs,}
+         mk, self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
       )
 
 
@@ -700,7 +680,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
             dictEnv['LD_LIBRARY_PATH'] = sLibPath
             break
 
-      return make.job.ExternalCommandJob(mk, tplBlockingJobs, ('TEST', self._m_sName), tplDeps, {
+      return make.job.ExternalCommandJob(mk, self, tplBlockingJobs, ('TEST', self._m_sName), {
          'args': tplArgs,
          'env' : dictEnv,
       })

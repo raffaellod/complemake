@@ -133,29 +133,6 @@ class Make(object):
    """)
 
 
-   def get_changed_files(self, iterFilePaths):
-      """Checks the specified files for changes, returning a list containing any files that appear
-      to have changed. After the target dependent on these files has been built, the metadata should
-      be refreshed by passing the return value to Make.update_file_metadata().
-
-      iterable(str*) iterFilePaths
-         Paths to the files to check for changes.
-      iterable(str*) return
-         List of changed files, or None if no file changes are detected.
-      """
-
-      listChanged = []
-      for sFilePath in iterFilePaths:
-         if self._m_mds.file_changed(sFilePath):
-            if self.verbosity >= self.VERBOSITY_HIGH:
-               sys.stdout.write('metadata: changes detected: {}\n'.format(sFilePath))
-            listChanged.append(sFilePath)
-         else:
-            if self.verbosity >= self.VERBOSITY_HIGH:
-               sys.stdout.write('metadata: no changes: {}\n'.format(sFilePath))
-      return listChanged or None
-
-
    def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a target given its path, raising an exception if no such target exists and no
       fallback value was provided.
@@ -271,7 +248,7 @@ class Make(object):
       with xml.dom.minidom.parse(sFilePath) as doc:
          self._parse_doc(doc)
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
-      self._m_mds = metadata.MetadataStore()
+      self._m_mds = metadata.MetadataStore(self)
       bRead = self._m_mds.read(sMetadataFilePath)
       if self.verbosity >= self.VERBOSITY_HIGH:
          if bRead:
@@ -397,22 +374,6 @@ class Make(object):
          assert not listBlockingJobs, \
             'Target.build() returned no jobs, no dependencies should have scheduled jobs'
       return job
-
-
-   def update_file_metadata(self, iterFilePaths):
-      """Updates the metadata stored by ABC Make for the specified files.
-
-      This should be called after each build job completes, to update the metadata for its input and
-      output files.
-
-      iterable(str*) iterFilePaths
-         Paths to the files whose metadata needs to be updated.
-      """
-
-      for sFilePath in iterFilePaths:
-         if self.verbosity >= self.VERBOSITY_HIGH:
-            sys.stdout.write('metadata: updating: {}\n'.format(sFilePath))
-         self._m_mds.update_file_signature(sFilePath)
 
 
    # Selects a verbosity level (Make.VERBOSITY_*), affecting what is displayed about the operations

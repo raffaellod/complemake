@@ -119,28 +119,27 @@ class Job(object):
    _m_setBlockedJobs = None
    # Count of jobs that block this one.
    _m_cBlocks = 0
-   # Paths to the input and output files for which we’ll need to update metadata after this job
-   # completes.
-   _m_iterMetadataToUpdate = None
    # Command summary for Make to print out in quiet mode..
    _m_iterQuietCmd = None
+   # Target built by this job.
+   _m_tgt = None
 
 
-   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate):
+   def __init__(self, mk, tgt, iterBlockingJobs, iterQuietCmd):
       """Constructor.
 
-      Make mk
+      make.Make mk
          Make instance.
+      make.target.Target
+         Target built by this job.
       iterable(Job*) iterBlockingJobs
          Jobs that block this one.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
-      iterable(str*) iterMetadataToUpdate
-         Paths to the files for which metadata should be updated when this job completes.
       """
 
       self._m_iterQuietCmd = iterQuietCmd
-      self._m_iterMetadataToUpdate = iterMetadataToUpdate
+      self._m_tgt = tgt
       if iterBlockingJobs is not None:
          # Assign this job as “blocked” by the jobs it depends on, and store their count.
          for jobDep in iterBlockingJobs:
@@ -210,22 +209,22 @@ class ExternalCommandJob(Job):
    _m_dictPopenArgs = None
 
 
-   def __init__(self, mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate, dictPopenArgs):
+   def __init__(self, mk, tgt, iterBlockingJobs, iterQuietCmd, dictPopenArgs):
       """Constructor. See Job.__init__().
 
-      Make mk
+      make.Make mk
          Make instance.
+      make.target.Target
+         Target built by this job.
       iterable(Job*) iterBlockingJobs
          Jobs that block this one.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
-      iterable(str*) iterMetadataToUpdate
-         Paths to the files for which metadata should be updated when this job completes.
       dict(object+) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
       """
 
-      super().__init__(mk, iterBlockingJobs, iterQuietCmd, iterMetadataToUpdate)
+      super().__init__(mk, tgt, iterBlockingJobs, iterQuietCmd)
       self._m_dictPopenArgs = dictPopenArgs
 
 
@@ -305,8 +304,8 @@ class Controller(object):
                      # jobs can now be released.
                      job.release_blocked()
                      # If the job was successfully executed, update any files’ metadata.
-                     if iRet == 0 and not mk.dry_run and job._m_iterMetadataToUpdate:
-                        mk.update_file_metadata(job._m_iterMetadataToUpdate)
+                     if iRet == 0 and not mk.dry_run:
+                        mk._m_mds.update_target_snapshot(job._m_tgt)
                   else:
                      if mk.keep_going:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
