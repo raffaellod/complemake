@@ -352,7 +352,7 @@ class Make(object):
       if job is None:
          # Visit leaves.
          listBlockingJobs = None
-         for tgtDep in tgt.dependencies or []:
+         for tgtDep in filter(lambda oDep: isinstance(oDep, target.Target), tgt.dependencies or []):
             # Recursively schedule jobs for this dependency, returning and storing the last one.
             jobDep = self.schedule_target_jobs(tgtDep)
             if jobDep is not None:

@@ -135,34 +135,17 @@ class Target(object):
       raise NotImplementedError('Target._get_tool() must be overridden')
 
 
-   def _is_build_needed(self, mk, iterDepsFilePaths):
-      """Checks if a build of this target should be scheduled.
+   def is_build_needed(self, mk):
+      """Checks if the target should be (re)built or if it’s up-to-date.
 
       Make mk
          Make instance.
-      iterable(str*) iterDepsFilePaths
-         List of file paths on which this target depends, to check their signatures for changes.
       bool return
          True if a build is needed, or False otherwise.
       """
 
-      # Choose a name to use for self, for logging purposes.
-      sSelf = self._m_sFilePath or self._m_sName
-
-      if mk._m_mds.compare_target_snapshot(self, iterDepsFilePaths):
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(sSelf + ': rebuilding due to detected changes\n')
-         return True
-
-      if mk.force_build:
-         if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-            sys.stdout.write(sSelf + ': up-to-date, but rebuild forced\n')
-         return True
-
-      # Still here? No need to rebuild.
-      if mk.verbosity >= mk.VERBOSITY_MEDIUM:
-         sys.stdout.write(sSelf + ': up-to-date\n')
-      return False
+      # Now compare the metadata with what’s in the store.
+      return mk._m_mds.compare_target_snapshot(self)
 
 
    def _get_name(self):
@@ -243,14 +226,13 @@ class ProcessedSourceTarget(Target):
       self._m_sSourceFilePath = sSourceFilePath
       self._m_sFinalOutputFilePath = sFinalOutputFilePath
       super().__init__(mk, sName)
+      self.add_dependency(self._m_sSourceFilePath)
+      # TODO: add other external dependencies.
 
 
    def build(self, mk, iterBlockingJobs):
       """See Target.build()."""
 
-      # TODO: check for additional changed external dependencies.
-      if not self._is_build_needed(mk, (self._m_sSourceFilePath, )):
-         return None
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
       return self._get_tool(mk).schedule_jobs(mk, self, iterBlockingJobs)
 
@@ -355,17 +337,14 @@ class ExecutableTarget(Target):
       # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
       # over that list only once, combine building the list of files to be checked for changes with
       # collecting linker inputs.
-      listFilesToCheck = []
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
          if isinstance(oDep, str):
-            listFilesToCheck.append(oDep)
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
             lnk.add_input_lib(oDep)
          else:
-            listFilesToCheck.append(oDep.file_path)
             if isinstance(oDep, ObjectTarget):
                lnk.add_input(oDep.file_path)
             elif isinstance(oDep, DynLibTarget):
@@ -378,9 +357,7 @@ class ExecutableTarget(Target):
             else:
                raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
-      # TODO: check for additional changed external dependencies.
-      if not self._is_build_needed(mk, listFilesToCheck):
-         return None
+      # TODO: add other external dependencies.
 
       return lnk.schedule_jobs(mk, self, iterBlockingJobs)
 
@@ -512,6 +489,12 @@ class DynLibTarget(ExecutableTarget):
 class UnitTestTarget(Target):
    """Generic unit test target."""
 
+   def _is_build_needed(self, mk):
+      """See Target.is_build_needed()."""
+
+      return True
+
+
    def parse_makefile_child(self, mk, elt):
       """See Target.parse_makefile_child()."""
 
@@ -584,9 +567,6 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             tgtToCompare = tgt
             break
 
-      if not self._is_build_needed(mk, (self._m_sExpectedOutputFilePath, tgtToCompare.file_path)):
-         return None
-
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
       return make.job.ExternalCommandJob(
          mk, self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
@@ -621,6 +601,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          return True
       if elt.nodeName == 'expected-output':
          self._m_sExpectedOutputFilePath = elt.getAttribute('path')
+         self.add_dependency(self._m_sExpectedOutputFilePath)
          return True
       return super().parse_makefile_child(mk, elt)
 
@@ -698,6 +679,7 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
 
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
+         self.add_dependency(self._m_sScriptFilePath)
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          return True

@@ -22,9 +22,12 @@
 
 from datetime import datetime
 import os
+import sys
 import weakref
 import xml.dom
 import xml.dom.minidom
+
+import make.target
 
 
 
@@ -180,41 +183,22 @@ class MetadataStore(object):
       self._m_dictStoredTargetSnapshots = {}
 
 
-   def compare_target_snapshot(self, tgt, iterDepsFilePaths):
-      """Checks if the specified target needs to be rebuilt: compares the current signature of the
-      dependency files in iterDepsFilePaths with the signature stored in the target’s snapshot,
-      returning True if any differences are detected.
+   def compare_target_snapshot(self, tgt):
+      """Checks if the specified target needs to be rebuilt: compares the current signature of its
+      dependencies with the signatures stored in the target’s snapshot, returning True if any
+      differences are detected.
 
       The new signatures are stored internally, and will be used to update the target’s snapshot
       once MetadataStore.update_target_snapshot() is called.
 
       make.target.Target tgt
          Target for which to get a new snapshot to compare with the stored one.
-      iter(str*) iterDepsFilePaths
-         File path of each dependency for tgt.
       bool return
          True if any files have changed since the last build, or False otherwise.
       """
 
       tssStored = self._m_dictStoredTargetSnapshots.get(tgt)
-      tssCurr = self._m_dictCurrTargetSnapshots.get(tgt)
-
-      if not tssCurr:
-         # Generate signatures for all the specified dependencies.
-         dictDepsSignatures = {}
-         for sFilePath in iterDepsFilePaths:
-            fs = self._m_dictSignatures.get(sFilePath)
-            if not fs:
-               # If we still haven’t read this file’s current signature, generate it now.
-               fs = FileSignature.generate(sFilePath)
-               # Store this signature, in case other targets also need it.
-               self._m_dictSignatures[sFilePath] = fs
-            dictDepsSignatures[sFilePath] = fs
-         # Instantiate the current snapshot.
-         tssCurr = TargetSnapshot(
-            tgt, dictDepsSignatures = dictDepsSignatures
-         )
-         self._m_dictCurrTargetSnapshots[tgt] = tssCurr
+      tssCurr = self._get_curr_target_snapshot(tgt)
 
       # If we have no stored snapshot to compare to, report the build as necessary.
       if not tssStored:
@@ -231,6 +215,46 @@ class MetadataStore(object):
          if self._m_mk().verbosity >= self._m_mk().VERBOSITY_HIGH:
             sys.stdout.write('metadata: {} is up-to-date\n'.format(tgt.name or tgt.file_path))
          return False
+
+
+   def _get_curr_target_snapshot(self, tgt):
+      """Returns a current snapshot for the specified target, creating one first it none such
+      exists.
+
+      make.target.Target tgt
+         Target for which to return a current snapshot.
+      make.metadata.TargetSnapshot return
+         Current target snapshot.
+      """
+
+      tssCurr = self._m_dictCurrTargetSnapshots.get(tgt)
+      if not tssCurr:
+         # Generate signatures for all the target’s dependencies.
+         dictDepsSignatures = {}
+         for oDep in tgt.dependencies or []:
+            if isinstance(oDep, make.target.Target):
+               sFilePath = oDep.file_path
+            elif isinstance(oDep, str):
+               sFilePath = oDep
+            else:
+               raise Exception('don’t know what to do with this dependency: {}'.format(oDep))
+            # See if we already have a signature for this file in the cache.
+            # The cache is supposed to always be current, because when we’re asked to check for the
+            # signature of a file, it means that the target for which we’re doing it is ready to be
+            # built, which means that the file has already been built and won’t be again, so when we
+            # cache a file signature, it won’t need to be refreshed.
+            fs = self._m_dictSignatures.get(sFilePath)
+            if not fs:
+               # If we still haven’t read this file’s current signature, generate it now.
+               fs = FileSignature.generate(sFilePath)
+               # Store this signature, in case other targets also need it.
+               self._m_dictSignatures[sFilePath] = fs
+            dictDepsSignatures[sFilePath] = fs
+         # Instantiate the current snapshot.
+         tssCurr = TargetSnapshot(tgt, dictDepsSignatures = dictDepsSignatures)
+         self._m_dictCurrTargetSnapshots[tgt] = tssCurr
+
+      return tssCurr
 
 
    def read(self, sFilePath):
@@ -287,7 +311,7 @@ class MetadataStore(object):
          sys.stdout.write(
             'metadata: updating target snapshot: {}\n'.format(tgt.name or tgt.file_path)
          )
-      self._m_dictStoredTargetSnapshots[tgt] = self._m_dictCurrTargetSnapshots[tgt]
+      self._m_dictStoredTargetSnapshots[tgt] = self._get_curr_target_snapshot(tgt)
       self._m_bDirty = True
 
 
@@ -307,13 +331,13 @@ class MetadataStore(object):
 
       # Add the signatures section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
-      for tgt, tgtsnap in self._m_dictCurrTargetSnapshots.items():
+      for tgt, tss in self._m_dictCurrTargetSnapshots.items():
          eltTarget = eltTgtSnaps.appendChild(doc.createElement('target'))
          if tgt.name:
             eltTarget.setAttribute('name', tgt.name)
          elif tgt.file_path:
             eltTarget.setAttribute('path', tgt.file_path)
-         for sFilePath, fsig in tgtsnap._m_dictDepsSignatures.items():
+         for sFilePath, fsig in tss._m_dictDepsSignatures.items():
             eltFile = eltTarget.appendChild(doc.createElement('file'))
             eltFile.setAttribute('path', sFilePath)
             fsig.save(eltFile)

@@ -376,16 +376,35 @@ class Controller(object):
          # Find a job that is ready to be executed.
          for job in self._m_setScheduledJobs:
             if not job.blocked:
-               if mk.verbosity >= mk.VERBOSITY_LOW:
-                  sys.stdout.write(job.get_verbose_command() + '\n')
+               # Execute this job.
+               sTgt = job._m_tgt._m_sFilePath or job._m_tgt._m_sName
+               bBuild = job._m_tgt.is_build_needed(mk)
+               if bBuild:
+                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                     sys.stdout.write(sTgt + ': rebuilding due to detected changes\n')
+               elif mk.force_build:
+                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                     sys.stdout.write(sTgt + ': up-to-date, but rebuild forced\n')
+                  bBuild = True
+               if bBuild:
+                  if mk.verbosity >= mk.VERBOSITY_LOW:
+                     sys.stdout.write(job.get_verbose_command() + '\n')
+                  else:
+                     iterQuietCmd = job.get_quiet_command()
+                     sys.stdout.write(
+                        '{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:]))
+                     )
+                  if mk.dry_run:
+                     # Don’t actually start the job.
+                     bBuild = False
                else:
-                  iterQuietCmd = job.get_quiet_command()
-                  sys.stdout.write('{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:])))
-               if mk.dry_run:
+                  if mk.verbosity >= mk.VERBOSITY_MEDIUM:
+                     sys.stdout.write(sTgt + ': up-to-date\n')
+               if bBuild:
+                  rj = job.start()
+               else:
                   # Create an always-successful job instead of starting the real job.
                   rj = RunningNoopJob(0)
-               else:
-                  rj = job.start()
                # Move the job from scheduled to running jobs.
                self._m_dictRunningJobs[rj] = job
                self._m_setScheduledJobs.remove(job)
