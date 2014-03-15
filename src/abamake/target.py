@@ -631,6 +631,32 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
       self._m_sName = None
 
 
+   def get_exec_environ(self):
+      """Generates an os.environ-like dictionary containing any variables necessary to execute the
+      unit test.
+
+      dict(str: str) return
+         Modified environment, or None if no environment changes are needed to run the unit test.
+      """
+
+      # If the build target is linked to a library built by this same makefile, make sure we add
+      # output_dir/lib to the library path.
+      assert self._m_listLinkerInputs is not None, \
+         'a ExecutableUnitTestBuildTarget must have at least one dependency (the Target it tests)'
+      dictEnv = None
+      for oDep in self._m_listLinkerInputs:
+         if isinstance(oDep, DynLibTarget):
+            # TODO: move this env tweaking to a Platform class.
+            dictEnv = os.environ.copy()
+            sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
+            if sLibPath:
+               sLibPath = ':' + sLibPath
+            sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
+            dictEnv['LD_LIBRARY_PATH'] = sLibPath
+            break
+      return dictEnv
+
+
    def _generate_file_path(self):
       """See ExecutableTarget._generate_file_path()."""
 
@@ -679,8 +705,6 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
    def build(self, iterBlockingJobs):
       """See Target.build()."""
 
-      mk = self._m_mk()
-
       # Build the command line to invoke.
       if self._m_sScriptFilePath:
          listArgs = [self._m_sScriptFilePath]
@@ -688,27 +712,12 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
          listArgs = []
       listArgs.append(self._m_eutbt.file_path)
 
-      # If the build target is linked to a library built by this same makefile, make sure we add
-      # output_dir/lib to the library path.
-      # TODO: move all this to a ExecutableUnitTestBuildTarget method returning the env dictionary.
-      assert self._m_eutbt._m_listLinkerInputs is not None, \
-         'a UnitTestTarget must have at least one dependency (the Target it tests)'
-      dictEnv = None
-      for oDep in self._m_eutbt._m_listLinkerInputs:
-         if isinstance(oDep, DynLibTarget):
-            # TODO: move this env tweaking to a Platform class.
-            dictEnv = os.environ.copy()
-            sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
-            if sLibPath:
-               sLibPath = ':' + sLibPath
-            sLibPath += os.path.join(mk.output_dir, 'lib')
-            dictEnv['LD_LIBRARY_PATH'] = sLibPath
-            break
-
-      return make.job.ExternalCommandJob(mk, self, iterBlockingJobs, ('TEST', self._m_sName), {
-         'args': listArgs,
-         'env' : dictEnv,
-      })
+      return make.job.ExternalCommandJob(
+         self._m_mk(), self, iterBlockingJobs, ('TEST', self._m_sName), {
+            'args': listArgs,
+            'env' : self._m_eutbt.get_exec_environ(),
+         }
+      )
 
 
    def is_build_needed(self):
