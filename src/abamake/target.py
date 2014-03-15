@@ -100,8 +100,10 @@ class ForeignLibDependency(ForeignDependency):
 class Target(Dependency):
    """Abstract build target."""
 
-   # Dependencies (make.target.Dependency instances) for this target.
-   _m_setDeps = None
+   # Dependencies (make.target.Dependency instances) for this target. Cannot be a set, because in
+   # some cases (e.g. linker inputs) we need to keep the order.
+   # TODO: use an ordered set when one becomes available in “stock” Python?
+   _m_listDeps = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # See Target.name.
@@ -118,7 +120,7 @@ class Target(Dependency):
          See Target.name.
       """
 
-      self._m_setDeps = set()
+      self._m_listDeps = []
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
       super().__init__(self._generate_file_path())
@@ -137,7 +139,8 @@ class Target(Dependency):
          Dependency.
       """
 
-      self._m_setDeps.add(dep)
+      if dep not in self._m_listDeps:
+         self._m_listDeps.append(dep)
 
 
    def build(self, iterBlockingJobs):
@@ -160,7 +163,7 @@ class Target(Dependency):
          Dependency of this target.
       """
 
-      for dep in self._m_setDeps:
+      for dep in self._m_listDeps:
          yield dep
 
 
@@ -595,7 +598,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """
 
       # Find the dependency target that generates the output we want to compare.
-      for tgt in self._m_setDeps:
+      for tgt in self._m_listDeps:
          if isinstance(tgt, ProcessedSourceTarget):
             tgtToCompare = tgt
             break
@@ -620,7 +623,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       mk = self._m_mk()
       if elt.nodeName == 'source':
          # Check if we already found a <source> child element (dependency).
-         for tgt in self._m_setDeps:
+         for tgt in self._m_listDeps:
             if isinstance(tgt, ProcessedSourceTarget):
                raise Exception(
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +
@@ -680,19 +683,15 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
 
       # If the build target is linked to a library built by this same makefile, make sure we add
       # output_dir/lib to the library path.
-      assert self._m_listLinkerInputs is not None, \
-         'a ExecutableUnitTestBuildTarget must have at least one dependency (the Target it tests)'
       dictEnv = None
-      for oDep in self._m_listLinkerInputs:
-         if isinstance(oDep, DynLibTarget):
-            # TODO: move this env tweaking to a Platform class.
-            dictEnv = os.environ.copy()
-            sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
-            if sLibPath:
-               sLibPath = ':' + sLibPath
-            sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
-            dictEnv['LD_LIBRARY_PATH'] = sLibPath
-            break
+      if any(isinstance(dep, DynLibTarget) for dep in self._m_listDeps):
+         # TODO: move this env tweaking to a Platform class.
+         dictEnv = os.environ.copy()
+         sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
+         if sLibPath:
+            sLibPath = ':' + sLibPath
+         sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
+         dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
 
 
