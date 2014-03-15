@@ -223,7 +223,7 @@ class ExternalCommandJob(Job):
          Jobs that block this one.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
-      dict(object+) dictPopenArgs
+      dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
       """
 

@@ -120,7 +120,7 @@ class TargetSnapshot(object):
 
       make.target.Target tgt
          Target.
-      dict(str, FileSignature) dictDepsSignatures
+      dict(str: FileSignature) dictDepsSignatures
          File paths associated to their signature; one for each dependency of the target.
       xml.dom.Element eltTarget
          XML Element to parse to load the target dependencies’ signatures.
