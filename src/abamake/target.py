@@ -369,51 +369,31 @@ class ExecutableTarget(Target):
    output base directory.
    """
 
-   # List of dynamic libraries against which the target will be linked. Each item is either a Target
-   # instance (for libraries/object files that can be built by the same makefile) or a string (for
-   # external files).
-   _m_listLinkerInputs = None
-
-
-   def add_dependency(self, dep):
-      """See Target.add_dependency(). If the dependency is something we should link to, also add it
-      as a linker input.
-      """
-
-      super().add_dependency(dep)
-      if isinstance(dep, (ObjectTarget, DynLibTarget, ForeignLibDependency)):
-         if self._m_listLinkerInputs is None:
-            self._m_listLinkerInputs = []
-         self._m_listLinkerInputs.append(dep)
-
-
    def build(self, iterBlockingJobs):
       """See Target.build()."""
 
       mk = self._m_mk()
       lnk = self._get_tool()
 
-      # Due to the different types of objects in _m_listLinkerInputs and the fact we want to iterate
-      # over that list only once, combine building the list of files to be checked for changes with
-      # collecting linker inputs.
+      # Scan this target’s dependencies for linker inputs.
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
-      for oDep in self._m_listLinkerInputs or []:
-         if isinstance(oDep, ForeignLibDependency):
+      for dep in self._m_listDeps:
+         if isinstance(dep, ForeignLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
-            lnk.add_input_lib(oDep)
-         elif isinstance(oDep, ObjectTarget):
-            lnk.add_input(oDep.file_path)
-         elif isinstance(oDep, DynLibTarget):
-            lnk.add_input_lib(oDep.name)
+            lnk.add_input_lib(dep)
+         elif isinstance(dep, ObjectTarget):
+            lnk.add_input(dep.file_path)
+         elif isinstance(dep, DynLibTarget):
+            lnk.add_input_lib(dep.name)
             # Since we’re linking to a library built by this makefile, make sure to add the
             # output lib/ directory to the library search path.
             if not bOutputLibPathAdded:
                lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
                bOutputLibPathAdded = True
          else:
-            raise Exception('unclassified linker input: {}'.format(oDep.file_path))
+            raise Exception('unclassified linker input: {}'.format(dep.file_path))
 
       # TODO: add other external dependencies.
 
