@@ -44,7 +44,7 @@ class RunningJob(object):
          Exit code of the job, or None if the job is still running.
       """
 
-      raise NotImplementedError('RunningJob.poll() must be overridden')
+      raise NotImplementedError('RunningJob.poll() must be overridden in ' + type(self).__name__)
 
 
 
@@ -177,7 +177,9 @@ class Job(object):
          Job’s command line.
       """
 
-      raise NotImplementedError('Job.get_verbose_command() must be overridden')
+      raise NotImplementedError(
+         'Job.get_verbose_command() must be overridden in ' + type(self).__name__
+      )
 
 
    def release_blocked(self):
@@ -196,7 +198,7 @@ class Job(object):
          Object to check the job status and eventual exit code.
       """
 
-      raise NotImplementedError('Job.start() must be overridden')
+      raise NotImplementedError('Job.start() must be overridden in ' + type(self).__name__)
 
 
 
