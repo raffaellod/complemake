@@ -420,14 +420,14 @@ class JobController(object):
 
          # Find a job that is ready to be executed.
          for job in self._m_setScheduledJobs:
-            if not job._m_tgt.is_build_blocked():
+            tgt = job._m_tgt
+            if not tgt.is_build_blocked():
                # Execute this job.
-               sTgt = job._m_tgt._m_sFilePath or job._m_tgt._m_sName
-               bBuild = job._m_tgt.is_build_needed()
+               bBuild = tgt.is_build_needed()
                if bBuild:
-                  log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', sTgt)
+                  log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', tgt)
                elif self._m_bForceBuild:
-                  log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', sTgt)
+                  log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
                   bBuild = True
                if bBuild:
                   if log.verbosity >= log.LOW:
@@ -441,7 +441,7 @@ class JobController(object):
                      # Don’t actually start the job.
                      bBuild = False
                else:
-                  log(log.MEDIUM, 'controller: {}: up-to-date\n', sTgt)
+                  log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
                if bBuild:
                   rj = job.start()
                else:
