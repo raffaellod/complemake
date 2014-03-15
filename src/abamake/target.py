@@ -102,6 +102,15 @@ class Target(object):
    """)
 
 
+   def _get_display_name(self):
+      return self._m_sName or self._m_sFilePath
+
+   display_name = property(_get_display_name, doc = """
+      User-friendly name of the target: equal to Target.name if not None, or Target.file_path
+      otherwise.
+   """)
+
+
    def _get_file_path(self):
       return self._m_sFilePath
 
