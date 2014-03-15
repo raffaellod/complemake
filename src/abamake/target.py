@@ -87,7 +87,7 @@ class Target(object):
          current.
       """
 
-      raise NotImplementedError('Target.build() must be overridden')
+      raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
 
 
    def _get_dependencies(self):
@@ -139,7 +139,7 @@ class Target(object):
          Ready-to-use tool.
       """
 
-      raise NotImplementedError('Target._get_tool() must be overridden')
+      raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
 
    def is_build_needed(self):
