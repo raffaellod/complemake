@@ -132,12 +132,18 @@ class Make(object):
          Target to add.
       """
 
-      sFilePath = tgt.file_path
-      if sFilePath:
-         self._m_dictTargets[sFilePath] = tgt
       sName = tgt.name
+      sFilePath = tgt.file_path
+      if not sName and not sFilePath:
+         raise Exception('a target must have either a name or a file path ({})'.format(tgt))
       if sName:
+         if sName in self._m_dictNamedTargets:
+            raise KeyError('duplicate target name: {}'.format(sName))
          self._m_dictNamedTargets[sName] = tgt
+      if sFilePath:
+         if sFilePath in self._m_dictTargets:
+            raise KeyError('duplicate target file path: {}'.format(sFilePath))
+         self._m_dictTargets[sFilePath] = tgt
 
 
    def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
