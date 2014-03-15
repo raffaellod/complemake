@@ -266,10 +266,8 @@ class JobController(object):
    _m_dictRunningJobs = None
    # Scheduled jobs.
    _m_setScheduledJobs = None
-   # “Last” scheduled jobs (Target -> Job that completes it), i.e. jobs that are the last in a chain
-   # of jobs scheduled to build a single target. The values are a subset of, or the same as,
-   # Make._m_setScheduledJobs.
-   _m_dictTargetLastScheduledJobs = None
+   # Scheduled jobs (Target -> Job). The values are the same as, Make._m_setScheduledJobs.
+   _m_dictTargetScheduledJobs = None
 
 
    def __init__(self, mk):
@@ -283,7 +281,7 @@ class JobController(object):
       self._m_dictRunningJobs = {}
       self.running_jobs_max = multiprocessing.cpu_count()
       self._m_setScheduledJobs = set()
-      self._m_dictTargetLastScheduledJobs = {}
+      self._m_dictTargetScheduledJobs = {}
 
 
    def _collect_completed_jobs(self, cJobsToComplete):
@@ -369,16 +367,16 @@ class JobController(object):
    """)
 
 
-   def get_target_jobs(self, tgt):
-      """Retrieves the job (chain) associated to a target.
+   def get_target_job(self, tgt):
+      """Retrieves the job associated to a target.
 
       Target tgt
-         Target for which to retrieve jobs.
+         Target for which to retrieve a job.
       Job return
-         Last job scheduled by tgt.build(), or None if tgt.build() has not been called yet.
+         Job scheduled by tgt.build(), or None if tgt.build() has not been called yet.
       """
 
-      return self._m_dictTargetLastScheduledJobs.get(tgt)
+      return self._m_dictTargetScheduledJobs.get(tgt)
 
 
    def _get_ignore_errors(self):
@@ -414,7 +412,7 @@ class JobController(object):
       """
 
       # This is the earliest point we know we can reset this.
-      self._m_dictTargetLastScheduledJobs.clear()
+      self._m_dictTargetScheduledJobs.clear()
 
       log = self._m_mk().log
       cFailedJobsTotal = 0
@@ -485,18 +483,7 @@ class JobController(object):
       """
 
       self._m_setScheduledJobs.add(job)
-
-
-   def set_target_jobs(self, tgt, job):
-      """Associates a job (chain) with a target.
-
-      Target tgt
-         Target to with job should be associated.
-      Job job
-         Last job scheduled by tgt.build(). None is an allowed value.
-      """
-
-      self._m_dictTargetLastScheduledJobs[tgt] = job
+      self._m_dictTargetScheduledJobs[job._m_tgt] = job
 
 
    def _unschedule_jobs_blocked_by(self, job):

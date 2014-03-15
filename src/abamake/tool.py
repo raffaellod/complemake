@@ -191,24 +191,20 @@ class Tool(object):
          listArgs.extend(self._m_listInputFilePaths)
 
 
-   def schedule_jobs(self, mk, tgt, iterBlockingJobs):
-      """Schedules one or more jobs that, when run, result in the execution of the tool.
+   def schedule_job(self, mk, tgt, iterBlockingJobs):
+      """Schedules a job that, when run, results in the execution of the tool.
 
-      An implementation will create one or more chained Job instances, blocking the first with
-      iterBlockingJobs and returning the last one.
-
-      The default implementation schedules a single job, the command line of which is composed by
-      calling Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
+      The default implementation schedules a job, the command line of which is composed by calling
+      Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
 
       make.Make mk
          Make instance.
       make.target.Target tgt
          Target that this job will build.
       iterable(make.job.Job*) iterBlockingJobs
-         Jobs that should block the first one scheduled for this execution of the tool (Tool
-         instance).
+         Jobs that should block the one scheduled for this execution of the tool (Tool instance).
       make.job.Job return
-         Last job scheduled.
+         Job scheduled.
       """
 
       # Build the arguments list.

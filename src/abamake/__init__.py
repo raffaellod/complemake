@@ -324,41 +324,31 @@ class Make(object):
    def schedule_target_jobs(self, tgt):
       """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
 
-      Recursively visits the dependency tree for the target in a leaves-first order, collecting
-      (possibly chains of) Job instances returned by Target.build() for all the dependencies, and
-      making these block the Job instance(s) for the specified target.
+      Recursively visits the dependency tree for the target in a leaves-first order, collecting Job
+      instances returned by Target.build() for all the dependencies, and making these block the Job
+      instance for the specified target.
 
       Target tgt
-         Target instance for which jobs should be scheduled by calling its build() method.
+         Target instance for which a job should be scheduled by calling its build() method.
       Job return
-         Last job scheduled by tgt.build().
+         Job scheduled by tgt.build().
       """
 
-      # Check if we already have a (last) Job for this target.
-      job = self._m_jc.get_target_jobs(tgt)
+      # Check if we already have a Job for this target.
+      job = self._m_jc.get_target_job(tgt)
       if job is None:
          # Visit leaves.
          listBlockingJobs = None
          for tgtDep in filter(lambda oDep: isinstance(oDep, target.Target), tgt.dependencies or []):
-            # Recursively schedule jobs for this dependency, returning and storing the last one.
-            jobDep = self.schedule_target_jobs(tgtDep)
-            if jobDep is not None:
-               # Keep track of the dependencies’ jobs.
-               if listBlockingJobs is None:
-                  listBlockingJobs = []
-               listBlockingJobs.append(jobDep)
+            if listBlockingJobs is None:
+               listBlockingJobs = []
+            # Recursively schedule jobs for this dependency, returning and storing job tree root.
+            listBlockingJobs.append(self.schedule_target_jobs(tgtDep))
 
-         # Visit the node: give the target a chance to schedule jobs, letting it know which of its
-         # dependencies scheduled jobs to be rebuilt, if any.
+         # Visit the node: schedule a job for the target, passing it any dependency jobs.
          job = tgt.build(listBlockingJobs)
-         # Store the job even if None.
-         self._m_jc.set_target_jobs(tgt, job)
-
-      if job is None:
-         # If Target.build() did not return a job, there’s nothing to do for this target. This must
-         # also mean that no dependencies scheduled any jobs.
          # TODO: how about phonies or “virtual targets”?
-         assert not listBlockingJobs, \
-            'Target.build() returned no jobs, no dependencies should have scheduled jobs'
+         assert job is not None, 'no jobs scheduled for target {}'.format(tgt)
+
       return job
 

@@ -78,13 +78,12 @@ class Target(object):
 
    def build(self, iterBlockingJobs):
       """Builds the output, using the facilities provided by the specified Make instance and
-      returning the last job scheduled.
+      returning the job scheduled.
 
       iterable(Job*) iterBlockingJobs
-         Jobs that should block the first one scheduled to build this target.
+         Jobs that should block the one scheduled to build this target.
       Job return
-         Last job scheduled if the target scheduled jobs to be rebuilt, of None if it was already
-         current.
+         Scheduled job.
       """
 
       raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
@@ -237,7 +236,7 @@ class ProcessedSourceTarget(Target):
       """See Target.build()."""
 
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool().schedule_jobs(self._m_mk(), self, iterBlockingJobs)
+      return self._get_tool().schedule_job(self._m_mk(), self, iterBlockingJobs)
 
 
    def _generate_file_path(self):
@@ -374,7 +373,7 @@ class ExecutableTarget(Target):
 
       # TODO: add other external dependencies.
 
-      return lnk.schedule_jobs(mk, self, iterBlockingJobs)
+      return lnk.schedule_job(mk, self, iterBlockingJobs)
 
 
    def configure_compiler(self, tool):
