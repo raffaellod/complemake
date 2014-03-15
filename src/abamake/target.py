@@ -319,6 +319,17 @@ class ExecutableTarget(Target):
    _m_listLinkerInputs = None
 
 
+   def add_dependency(self, tgtDep):
+      """See Target.add_dependency(). If the dependency is something we should link to, also add it
+      as a linker input.
+      """
+
+      super().add_dependency(tgtDep)
+      if isinstance(tgtDep, (ObjectTarget, DynLibTarget)):
+         self.add_linker_input(tgtDep)
+
+
+   # TODO: this is only used for external targets; once ExternalTarget is available, remove this.
    def add_linker_input(self, oLib):
       """Adds a library dependency. Similar to Target.add_dependency(), but does not implicitly add
       oLib as a dependency.
@@ -408,18 +419,17 @@ class ExecutableTarget(Target):
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath, self._m_sFilePath)
          self.add_dependency(tgtObj)
-         self.add_linker_input(tgtObj)
          return True
       if elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
          sName = elt.getAttribute('name')
-         # If the library was in the dictionary (i.e. it’s built by this makefile), assign it as a
-         # dependency of self; else just add the library name (hence passing sName as 2nd argument
-         # to mk.get_target_by_name()).
-         oDynLib = mk.get_target_by_name(sName, sName)
-         if oDynLib is not sName:
+         # If the library is a known target (i.e. it’s built by this makefile), assign it as a
+         # dependency of self; else just add the library name.
+         oDynLib = mk.get_target_by_name(sName, None)
+         if oDynLib is None:
+            self.add_linker_input(sName)
+         else:
             self.add_dependency(oDynLib)
-         self.add_linker_input(oDynLib)
          return True
       if elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
@@ -471,35 +481,12 @@ class DynLibTarget(ExecutableTarget):
       return lnk
 
 
-   def parse_makefile_child(self, elt):
-      """See ExecutableTarget.parse_makefile_child()."""
-
-      mk = self._m_mk()
-      # This implementation does not allow more element types than the base class’ version.
-      if not super().parse_makefile_child(elt):
-         return False
-      # Apply additional logic on the recognized element.
-      if elt.nodeName == 'unittest':
-         sName = elt.getAttribute('name')
-         tgtUnitTest = mk.get_target_by_name(sName)
-         # If tgtUnitTest generates an executable, have it link to this library.
-         if isinstance(tgtUnitTest, ExecutableTarget):
-            tgtUnitTest.add_linker_input(self)
-      return True
-
-
 
 ####################################################################################################
 # UnitTestTarget
 
 class UnitTestTarget(Target):
    """Generic unit test target."""
-
-   def _is_build_needed(self):
-      """See Target.is_build_needed()."""
-
-      return True
-
 
    def parse_makefile_child(self, elt):
       """See Target.parse_makefile_child()."""
@@ -534,11 +521,11 @@ class UnitTestTarget(Target):
                clsCurr = ComparisonUnitTestTarget
             else:
                # A <target> with <source> (default tool) will generate an executable.
-               clsCurr = ExecutableUnitTestTarget
+               clsCurr = ExecutableUnitTestExecTarget
          elif ndChild.nodeName == 'dynlib' or ndChild.nodeName == 'script':
             # Linking to dynamic libraries or using execution scripts is a prerogative of executable
             # unit tests only.
-            clsCurr = ExecutableUnitTestTarget
+            clsCurr = ExecutableUnitTestExecTarget
          if clsCurr:
             # If we already picked cls, make sure it was the same as clsCurr.
             if cls and cls is not clsCurr:
@@ -549,6 +536,7 @@ class UnitTestTarget(Target):
       if cls is None:
          raise SyntaxError('invalid empty unit test target “{}” element'.format(sName))
       return cls
+
 
 
 ####################################################################################################
@@ -577,6 +565,14 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       return make.job.ExternalCommandJob(
          self._m_mk(), self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
       )
+
+
+   def is_build_needed(self):
+      """See Target.is_build_needed()."""
+
+      # TODO: make unit test execution incremental like everything else by storing something in the
+      # metadata store.
+      return True
 
 
    def parse_makefile_child(self, elt):
@@ -615,50 +611,90 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
 
 ####################################################################################################
-# ExecutableUnitTestTarget
+# ExecutableUnitTestBuildTarget
 
-class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
-   """Executable unit test target. The output file will be placed in a bin/unittest/ directory
+class ExecutableUnitTestBuildTarget(ExecutableTarget):
+   """Builds an executable unit test. The output file will be placed in a bin/unittest/ directory
    relative to the output base directory.
+
+   One instance of this class is created for every instance of ExecutableUnitTestExecTarget.
    """
 
+   def __init__(self, mk, sName = None):
+      """See ExecutableTarget.__init__()."""
+
+      super().__init__(mk, sName)
+      # Remove self from mk’s named targets, to let the execution target use sName instead.
+      # TODO: don’t poke Make’s privates.
+      del mk._m_dictNamedTargets[sName]
+      # Give up the name to the execution target.
+      self._m_sName = None
+
+
+   def _generate_file_path(self):
+      """See ExecutableTarget._generate_file_path()."""
+
+      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      return os.path.join(self._m_mk().output_dir, 'bin', 'unittest', '' + self._m_sName + '')
+
+
+
+####################################################################################################
+# ExecutableUnitTestExecTarget
+
+class ExecutableUnitTestExecTarget(UnitTestTarget):
+   """Executes an executable unit test.
+
+   Instantiating this class generates two targets: the first one is a ExecutableUnitTestBuildTarget,
+   and takes care of building the unit test’s executable; the second one is of this type, and is
+   only needed to run the unit test. The target name is taken by the latter; the former is only
+   assigned the path to the file it generates.
+   """
+
+   # ExecutableUnitTestBuildTarget instance that builds the unit test executable invoked by building
+   # this object.
+   _m_eutbt = None
    # Path to the script file that will be invoked to execute the unit test.
    _m_sScriptFilePath = None
 
 
-   def build(self, iterBlockingJobs):
-      """See ExecutableTarget.build(). In addition to building the unit test, it also schedules its
-      execution.
+   def __init__(self, mk, sName = None):
+      """See UnitTestTarget.__init__(). Also instantiates the related ExecutableUnitTestBuildTarget.
       """
 
+      self._m_eutbt = ExecutableUnitTestBuildTarget(mk, sName)
+      super().__init__(mk, sName)
+      # Add the build target as a dependency. Note that we don’t invoke our overridden method.
+      super().add_dependency(self._m_eutbt)
+
+
+   def add_dependency(self, tgtDep):
+      """See UnitTestTarget.add_dependency(). Overridden to add the dependency to the build target
+      instead of this one; this target should only depend on the unit test build target.
+      """
+
+      self._m_eutbt.add_dependency(tgtDep)
+
+
+   def build(self, iterBlockingJobs):
+      """See Target.build()."""
+
       mk = self._m_mk()
-      jobBuild = super().build(iterBlockingJobs)
-      # If to build the unit test executable we scheduled any jobs, make sure that the metadata for
-      # the jobs’ output is updated and that the unit test execution depends on the build job(s).
-      if jobBuild:
-         tplBlockingJobs = (jobBuild, )
-         tplDeps = (self._m_sFilePath, )
-      else:
-         # No need to block the unit test job with iterBlockingJobs: if jobBuild is None,
-         # iterBlockingJobs must be None as well, or else we would’ve scheduled jobs in
-         # Target.build().
-         assert not iterBlockingJobs, \
-            'ExecutableTarget.build() returned no jobs, no dependencies should have scheduled jobs'
-         tplBlockingJobs = None
-         tplDeps = None
 
       # Build the command line to invoke.
       if self._m_sScriptFilePath:
-         tplArgs = (self._m_sScriptFilePath, self._m_sFilePath)
+         listArgs = [self._m_sScriptFilePath]
       else:
-         tplArgs = (self._m_sFilePath, )
+         listArgs = []
+      listArgs.append(self._m_eutbt.file_path)
 
-      # If this target is linked to a library built by this same makefile, make sure we add
+      # If the build target is linked to a library built by this same makefile, make sure we add
       # output_dir/lib to the library path.
-      assert self._m_listLinkerInputs is not None, \
+      # TODO: move all this to a ExecutableUnitTestBuildTarget method returning the env dictionary.
+      assert self._m_eutbt._m_listLinkerInputs is not None, \
          'a UnitTestTarget must have at least one dependency (the Target it tests)'
       dictEnv = None
-      for oDep in self._m_listLinkerInputs:
+      for oDep in self._m_eutbt._m_listLinkerInputs:
          if isinstance(oDep, DynLibTarget):
             # TODO: move this env tweaking to a Platform class.
             dictEnv = os.environ.copy()
@@ -669,17 +705,18 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
             dictEnv['LD_LIBRARY_PATH'] = sLibPath
             break
 
-      return make.job.ExternalCommandJob(mk, self, tplBlockingJobs, ('TEST', self._m_sName), {
-         'args': tplArgs,
+      return make.job.ExternalCommandJob(mk, self, iterBlockingJobs, ('TEST', self._m_sName), {
+         'args': listArgs,
          'env' : dictEnv,
       })
 
 
-   def _generate_file_path(self):
-      """See ExecutableTarget._generate_file_path()."""
+   def is_build_needed(self):
+      """See Target.is_build_needed()."""
 
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(self._m_mk().output_dir, 'bin', 'unittest', '' + self._m_sName + '')
+      # TODO: make unit test execution incremental like everything else by storing something in the
+      # metadata store.
+      return True
 
 
    def parse_makefile_child(self, elt):
@@ -687,11 +724,13 @@ class ExecutableUnitTestTarget(ExecutableTarget, UnitTestTarget):
 
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
-         self.add_dependency(self._m_sScriptFilePath)
+         # Note that we don’t invoke our overridden method.
+         super().add_dependency(self._m_sScriptFilePath)
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          return True
-      if ExecutableTarget.parse_makefile_child(self, elt):
+      if super().parse_makefile_child(elt):
          return True
-      return UnitTestTarget.parse_makefile_child(self, elt)
+      # Non-unit test-specific elements are probably for the build target to process.
+      return self._m_eutbt.parse_makefile_child(elt)
 
