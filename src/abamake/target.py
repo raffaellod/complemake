@@ -155,12 +155,9 @@ class Target(Dependency):
             self._m_cBuildBlocks += 1
 
 
-   def build(self, iterBlockingJobs):
-      """Builds the output, using the facilities provided by the specified Make instance and
-      returning the job scheduled.
+   def build(self):
+      """Builds the output.
 
-      iterable(Job*) iterBlockingJobs
-         Jobs that should block the one scheduled to build this target.
       Job return
          Scheduled job.
       """
@@ -326,11 +323,11 @@ class ProcessedSourceTarget(Target):
       # TODO: add other external dependencies.
 
 
-   def build(self, iterBlockingJobs):
+   def build(self):
       """See Target.build()."""
 
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool().schedule_job(self._m_mk(), self, iterBlockingJobs)
+      return self._get_tool().schedule_job(self._m_mk(), self)
 
 
    def _generate_file_path(self):
@@ -406,7 +403,7 @@ class ExecutableTarget(Target):
    output base directory.
    """
 
-   def build(self, iterBlockingJobs):
+   def build(self):
       """See Target.build()."""
 
       mk = self._m_mk()
@@ -434,7 +431,7 @@ class ExecutableTarget(Target):
 
       # TODO: add other external dependencies.
 
-      return lnk.schedule_job(mk, self, iterBlockingJobs)
+      return lnk.schedule_job(mk, self)
 
 
    def configure_compiler(self, tool):
@@ -610,7 +607,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
    _m_sExpectedOutputFilePath = None
 
 
-   def build(self, iterBlockingJobs):
+   def build(self):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
@@ -622,7 +619,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
       return make.job.ExternalCommandJob(
-         self._m_mk(), self, iterBlockingJobs, ('CMP', self._m_sName), {'args': listArgs,}
+         self._m_mk(), self, ('CMP', self._m_sName), {'args': listArgs,}
       )
 
 
@@ -757,7 +754,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       self._m_eutbt.add_dependency(dep)
 
 
-   def build(self, iterBlockingJobs):
+   def build(self):
       """See Target.build()."""
 
       # Build the command line to invoke.
@@ -767,12 +764,10 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
          listArgs = []
       listArgs.append(self._m_eutbt.file_path)
 
-      return make.job.ExternalCommandJob(
-         self._m_mk(), self, iterBlockingJobs, ('TEST', self._m_sName), {
-            'args': listArgs,
-            'env' : self._m_eutbt.get_exec_environ(),
-         }
-      )
+      return make.job.ExternalCommandJob(self._m_mk(), self, ('TEST', self._m_sName), {
+         'args': listArgs,
+         'env' : self._m_eutbt.get_exec_environ(),
+      })
 
 
    def is_build_needed(self):

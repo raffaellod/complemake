@@ -191,7 +191,7 @@ class Tool(object):
          listArgs.extend(self._m_listInputFilePaths)
 
 
-   def schedule_job(self, mk, tgt, iterBlockingJobs):
+   def schedule_job(self, mk, tgt):
       """Schedules a job that, when run, results in the execution of the tool.
 
       The default implementation schedules a job, the command line of which is composed by calling
@@ -201,8 +201,6 @@ class Tool(object):
          Make instance.
       make.target.Target tgt
          Target that this job will build.
-      iterable(make.job.Job*) iterBlockingJobs
-         Jobs that should block the one scheduled for this execution of the tool (Tool instance).
       make.job.Job return
          Job scheduled.
       """
@@ -223,7 +221,7 @@ class Tool(object):
 
       self._run_add_cmd_inputs(listArgs)
 
-      return make.job.ExternalCommandJob(mk, tgt, iterBlockingJobs, self._get_quiet_cmd(), {
+      return make.job.ExternalCommandJob(mk, tgt, self._get_quiet_cmd(), {
          'args': listArgs,
       })
 

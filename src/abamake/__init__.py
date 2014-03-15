@@ -325,31 +325,23 @@ class Make(object):
       """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
 
       Recursively visits the dependency tree for the target in a leaves-first order, collecting Job
-      instances returned by Target.build() for all the dependencies, and making these block the Job
-      instance for the specified target.
+      instances returned by Target.build() for all the dependencies.
 
       Target tgt
          Target instance for which a job should be scheduled by calling its build() method.
-      Job return
-         Job scheduled by tgt.build().
       """
 
       # Check if we already have a Job for this target.
       job = self._m_jc.get_target_job(tgt)
       if job is None:
          # Visit leaves.
-         listBlockingJobs = None
          for dep in tgt.get_dependencies():
             if isinstance(dep, target.Target):
-               if listBlockingJobs is None:
-                  listBlockingJobs = []
-               # Recursively schedule jobs for this dependency target, and store its job.
-               listBlockingJobs.append(self.schedule_target_jobs(dep))
+               # Recursively schedule jobs for this dependency target.
+               self.schedule_target_jobs(dep)
 
          # Visit the node: schedule a job for the target, passing it any dependency jobs.
-         job = tgt.build(listBlockingJobs)
+         job = tgt.build()
          # TODO: how about phonies or “virtual targets”?
          assert job is not None, 'no jobs scheduled for target {}'.format(tgt)
-
-      return job
 

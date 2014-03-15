@@ -122,15 +122,13 @@ class Job(object):
    _m_tgt = None
 
 
-   def __init__(self, mk, tgt, iterBlockingJobs, iterQuietCmd):
+   def __init__(self, mk, tgt, iterQuietCmd):
       """Constructor.
 
       make.Make mk
          Make instance.
       make.target.Target
          Target built by this job.
-      iterable(Job*) iterBlockingJobs
-         Jobs that block this one.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       """
@@ -185,22 +183,20 @@ class ExternalCommandJob(Job):
    _m_dictPopenArgs = None
 
 
-   def __init__(self, mk, tgt, iterBlockingJobs, iterQuietCmd, dictPopenArgs):
+   def __init__(self, mk, tgt, iterQuietCmd, dictPopenArgs):
       """Constructor. See Job.__init__().
 
       make.Make mk
          Make instance.
       make.target.Target
          Target built by this job.
-      iterable(Job*) iterBlockingJobs
-         Jobs that block this one.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
       """
 
-      super().__init__(mk, tgt, iterBlockingJobs, iterQuietCmd)
+      super().__init__(mk, tgt, iterQuietCmd)
       self._m_dictPopenArgs = dictPopenArgs
 
 
