@@ -167,12 +167,6 @@ class Target(Dependency):
          yield dep
 
 
-   def _get_file_path(self):
-      return self._m_sFilePath
-
-   file_path = property(_get_file_path, doc = """Target file path.""")
-
-
    def _generate_file_path(self):
       """Generates and returns a file path for the target, based on other member varialbes set
       beforehand and the configuration of the provided Make instance. Called by Target.__init__().
