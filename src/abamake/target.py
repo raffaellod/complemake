@@ -32,15 +32,76 @@ import make.tool
 
 
 ####################################################################################################
+# Dependency
+
+class Dependency(object):
+   """Represents an abstract dependency of which only the file path is known."""
+
+   # See Dependency.file_path.
+   _m_sFilePath = None
+
+
+   def __init__(self, sFilePath):
+      """Constructor.
+
+      str sFilePath
+         See Dependency.file_path.
+      """
+
+      self._m_sFilePath = sFilePath
+
+
+   def __str__(self):
+      return '{} ({})'.format(self._m_sFilePath, type(self).__name__)
+
+
+   def _get_file_path(self):
+      return self._m_sFilePath
+
+   file_path = property(_get_file_path, doc = """Dependency file path.""")
+
+
+
+####################################################################################################
+# ForeignDependency
+
+class ForeignDependency(Dependency):
+   """Abstract foreign dependency. Used by Target and its subclasses to represent files not built by
+   ABC Make.
+   """
+
+   pass
+
+
+
+####################################################################################################
+# ForeignSourceDependency
+
+class ForeignSourceDependency(ForeignDependency):
+   """Foreign source file dependency."""
+
+   pass
+
+
+
+####################################################################################################
+# ForeignLibDependency
+
+class ForeignLibDependency(ForeignDependency):
+   """Foreign library dependency."""
+
+   pass
+
+
+
+####################################################################################################
 # Target
 
-class Target(object):
+class Target(Dependency):
    """Abstract build target."""
 
    # See Target.dependencies.
    _m_setDeps = None
-   # See Target.file_path.
-   _m_sFilePath = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # See Target.name.
@@ -59,7 +120,7 @@ class Target(object):
 
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
-      self._m_sFilePath = self._generate_file_path()
+      super().__init__(self._generate_file_path())
       # Add self to any applicable targets lists.
       mk._add_target(self)
 
@@ -68,16 +129,16 @@ class Target(object):
       return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
 
 
-   def add_dependency(self, tgtDep):
+   def add_dependency(self, dep):
       """Adds a target dependency.
 
-      Target tgtDep
+      make.target.Dependency dep
          Dependency.
       """
 
       if self._m_setDeps is None:
          self._m_setDeps = set()
-      self._m_setDeps.add(tgtDep)
+      self._m_setDeps.add(dep)
 
 
    def build(self, iterBlockingJobs):
@@ -101,7 +162,7 @@ class Target(object):
          return list(self._m_setDeps)
 
    dependencies = property(_get_dependencies, doc = """
-      List of targets on which this target depends.
+      List of dependencies (make.target.Dependency instances) for this target.
    """)
 
 
@@ -118,7 +179,7 @@ class Target(object):
       The default implementation doesn’t generate a file path because no output file is assumed.
 
       str return
-         Target file path; same as Target.file_path.
+         Target file path; same as Dependency.file_path.
       """
 
       # No output file.
@@ -223,7 +284,7 @@ class ProcessedSourceTarget(Target):
       self._m_sSourceFilePath = sSourceFilePath
       self._m_sFinalOutputFilePath = sFinalOutputFilePath
       super().__init__(mk, sName)
-      self.add_dependency(self._m_sSourceFilePath)
+      self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
 
@@ -313,28 +374,16 @@ class ExecutableTarget(Target):
    _m_listLinkerInputs = None
 
 
-   def add_dependency(self, tgtDep):
+   def add_dependency(self, dep):
       """See Target.add_dependency(). If the dependency is something we should link to, also add it
       as a linker input.
       """
 
-      super().add_dependency(tgtDep)
-      if isinstance(tgtDep, (ObjectTarget, DynLibTarget)):
-         self.add_linker_input(tgtDep)
-
-
-   # TODO: this is only used for external targets; once ExternalTarget is available, remove this.
-   def add_linker_input(self, oLib):
-      """Adds a library dependency. Similar to Target.add_dependency(), but does not implicitly add
-      oLib as a dependency.
-
-      object oLib
-         Library dependency. Can be a Target(-derived class) instance or a string.
-      """
-
-      if self._m_listLinkerInputs is None:
-         self._m_listLinkerInputs = []
-      self._m_listLinkerInputs.append(oLib)
+      super().add_dependency(dep)
+      if isinstance(dep, (ObjectTarget, DynLibTarget, ForeignLibDependency)):
+         if self._m_listLinkerInputs is None:
+            self._m_listLinkerInputs = []
+         self._m_listLinkerInputs.append(dep)
 
 
    def build(self, iterBlockingJobs):
@@ -349,22 +398,21 @@ class ExecutableTarget(Target):
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
       for oDep in self._m_listLinkerInputs or []:
-         if isinstance(oDep, str):
+         if isinstance(oDep, ForeignLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
             lnk.add_input_lib(oDep)
+         elif isinstance(oDep, ObjectTarget):
+            lnk.add_input(oDep.file_path)
+         elif isinstance(oDep, DynLibTarget):
+            lnk.add_input_lib(oDep.name)
+            # Since we’re linking to a library built by this makefile, make sure to add the
+            # output lib/ directory to the library search path.
+            if not bOutputLibPathAdded:
+               lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
+               bOutputLibPathAdded = True
          else:
-            if isinstance(oDep, ObjectTarget):
-               lnk.add_input(oDep.file_path)
-            elif isinstance(oDep, DynLibTarget):
-               lnk.add_input_lib(oDep.name)
-               # Since we’re linking to a library built by this makefile, make sure to add the
-               # output lib/ directory to the library search path.
-               if not bOutputLibPathAdded:
-                  lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
-                  bOutputLibPathAdded = True
-            else:
-               raise Exception('unclassified linker input: {}'.format(oDep.file_path))
+            raise Exception('unclassified linker input: {}'.format(oDep.file_path))
 
       # TODO: add other external dependencies.
 
@@ -419,11 +467,10 @@ class ExecutableTarget(Target):
          sName = elt.getAttribute('name')
          # If the library is a known target (i.e. it’s built by this makefile), assign it as a
          # dependency of self; else just add the library name.
-         oDynLib = mk.get_target_by_name(sName, None)
-         if oDynLib is None:
-            self.add_linker_input(sName)
-         else:
-            self.add_dependency(oDynLib)
+         dep = mk.get_target_by_name(sName, None)
+         if dep is None:
+            dep = ForeignLibDependency(sName)
+         self.add_dependency(dep)
          return True
       if elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
@@ -598,7 +645,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          return True
       if elt.nodeName == 'expected-output':
          self._m_sExpectedOutputFilePath = elt.getAttribute('path')
-         self.add_dependency(self._m_sExpectedOutputFilePath)
+         self.add_dependency(ForeignDependency(self._m_sExpectedOutputFilePath))
          return True
       return super().parse_makefile_child(elt)
 
@@ -688,12 +735,12 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       super().add_dependency(self._m_eutbt)
 
 
-   def add_dependency(self, tgtDep):
+   def add_dependency(self, dep):
       """See UnitTestTarget.add_dependency(). Overridden to add the dependency to the build target
       instead of this one; this target should only depend on the unit test build target.
       """
 
-      self._m_eutbt.add_dependency(tgtDep)
+      self._m_eutbt.add_dependency(dep)
 
 
    def build(self, iterBlockingJobs):
@@ -728,7 +775,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
          # Note that we don’t invoke our overridden method.
-         super().add_dependency(self._m_sScriptFilePath)
+         super().add_dependency(ForeignDependency(self._m_sScriptFilePath))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          return True

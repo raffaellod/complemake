@@ -262,13 +262,8 @@ class MetadataStore(object):
       if not tssCurr:
          # Generate signatures for all the target’s dependencies.
          dictDepsSignatures = {}
-         for oDep in tgt.dependencies or []:
-            if isinstance(oDep, make.target.Target):
-               sFilePath = oDep.file_path
-            elif isinstance(oDep, str):
-               sFilePath = oDep
-            else:
-               raise Exception('don’t know what to do with this dependency: {}'.format(oDep))
+         for dep in tgt.dependencies or []:
+            sFilePath = dep.file_path
             # See if we already have a signature for this file in the cache.
             # The cache is supposed to always be current, because when we’re asked to check for the
             # signature of a file, it means that the target for which we’re doing it is ready to be
