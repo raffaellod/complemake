@@ -103,7 +103,7 @@ class Target(Dependency):
    # Dependencies (make.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep the order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
-   _m_listDeps = None
+   _m_listDepencencies = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # See Target.name.
@@ -120,7 +120,7 @@ class Target(Dependency):
          See Target.name.
       """
 
-      self._m_listDeps = []
+      self._m_listDepencencies = []
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
       super().__init__(self._generate_file_path())
@@ -139,8 +139,8 @@ class Target(Dependency):
          Dependency.
       """
 
-      if dep not in self._m_listDeps:
-         self._m_listDeps.append(dep)
+      if dep not in self._m_listDepencencies:
+         self._m_listDepencencies.append(dep)
 
 
    def build(self, iterBlockingJobs):
@@ -163,7 +163,7 @@ class Target(Dependency):
          Dependency of this target.
       """
 
-      for dep in self._m_listDeps:
+      for dep in self._m_listDepencencies:
          yield dep
 
 
@@ -372,7 +372,7 @@ class ExecutableTarget(Target):
       # Scan this target’s dependencies for linker inputs.
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
-      for dep in self._m_listDeps:
+      for dep in self._m_listDepencencies:
          if isinstance(dep, ForeignLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
@@ -572,7 +572,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """
 
       # Find the dependency target that generates the output we want to compare.
-      for tgt in self._m_listDeps:
+      for tgt in self._m_listDepencencies:
          if isinstance(tgt, ProcessedSourceTarget):
             tgtToCompare = tgt
             break
@@ -597,7 +597,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       mk = self._m_mk()
       if elt.nodeName == 'source':
          # Check if we already found a <source> child element (dependency).
-         for tgt in self._m_listDeps:
+         for tgt in self._m_listDepencencies:
             if isinstance(tgt, ProcessedSourceTarget):
                raise Exception(
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +
@@ -658,7 +658,7 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
       # If the build target is linked to a library built by this same makefile, make sure we add
       # output_dir/lib to the library path.
       dictEnv = None
-      if any(isinstance(dep, DynLibTarget) for dep in self._m_listDeps):
+      if any(isinstance(dep, DynLibTarget) for dep in self._m_listDepencencies):
          # TODO: move this env tweaking to a Platform class.
          dictEnv = os.environ.copy()
          sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
