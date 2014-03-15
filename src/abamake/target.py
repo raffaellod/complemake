@@ -100,7 +100,7 @@ class ForeignLibDependency(ForeignDependency):
 class Target(Dependency):
    """Abstract build target."""
 
-   # See Target.dependencies.
+   # Dependencies (make.target.Dependency instances) for this target.
    _m_setDeps = None
    # Weak ref to the owning make instance.
    _m_mk = None
@@ -118,6 +118,7 @@ class Target(Dependency):
          See Target.name.
       """
 
+      self._m_setDeps = set()
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
       super().__init__(self._generate_file_path())
@@ -136,8 +137,6 @@ class Target(Dependency):
          Dependency.
       """
 
-      if self._m_setDeps is None:
-         self._m_setDeps = set()
       self._m_setDeps.add(dep)
 
 
@@ -154,16 +153,15 @@ class Target(Dependency):
       raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
 
 
-   def _get_dependencies(self):
-      if self._m_setDeps is None:
-         return None
-      else:
-         # Return a copy, so the caller can manipulate it as necessary.
-         return list(self._m_setDeps)
+   def get_dependencies(self):
+      """Iterates over the dependencies (make.target.Dependency instances) for this target.
 
-   dependencies = property(_get_dependencies, doc = """
-      List of dependencies (make.target.Dependency instances) for this target.
-   """)
+      make.target.Dependency yield
+         Dependency of this target.
+      """
+
+      for dep in self._m_setDeps:
+         yield dep
 
 
    def _get_file_path(self):
@@ -597,7 +595,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """
 
       # Find the dependency target that generates the output we want to compare.
-      for tgt in self._m_setDeps or []:
+      for tgt in self._m_setDeps:
          if isinstance(tgt, ProcessedSourceTarget):
             tgtToCompare = tgt
             break
@@ -622,7 +620,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       mk = self._m_mk()
       if elt.nodeName == 'source':
          # Check if we already found a <source> child element (dependency).
-         for tgt in self._m_setDeps or []:
+         for tgt in self._m_setDeps:
             if isinstance(tgt, ProcessedSourceTarget):
                raise Exception(
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +

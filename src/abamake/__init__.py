@@ -339,11 +339,12 @@ class Make(object):
       if job is None:
          # Visit leaves.
          listBlockingJobs = None
-         for tgtDep in filter(lambda oDep: isinstance(oDep, target.Target), tgt.dependencies or []):
-            if listBlockingJobs is None:
-               listBlockingJobs = []
-            # Recursively schedule jobs for this dependency, returning and storing job tree root.
-            listBlockingJobs.append(self.schedule_target_jobs(tgtDep))
+         for dep in tgt.get_dependencies():
+            if isinstance(dep, target.Target):
+               if listBlockingJobs is None:
+                  listBlockingJobs = []
+               # Recursively schedule jobs for this dependency target, and store its job.
+               listBlockingJobs.append(self.schedule_target_jobs(dep))
 
          # Visit the node: schedule a job for the target, passing it any dependency jobs.
          job = tgt.build(listBlockingJobs)
