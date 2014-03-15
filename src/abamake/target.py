@@ -64,6 +64,10 @@ class Target(object):
       mk._add_target(self)
 
 
+   def __str__(self):
+      return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
+
+
    def add_dependency(self, tgtDep):
       """Adds a target dependency.
 
@@ -98,15 +102,6 @@ class Target(object):
 
    dependencies = property(_get_dependencies, doc = """
       List of targets on which this target depends.
-   """)
-
-
-   def _get_display_name(self):
-      return self._m_sName or self._m_sFilePath
-
-   display_name = property(_get_display_name, doc = """
-      User-friendly name of the target: equal to Target.name if not None, or Target.file_path
-      otherwise.
    """)
 
 

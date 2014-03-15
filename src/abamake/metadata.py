@@ -241,10 +241,10 @@ class MetadataStore(object):
 
       # Compare current and stored snapshots.
       if tssCurr != tssStored:
-         self._m_log(self._m_log.HIGH, 'metadata: {} needs to be (re)built\n', tgt.display_name)
+         self._m_log(self._m_log.HIGH, 'metadata: {} needs to be (re)built\n', tgt)
          return True
       else:
-         self._m_log(self._m_log.HIGH, 'metadata: {} is up-to-date\n', tgt.display_name)
+         self._m_log(self._m_log.HIGH, 'metadata: {} is up-to-date\n', tgt)
          return False
 
 
@@ -295,7 +295,7 @@ class MetadataStore(object):
          Target for which to update the snapshot.
       """
 
-      self._m_log(self._m_log.HIGH, 'metadata: updating target snapshot: {}\n', tgt.display_name)
+      self._m_log(self._m_log.HIGH, 'metadata: updating target snapshot: {}\n', tgt)
       self._m_dictStoredTargetSnapshots[tgt] = self._get_curr_target_snapshot(tgt)
       self._m_bDirty = True
 
