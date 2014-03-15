@@ -100,10 +100,14 @@ class ForeignLibDependency(ForeignDependency):
 class Target(Dependency):
    """Abstract build target."""
 
+   # Unfinished dependency builds that block building this target.
+   _m_cBuildBlocks = None
    # Dependencies (make.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep the order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDepencencies = None
+   # Targets (make.target.Target instances) dependant on this target.
+   _m_listDependants = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # See Target.name.
@@ -120,7 +124,9 @@ class Target(Dependency):
          See Target.name.
       """
 
+      self._m_cBuildBlocks = 0
       self._m_listDepencencies = []
+      self._m_listDependants = []
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
       super().__init__(self._generate_file_path())
@@ -141,6 +147,11 @@ class Target(Dependency):
 
       if dep not in self._m_listDepencencies:
          self._m_listDepencencies.append(dep)
+         # If the dependency is a target built by the same makefile, add a reverse dependency link
+         # (dependant) and increment the block count for this target.
+         if isinstance(dep, Target):
+            dep._m_listDependants.append(weakref.ref(self))
+            self._m_cBuildBlocks += 1
 
 
    def build(self, iterBlockingJobs):
@@ -190,6 +201,17 @@ class Target(Dependency):
       """
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
+
+
+   def is_build_blocked(self):
+      """Returns True if the build of this target is blocked, i.e. it requires one ore more
+      dependencies to be built first.
+
+      bool return
+         True if this target can’t be build yet, or False if it can.
+      """
+
+      return self._m_cBuildBlocks > 0
 
 
    def is_build_needed(self):

@@ -118,8 +118,6 @@ class Job(object):
 
    # Jobs that this one is blocking.
    _m_setBlockedJobs = None
-   # Count of jobs that block this one.
-   _m_cBlocks = 0
    # Command summary for Make to print out in quiet mode..
    _m_iterQuietCmd = None
    # Target built by this job.
@@ -147,17 +145,8 @@ class Job(object):
             if jobDep._m_setBlockedJobs is None:
                jobDep._m_setBlockedJobs = set()
             jobDep._m_setBlockedJobs.add(self)
-         self._m_cBlocks = len(iterBlockingJobs)
       # Schedule this job.
       mk.job_controller.schedule_job(self)
-
-
-   def _get_blocked(self):
-      return self._m_cBlocks > 0
-
-   blocked = property(_get_blocked, doc = """
-      True if the job is blocked (i.e. requires other jobs to be run first), or False otherwise.
-   """)
 
 
    def get_quiet_command(self):
@@ -187,7 +176,7 @@ class Job(object):
 
       if self._m_setBlockedJobs:
          for job in self._m_setBlockedJobs:
-            job._m_cBlocks -= 1
+            job._m_tgt._m_cBuildBlocks -= 1
 
 
    def start(self):
@@ -431,7 +420,7 @@ class JobController(object):
 
          # Find a job that is ready to be executed.
          for job in self._m_setScheduledJobs:
-            if not job.blocked:
+            if not job._m_tgt.is_build_blocked():
                # Execute this job.
                sTgt = job._m_tgt._m_sFilePath or job._m_tgt._m_sName
                bBuild = job._m_tgt.is_build_needed()
