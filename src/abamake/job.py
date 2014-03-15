@@ -116,8 +116,6 @@ class Job(object):
    of the jobs it depends on.
    """
 
-   # Jobs that this one is blocking.
-   _m_setBlockedJobs = None
    # Command summary for Make to print out in quiet mode..
    _m_iterQuietCmd = None
    # Target built by this job.
@@ -139,12 +137,6 @@ class Job(object):
 
       self._m_iterQuietCmd = iterQuietCmd
       self._m_tgt = tgt
-      if iterBlockingJobs is not None:
-         # Assign this job as “blocked” by the jobs it depends on, and store their count.
-         for jobDep in iterBlockingJobs:
-            if jobDep._m_setBlockedJobs is None:
-               jobDep._m_setBlockedJobs = set()
-            jobDep._m_setBlockedJobs.add(self)
       # Schedule this job.
       mk.job_controller.schedule_job(self)
 
@@ -169,14 +161,6 @@ class Job(object):
       raise NotImplementedError(
          'Job.get_verbose_command() must be overridden in ' + type(self).__name__
       )
-
-
-   def release_blocked(self):
-      """Release any jobs this one was blocking."""
-
-      if self._m_setBlockedJobs:
-         for job in self._m_setBlockedJobs:
-            job._m_tgt._m_cBuildBlocks -= 1
 
 
    def start(self):
@@ -302,20 +286,20 @@ class JobController(object):
                if iRet is not None:
                   # Remove the job from the running jobs.
                   job = self._m_dictRunningJobs.pop(rj)
+                  tgt = job._m_tgt
                   cCompletedJobs += 1
                   if iRet == 0 or self._m_bIgnoreErrors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
                      # jobs can now be released.
-                     job.release_blocked()
+                     tgt.release_blocked_builds()
                      # If the job was successfully executed, update any files’ metadata.
                      if iRet == 0 and not self._m_bDryRun:
-                        mds.update_target_snapshot(job._m_tgt)
+                        mds.update_target_snapshot(tgt)
                   else:
                      if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
-                        if job._m_setBlockedJobs:
-                           self._unschedule_jobs_blocked_by(job)
+                        self._unschedule_builds_blocked_by(tgt)
                      cFailedJobs += 1
                   # Since we modified self._m_setScheduledJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.
@@ -475,19 +459,18 @@ class JobController(object):
       self._m_dictTargetScheduledJobs[job._m_tgt] = job
 
 
-   def _unschedule_jobs_blocked_by(self, job):
-      """Recursively removes the jobs blocked by the specified job from the set of scheduled
-      jobs.
+   def _unschedule_builds_blocked_by(self, tgt):
+      """Recursively removes the target builds blocked by the specified target from the set of
+      scheduled builds.
 
-      Job job
-         Job to be unscheduled.
+      make.target.Target tgt
+         Target build to be unscheduled.
       """
 
-      for jobBlocked in job._m_setBlockedJobs:
+      for tgtBlocked in tgt.get_dependents():
          # Use set.discard() instead of set.remove() since it may have already been removed due to a
          # previous unrelated call to this method, e.g. another job failed before the one that
          # caused this call.
-         self._m_setScheduledJobs.discard(jobBlocked)
-         if jobBlocked._m_setBlockedJobs:
-            self._unschedule_jobs_blocked_by(jobBlocked)
+         self._m_setScheduledJobs.discard(tgtBlocked)
+         self._unschedule_builds_blocked_by(tgtBlocked)
 

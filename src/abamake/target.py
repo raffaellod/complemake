@@ -105,9 +105,9 @@ class Target(Dependency):
    # Dependencies (make.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep the order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
-   _m_listDepencencies = None
-   # Targets (make.target.Target instances) dependant on this target.
-   _m_listDependants = None
+   _m_listDependencies = None
+   # Targets (make.target.Target instances) dependent on this target.
+   _m_listDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # See Target.name.
@@ -125,8 +125,8 @@ class Target(Dependency):
       """
 
       self._m_cBuildBlocks = 0
-      self._m_listDepencencies = []
-      self._m_listDependants = []
+      self._m_listDependencies = []
+      self._m_listDependents = []
       self._m_sName = sName
       self._m_mk = weakref.ref(mk)
       super().__init__(self._generate_file_path())
@@ -145,12 +145,13 @@ class Target(Dependency):
          Dependency.
       """
 
-      if dep not in self._m_listDepencencies:
-         self._m_listDepencencies.append(dep)
+      if dep not in self._m_listDependencies:
+         self._m_listDependencies.append(dep)
          # If the dependency is a target built by the same makefile, add a reverse dependency link
-         # (dependant) and increment the block count for this target.
+         # (dependent) and increment the block count for this target.
          if isinstance(dep, Target):
-            dep._m_listDependants.append(weakref.ref(self))
+            # Use weak references to avoid creating reference loops.
+            dep._m_listDependents.append(weakref.ref(self))
             self._m_cBuildBlocks += 1
 
 
@@ -174,8 +175,20 @@ class Target(Dependency):
          Dependency of this target.
       """
 
-      for dep in self._m_listDepencencies:
+      for dep in self._m_listDependencies:
          yield dep
+
+
+   def get_dependents(self):
+      """Iterates over the targets (make.target.Target instances) dependent on this target.
+
+      make.target.Target yield
+         Dependent on this target.
+      """
+
+      for tgt in self._m_listDependents:
+         # These are weak references.
+         yield tgt()
 
 
    def _generate_file_path(self):
@@ -242,6 +255,14 @@ class Target(Dependency):
 
       # Default implementation: expect no child elements.
       return False
+
+
+   def release_blocked_builds(self):
+      """Releases the build of any targets that this one was blocking."""
+
+      for tgt in self._m_listDependents:
+         # These are weak references.
+         tgt()._m_cBuildBlocks -= 1
 
 
    @classmethod
@@ -394,7 +415,7 @@ class ExecutableTarget(Target):
       # Scan this target’s dependencies for linker inputs.
       bOutputLibPathAdded = False
       # At this point all the dependencies are available, so add them as inputs.
-      for dep in self._m_listDepencencies:
+      for dep in self._m_listDependencies:
          if isinstance(dep, ForeignLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
@@ -594,7 +615,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """
 
       # Find the dependency target that generates the output we want to compare.
-      for tgt in self._m_listDepencencies:
+      for tgt in self._m_listDependencies:
          if isinstance(tgt, ProcessedSourceTarget):
             tgtToCompare = tgt
             break
@@ -619,7 +640,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       mk = self._m_mk()
       if elt.nodeName == 'source':
          # Check if we already found a <source> child element (dependency).
-         for tgt in self._m_listDepencencies:
+         for tgt in self._m_listDependencies:
             if isinstance(tgt, ProcessedSourceTarget):
                raise Exception(
                   ('a tool output comparison like “{}” unit test can only have a single <source> ' +
@@ -680,7 +701,7 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
       # If the build target is linked to a library built by this same makefile, make sure we add
       # output_dir/lib to the library path.
       dictEnv = None
-      if any(isinstance(dep, DynLibTarget) for dep in self._m_listDepencencies):
+      if any(isinstance(dep, DynLibTarget) for dep in self._m_listDependencies):
          # TODO: move this env tweaking to a Platform class.
          dictEnv = os.environ.copy()
          sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
