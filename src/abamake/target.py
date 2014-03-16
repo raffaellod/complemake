@@ -601,6 +601,10 @@ class ComparisonUnitTestTarget(UnitTestTarget):
    the expected output.
    """
 
+   # Filter (regex) to apply to the comparands.
+   _m_reFilter = None
+
+
    def build(self):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
@@ -614,16 +618,16 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
       # Compare the targets.
-      # TODO: do the comparison asynchronously, via a Job?
-      with open(depComparands[0].file_path) as fileDep1:
-         sDep1 = fileDep1.read()
-      with open(depComparands[1].file_path) as fileDep2:
-         sDep2 = fileDep2.read()
+      # TODO: do the reads and comparison asynchronously, via ComparisonJob?
+      sDepFilePath1 = depComparands[0].file_path
+      sDepFilePath2 = depComparands[1].file_path
+      sDep1 = self._read_file(sDepFilePath1)
+      sDep2 = self._read_file(sDepFilePath2)
       bEqual = (sDep1 == sDep2)
 
       return make.job.NoopJob(
          0 if bEqual else 1, ('CMP', self._m_sName),
-         '[internal:compare] {} {}'.format(depComparands[0].file_path, depComparands[1].file_path)
+         '[internal:compare] {} {}'.format(sDepFilePath1, sDepFilePath2)
       )
 
 
@@ -658,8 +662,35 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       if elt.nodeName == 'expected-output':
          self.add_dependency(ForeignDependency(elt.getAttribute('path')))
          return True
+      if elt.nodeName == 'output-transform':
+         sFilter = elt.getAttribute('filter')
+         if sFilter:
+            self._m_reFilter = re.compile('ABCMK_CMP_BEGIN.*?ABCMK_CMP_END', re.DOTALL)
+         else:
+            raise Exception('unsupported output transformation')
+         return True
       return super().parse_makefile_child(elt)
 
+
+   def _read_file(self, sFilePath):
+      """Reads the contents of a file, processes them according to any <output-transform> rules
+      specified in the makefile, and returns the resulting string.
+
+      str sFilePath
+         Path to the file to read.
+      str return
+         Contents of the file, processed according any active <output-transform> rules.
+      """
+
+      with open(sFilePath) as fileInput:
+         sFile = fileInput.read()
+
+      # Apply the only supported filter.
+      # TODO: use an interface/specialization to apply transformations.
+      if self._m_reFilter:
+         sFile = '\n'.join(self._m_reFilter.findall(sFile))
+
+      return sFile
 
 
 ####################################################################################################
