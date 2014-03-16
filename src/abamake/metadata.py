@@ -296,8 +296,11 @@ class MetadataStore(object):
    def write(self):
       """Stores metadata to the file from which it was loaded."""
 
+      log = self._m_log
       if not self._m_bDirty:
+         log(log.HIGH, 'metadata: no changes to write\n')
          return
+      log(log.HIGH, 'metadata: writing changes\n')
 
       # Create an empty XML document.
       doc = xml.dom.getDOMImplementation().createDocument(

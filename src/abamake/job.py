@@ -295,7 +295,6 @@ class JobController(object):
             # Write any new metadata.
             mds = self._m_mk()._m_mds
             if mds:
-               log(log.HIGH, 'metadata: updating\n')
                mds.write()
 
       return cFailedJobsTotal
