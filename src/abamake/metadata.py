@@ -77,14 +77,18 @@ class FileSignature(object):
       return self
 
 
-   def save(self, eltFile):
-      """Saves the signature as attributes for the specified XML element.
+   def to_xml(self, doc):
+      """Serializes the signature as an XML element.
 
-      xml.dom.Element eltFile
-         <file> element on which to set metadata attributes.
+      xml.dom.Document doc
+         XML document to use to create any elements.
+      xml.dom.Element return
+         Resulting <file> element. Note that this will be lacking a “path” attribute.
       """
 
+      eltFile = doc.createElement('file')
       eltFile.setAttribute('mtime', self._m_dtMTime.isoformat(' '))
+      return eltFile
 
 
 
@@ -178,6 +182,34 @@ class TargetSnapshot(object):
       return True
 
 
+   def to_xml(self, doc):
+      """Serializes the snapshot as an XML element.
+
+      xml.dom.Document doc
+         XML document to use to create any elements.
+      xml.dom.Element return
+         Resulting <target> element.
+      """
+
+      eltTarget = doc.createElement('target')
+
+      # Store the name of the target or, lacking that, its file path.
+      sTargetName = self._m_tgt.name
+      if sTargetName:
+         eltTarget.setAttribute('name', sTargetName)
+      else:
+         sTargetFilePath = self._m_tgt.file_path
+         if sTargetFilePath:
+            eltTarget.setAttribute('path', sTargetFilePath)
+
+      # Serialize the signature of each dependency.
+      for sFilePath, fs in self._m_dictDepsSignatures.items():
+         eltFile = eltTarget.appendChild(fs.to_xml(doc))
+         eltFile.setAttribute('path', sFilePath)
+
+      return eltTarget
+
+
 
 ####################################################################################################
 # MetadataStore
@@ -237,11 +269,10 @@ class MetadataStore(object):
                         eltTarget.nodeName != 'target' \
                      :
                         continue
-                     sFilePath = eltTarget.getAttribute('path')
-                     sName = eltTarget.getAttribute('name')
-                     # It’s possible that no such target exists. Maybe it used to, but not anymore.
-                     tgt = mk.get_target_by_name(sName, None) or \
-                           mk.get_target_by_file_path(sFilePath, None)
+                     # Allow for None because it’s possible that no such target exists – maybe it
+                     # used to, but not anymore.
+                     tgt = mk.get_target_by_name(eltTarget.getAttribute('name'), None) or \
+                           mk.get_target_by_file_path(eltTarget.getAttribute('path'), None)
                      if tgt:
                         self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
                            tgt, eltTarget = eltTarget
@@ -344,16 +375,8 @@ class MetadataStore(object):
 
       # Add the signatures section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
-      for tgt, tss in self._m_dictCurrTargetSnapshots.items():
-         eltTarget = eltTgtSnaps.appendChild(doc.createElement('target'))
-         if tgt.name:
-            eltTarget.setAttribute('name', tgt.name)
-         elif tgt.file_path:
-            eltTarget.setAttribute('path', tgt.file_path)
-         for sFilePath, fs in tss._m_dictDepsSignatures.items():
-            eltFile = eltTarget.appendChild(doc.createElement('file'))
-            eltFile.setAttribute('path', sFilePath)
-            fs.save(eltFile)
+      for tss in self._m_dictCurrTargetSnapshots.values():
+         eltTgtSnaps.appendChild(tss.to_xml(doc))
 
       # Write the document to file.
       with open(self._m_sFilePath, 'w') as fileMetadata:
