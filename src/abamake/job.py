@@ -201,6 +201,66 @@ class JobController(object):
       self._m_setScheduledBuilds = set()
 
 
+   def build_scheduled_targets(self):
+      """Conditionally builds any targets scheduled for build.
+
+      int return
+         Count of jobs that completed in failure.
+      """
+
+      log = self._m_mk().log
+      cFailedJobsTotal = 0
+      while self._m_setScheduledBuilds:
+         # Make sure any completed jobs are collected.
+         cFailedJobs = self._collect_completed_jobs(0)
+         # Make sure we have at least one free job slot.
+         while len(self._m_dictRunningJobs) == self.running_jobs_max:
+            # Wait for one or more jobs slots to free up.
+            cFailedJobs += self._collect_completed_jobs(1)
+
+         cFailedJobsTotal += cFailedJobs
+         # Stop starting jobs in case of failed errors – unless overridden by the user.
+         if cFailedJobs > 0 and not self._m_bKeepGoing:
+            break
+
+         # Find a target that is ready to be built.
+         for tgt in self._m_setScheduledBuilds:
+            if not tgt.is_build_blocked():
+               # Execute this job.
+               bBuild = tgt.is_build_needed()
+               if bBuild:
+                  log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', tgt)
+               elif self._m_bForceBuild:
+                  log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
+                  bBuild = True
+               else:
+                  log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
+
+               if bBuild:
+                  job = tgt.build()
+                  if log.verbosity >= log.LOW:
+                     log(log.LOW, '{}\n', job.get_verbose_command())
+                  else:
+                     iterCmd = job.get_quiet_command()
+                     log(log.QUIET, '{:^8} {}\n'.format(iterCmd[0], ' '.join(iterCmd[1:])))
+                  if not self._m_bDryRun:
+                     job.start()
+               else:
+                  job = NoopJob(0)
+
+               # Move the target from scheduled builds to running jobs.
+               self._m_dictRunningJobs[job] = tgt
+               self._m_setScheduledBuilds.remove(tgt)
+               # Since we modified self._m_setScheduledBuilds, we have to stop iterating over it;
+               # the outer while loop will get back here, eventually.
+               break
+
+      # There are no more scheduled jobs, just wait for the running ones to complete.
+      cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
+
+      return cFailedJobsTotal
+
+
    def _collect_completed_jobs(self, cJobsToComplete):
       """Returns only after the specified number of jobs completes and the respective cleanup
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
@@ -306,65 +366,6 @@ class JobController(object):
       depend on a failed job. If False, a failed job causes execution to stop as soon as any other
       running jobs complete.
    """)
-
-
-   def run_scheduled_jobs(self):
-      """Executes any scheduled jobs.
-
-      int return
-         Count of jobs that completed in failure.
-      """
-
-      log = self._m_mk().log
-      cFailedJobsTotal = 0
-      while self._m_setScheduledBuilds:
-         # Make sure any completed jobs are collected.
-         cFailedJobs = self._collect_completed_jobs(0)
-         # Make sure we have at least one free job slot.
-         while len(self._m_dictRunningJobs) == self.running_jobs_max:
-            # Wait for one or more jobs slots to free up.
-            cFailedJobs += self._collect_completed_jobs(1)
-
-         cFailedJobsTotal += cFailedJobs
-         # Stop starting jobs in case of failed errors – unless overridden by the user.
-         if cFailedJobs > 0 and not self._m_bKeepGoing:
-            break
-
-         # Find a target that is ready to be built.
-         for tgt in self._m_setScheduledBuilds:
-            if not tgt.is_build_blocked():
-               # Execute this job.
-               bBuild = tgt.is_build_needed()
-               if bBuild:
-                  log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', tgt)
-               elif self._m_bForceBuild:
-                  log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
-                  bBuild = True
-               else:
-                  log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
-
-               if bBuild:
-                  job = tgt.build()
-                  if log.verbosity >= log.LOW:
-                     log(log.LOW, '{}\n', job.get_verbose_command())
-                  else:
-                     iterCmd = job.get_quiet_command()
-                     log(log.QUIET, '{:^8} {}\n'.format(iterCmd[0], ' '.join(iterCmd[1:])))
-                  if not self._m_bDryRun:
-                     job.start()
-               else:
-                  job = NoopJob(0)
-
-               # Move the target from scheduled builds to running jobs.
-               self._m_dictRunningJobs[job] = tgt
-               self._m_setScheduledBuilds.remove(tgt)
-               # Since we modified self._m_setScheduledBuilds, we have to stop iterating over it;
-               # the outer while loop will get back here, eventually.
-               break
-      # There are no more scheduled jobs, just wait for the running ones to complete.
-      cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
-
-      return cFailedJobsTotal
 
 
    # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors

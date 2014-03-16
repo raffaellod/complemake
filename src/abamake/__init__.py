@@ -94,7 +94,7 @@ class Make(object):
       mk = make.Make()
       mk.parse('project.abcmk')
       mk.job_controller.schedule_build(mk.get_target_by_name('projectbin'))
-      mk.run_scheduled_jobs()
+      mk.build_scheduled_targets()
    """
 
    # See Make.job_controller.
@@ -302,15 +302,15 @@ class Make(object):
          print('Target {}'.format(tgt.file_path))
 
 
-   def run_scheduled_jobs(self):
-      """Executes any scheduled jobs.
+   def build_scheduled_targets(self):
+      """Conditionally builds any targets scheduled for build.
 
       int return
          Count of jobs that completed in failure.
       """
 
       try:
-         cFailedJobsTotal = self._m_jc.run_scheduled_jobs()
+         cFailedJobsTotal = self._m_jc.build_scheduled_targets()
       finally:
          # Write any new metadata.
          if self._m_mds and not self._m_jc.dry_run:
