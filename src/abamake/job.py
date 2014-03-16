@@ -305,7 +305,7 @@ class JobController(object):
       finally:
          if not self._m_bDryRun:
             # Write any new metadata.
-            mds = self._m_mk()._m_mds
+            mds = self._m_mk().metadata
             if mds:
                mds.write()
 
@@ -326,7 +326,7 @@ class JobController(object):
          Count of jobs that completed in failure.
       """
 
-      mds = self._m_mk()._m_mds
+      mds = self._m_mk().metadata
       # This loop alternates poll loop and sleeping.
       cCompletedJobs = 0
       cFailedJobs = 0

@@ -230,7 +230,7 @@ class Target(Dependency):
       """
 
       # Now compare the current metadata with what’s in the store.
-      return self._m_mk()._m_mds.has_target_snapshot_changed(self)
+      return self._m_mk().metadata.has_target_snapshot_changed(self)
 
 
    def _get_name(self):

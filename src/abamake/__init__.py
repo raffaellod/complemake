@@ -108,7 +108,7 @@ class Make(object):
    _m_jc = None
    # See Make.log.
    _m_log = None
-   # Metadata store.
+   # See Make.metadata.
    _m_mds = None
    # Targets explicitly declared in the parsed makefile (name -> Target).
    _m_dictNamedTargets = None
@@ -218,6 +218,12 @@ class Make(object):
       return self._m_log
 
    log = property(_get_log, doc = """Output log.""")
+
+
+   def _get_metadata(self):
+      return self._m_mds
+
+   metadata = property(_get_metadata, doc = """Metadata store.""")
 
 
    def _get_named_targets(self):
