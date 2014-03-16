@@ -135,6 +135,18 @@ class NoopJob(Job):
 
 
 ####################################################################################################
+# SkippedBuildJob
+
+class SkippedBuildJob(NoopJob):
+
+   def __init__(self):
+      """See NoopJob.__init__()."""
+
+      super().__init__(0, ('SKIP',), sVerboseCmd = '[internal:skipping build]')
+
+
+
+####################################################################################################
 # ExternalCommandJob
 
 class ExternalCommandJob(Job):
@@ -279,7 +291,7 @@ class JobController(object):
                         job.start()
                   else:
                      # Start a no-op job with an exit code of 0 (success).
-                     job = NoopJob(0)
+                     job = SkippedBuildJob()
 
                   # Move the target from scheduled builds to running jobs.
                   self._m_dictRunningJobs[job] = tgt
@@ -335,7 +347,7 @@ class JobController(object):
                      # jobs can now be released.
                      tgt.release_blocked_builds()
                      # If the job was successfully executed, update any files’ metadata.
-                     if iRet == 0 and not self._m_bDryRun:
+                     if iRet == 0 and not self._m_bDryRun and not isinstance(job, SkippedBuildJob):
                         mds.update_target_snapshot(tgt)
                   else:
                      if self._m_bKeepGoing:
