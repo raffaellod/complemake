@@ -31,31 +31,58 @@ import make.target
 
 
 ####################################################################################################
-# RunningJob
+# Job
 
-class RunningJob(object):
-   """Runtime version of Job. Allows to synchronize with it and to check its return status."""
+class Job(object):
+   """Job to be executed by a JobController instance."""
 
-   __slots__ = ()
+   def get_quiet_command(self):
+      """Returns a command summary for Make to print out in quiet mode.
+
+      iterable(str, str+) return
+         Job’s command summary.
+      """
+
+      raise NotImplementedError(
+         'Job.get_quiet_command() must be overridden in ' + type(self).__name__
+      )
+
+
+   def get_verbose_command(self):
+      """Returns a command-line for Make to print out in verbose mode.
+
+      str return
+         Job’s command line.
+      """
+
+      raise NotImplementedError(
+         'Job.get_verbose_command() must be overridden in ' + type(self).__name__
+      )
 
 
    def poll(self):
-      """Returns the execution status of the job.
+      """Returns the execution status of the job. If the job is never started (e.g. due to “dry run”
+      mode), the return value will be 0.
 
       int return
-         Exit code of the job, or None if the job is still running.
+         Exit code of the job, or None if the job is still running, or 0 if the job was not started.
       """
 
-      raise NotImplementedError('RunningJob.poll() must be overridden in ' + type(self).__name__)
+      raise NotImplementedError('Job.poll() must be overridden in ' + type(self).__name__)
+
+
+   def start(self):
+      """Starts the job."""
+
+      raise NotImplementedError('Job.start() must be overridden in ' + type(self).__name__)
 
 
 
 ####################################################################################################
-# RunningNoopJob
+# NoopJob
 
-class RunningNoopJob(RunningJob):
-   """No-op running job. Used to implement Make’s “dry run” mode as well as jobs that are carried
-   out synchronously.
+class NoopJob(Job):
+   """No-op job. Used to avoid special-case logic to handle targets that don’t need to be (re)built.
    """
 
    __slots__ = (
@@ -71,103 +98,14 @@ class RunningNoopJob(RunningJob):
          Value that poll() will return.
       """
 
+      super().__init__()
       self._m_iRet = iRet
 
 
    def poll(self):
-      """See RunningJob.poll()."""
+      """See Job.poll()."""
 
       return self._m_iRet
-
-
-
-####################################################################################################
-# RunningPopenJob
-
-class RunningPopenJob(RunningJob):
-   """Running job consisting in an external process (Popen)."""
-
-   __slots__ = (
-      # Controlled Popen instance.
-      '_m_popen',
-   )
-
-
-   def __init__(self, popen):
-      """Constructor.
-
-      Popen popen
-         External process to take control of.
-      """
-
-      self._m_popen = popen
-
-
-   def poll(self):
-      """See RunningJob.poll()."""
-
-      return self._m_popen.poll()
-
-
-
-####################################################################################################
-# Job
-
-class Job(object):
-   """Asynchronous job that is first scheduled and then executed by a Make instance. It keeps track
-   of the jobs it depends on.
-   """
-
-   # Command summary for Make to print out in quiet mode..
-   _m_iterQuietCmd = None
-   # Target built by this job.
-   _m_tgt = None
-
-
-   def __init__(self, tgt, iterQuietCmd):
-      """Constructor.
-
-      make.target.Target
-         Target built by this job.
-      iterable(str, str*) iterQuietCmd
-         “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
-      """
-
-      self._m_iterQuietCmd = iterQuietCmd
-      self._m_tgt = tgt
-
-
-   def get_quiet_command(self):
-      """Returns a command summary for Make to print out in quiet mode.
-
-      iterable(str, str+) return
-         Job’s command summary.
-      """
-
-      return self._m_iterQuietCmd
-
-
-   def get_verbose_command(self):
-      """Returns a command-line for Make to print out in verbose mode.
-
-      str return
-         Job’s command line.
-      """
-
-      raise NotImplementedError(
-         'Job.get_verbose_command() must be overridden in ' + type(self).__name__
-      )
-
-
-   def start(self):
-      """Starts the job, returning a RunningJob instance that can be used to check on the job’s
-      execution status.
-
-      RunningJob return
-         Object to check the job status and eventual exit code.
-      """
-
-      raise NotImplementedError('Job.start() must be overridden in ' + type(self).__name__)
 
 
 
@@ -177,23 +115,32 @@ class Job(object):
 class ExternalCommandJob(Job):
    """Models a job consisting in the invocation of an external program."""
 
+   # Command summary to print out in quiet mode.
+   _m_iterQuietCmd = None
+   # Controlled Popen instance.
+   _m_popen = None
    # Arguments to be passed to Popen’s constructor.
    _m_dictPopenArgs = None
 
 
-   def __init__(self, tgt, iterQuietCmd, dictPopenArgs):
+   def __init__(self, iterQuietCmd, dictPopenArgs):
       """Constructor. See Job.__init__().
 
-      make.target.Target
-         Target built by this job.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
       """
 
-      super().__init__(tgt, iterQuietCmd)
+      super().__init__()
+      self._m_iterQuietCmd = iterQuietCmd
       self._m_dictPopenArgs = dictPopenArgs
+
+
+   def get_quiet_command(self):
+      """See Job.get_quiet_command()."""
+
+      return self._m_iterQuietCmd
 
 
    def get_verbose_command(self):
@@ -202,10 +149,19 @@ class ExternalCommandJob(Job):
       return ' '.join(self._m_dictPopenArgs['args'])
 
 
+   def poll(self):
+      """See Job.poll()."""
+
+      if self._m_popen is None:
+         return 0
+      else:
+         return self._m_popen.poll()
+
+
    def start(self):
       """See Job.start()."""
 
-      return RunningPopenJob(subprocess.Popen(**self._m_dictPopenArgs))
+      self._m_popen = subprocess.Popen(**self._m_dictPopenArgs)
 
 
 
@@ -227,7 +183,7 @@ class JobController(object):
    _m_bKeepGoing = False
    # Weak reference to the owning make.Make instance.
    _m_mk = None
-   # Running jobs for each target build (RunningJob -> Target).
+   # Running jobs for each target build (Job -> Target).
    _m_dictRunningJobs = None
    # Scheduled target builds.
    _m_setScheduledBuilds = None
@@ -270,11 +226,11 @@ class JobController(object):
          # condition is a break statement.
          while True:
             # Poll each running job.
-            for rj in self._m_dictRunningJobs.keys():
-               iRet = rj.poll()
+            for job in self._m_dictRunningJobs.keys():
+               iRet = job.poll()
                if iRet is not None:
                   # Remove the target build from the running jobs.
-                  tgt = self._m_dictRunningJobs.pop(rj)
+                  tgt = self._m_dictRunningJobs.pop(job)
                   cCompletedJobs += 1
                   if iRet == 0 or self._m_bIgnoreErrors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
@@ -394,18 +350,13 @@ class JobController(object):
                      sys.stdout.write(
                         '{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:]))
                      )
-                  if self._m_bDryRun:
-                     # Don’t actually start the job.
-                     bBuild = False
+                  if not self._m_bDryRun:
+                     job.start()
                else:
                   log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
-               if bBuild:
-                  rj = job.start()
-               else:
-                  # Create an always-successful job instead of starting the real job.
-                  rj = RunningNoopJob(0)
-               # Move the job from scheduled to running jobs.
-               self._m_dictRunningJobs[rj] = tgt
+                  job = NoopJob(0)
+               # Move the target from scheduled builds to running jobs.
+               self._m_dictRunningJobs[job] = tgt
                self._m_setScheduledBuilds.remove(tgt)
                # Since we modified self._m_setScheduledBuilds, we have to stop iterating over it;
                # the outer while loop will get back here, eventually.

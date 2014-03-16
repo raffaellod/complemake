@@ -618,7 +618,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             break
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.job.ExternalCommandJob(self, ('CMP', self._m_sName), {'args': listArgs,})
+      return make.job.ExternalCommandJob(('CMP', self._m_sName), {'args': listArgs,})
 
 
    def is_build_needed(self):
@@ -762,7 +762,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
          listArgs = []
       listArgs.append(self._m_eutbt.file_path)
 
-      return make.job.ExternalCommandJob(self, ('TEST', self._m_sName), {
+      return make.job.ExternalCommandJob(('TEST', self._m_sName), {
          'args': listArgs,
          'env' : self._m_eutbt.get_exec_environ(),
       })
