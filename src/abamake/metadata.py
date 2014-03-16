@@ -220,7 +220,7 @@ class MetadataStore(object):
    # Freshly-read target snapshots (make.target.Target -> TargetSnapshot).
    _m_dictCurrTargetSnapshots = None
    # True if any changes occurred, which means that the metadata file should be updated.
-   _m_bDirty = False
+   _m_bDirty = None
    # Persistent storage file path.
    _m_sFilePath = None
    # Output log.
@@ -241,6 +241,7 @@ class MetadataStore(object):
       """
 
       self._m_dictCurrTargetSnapshots = {}
+      self._m_bDirty = False
       self._m_sFilePath = sFilePath
       self._m_log = mk.log
       self._m_dictSignatures = {}
@@ -373,12 +374,21 @@ class MetadataStore(object):
       )
       eltRoot = doc.appendChild(doc.createElement('abcmk-metadata'))
 
-      # Add the signatures section.
+      # Combine current and stored target snapshots, and add them to their section.
+      dictTargetSnapshots = self._m_dictStoredTargetSnapshots.copy()
+      dictTargetSnapshots.update(self._m_dictCurrTargetSnapshots)
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
-      for tss in self._m_dictCurrTargetSnapshots.values():
+      for tss in dictTargetSnapshots.values():
          eltTgtSnaps.appendChild(tss.to_xml(doc))
 
       # Write the document to file.
       with open(self._m_sFilePath, 'w') as fileMetadata:
          doc.writexml(fileMetadata, addindent = '   ', newl = '\n')
+
+      # Now that everything went well, update the internal state to look like we just read the file
+      # we just wrote to.
+      self._m_dictCurrTargetSnapshots = {}
+      self._m_dictSignatures = {}
+      self._m_dictStoredTargetSnapshots = dictTargetSnapshots
+      self._m_bDirty = False
 
