@@ -87,14 +87,6 @@ class FileSignature(object):
       eltFile.setAttribute('mtime', self._m_dtMTime.isoformat(' '))
 
 
-   def __eq__(self, other):
-      return self._m_dtMTime == other._m_dtMTime
-
-
-   def __ne__(self, other):
-      return not self.__eq__(other)
-
-
 
 ####################################################################################################
 # TargetSnapshot
@@ -136,13 +128,54 @@ class TargetSnapshot(object):
          self._m_dictDepsSignatures = dictDepsSignatures
 
 
-   def __eq__(self, other):
-      return self._m_tgt == other._m_tgt and \
-             self._m_dictDepsSignatures == other._m_dictDepsSignatures
+   def equals_stored(self, tssStored, log):
+      """Compares self (current snapshot) with the stored snapshot for the same target, logging any
+      detected differences.
 
+      make.metadata.TargetSnapshot tssStored
+         Stored snapshot.
+      make.Logger log
+         Log instance.
+      bool return
+         True if the two snapshots are equal, of False in case of any differences.
+      """
 
-   def __ne__(self, other):
-      return not self.__eq__(other)
+      assert self._m_tgt == tssStored._m_tgt, 'comparing snapshots of different targets'
+
+      # Check that all signatures in the current snapshot (self) match those in the stored snapshot.
+      for sFilePath, fsCurr in self._m_dictDepsSignatures.items():
+         fsStored = tssStored._m_dictDepsSignatures.get(sFilePath)
+         if fsStored is None:
+            log(
+               log.HIGH,
+               'metadata: {}: file {} not part of stored snapshot, rebuild needed\n',
+               self._m_tgt, sFilePath
+            )
+            return False
+         if fsCurr._m_dtMTime != fsStored._m_dtMTime:
+            log(
+               log.HIGH,
+               'metadata: {}: changes detected in file {} (timestamp was: {}, now: {}), rebuild ' +
+                  'needed\n',
+               self._m_tgt, sFilePath, fsCurr._m_dtMTime, fsStored._m_dtMTime
+            )
+            return False
+
+      # A change in the number of signatures should cause a rebuild because it’s a dependencies
+      # change, so verify that all signatures in the stored snapshot are still in the current one
+      # (self).
+      for sFilePath in tssStored._m_dictDepsSignatures.keys():
+         if sFilePath not in self._m_dictDepsSignatures:
+            log(
+               log.HIGH,
+               'metadata: {}: file {} not part of current snapshot, rebuild needed\n',
+               self._m_tgt, sFilePath
+            )
+            return False
+
+      # No changes detected.
+      log(log.HIGH, 'metadata: {}: up-to-date\n', self._m_tgt)
+      return True
 
 
 
@@ -216,39 +249,6 @@ class MetadataStore(object):
          log(log.HIGH, 'metadata: store loaded: {}\n', sFilePath)
 
 
-   def compare_target_snapshot(self, tgt):
-      """Checks if the specified target needs to be rebuilt: compares the current signature of its
-      dependencies with the signatures stored in the target’s snapshot, returning True if any
-      differences are detected.
-
-      The new signatures are stored internally, and will be used to update the target’s snapshot
-      once MetadataStore.update_target_snapshot() is called.
-
-      make.target.Target tgt
-         Target for which to get a new snapshot to compare with the stored one.
-      bool return
-         True if any files have changed since the last build, or False otherwise.
-      """
-
-      log = self._m_log
-
-      tssStored = self._m_dictStoredTargetSnapshots.get(tgt)
-      tssCurr = self._get_curr_target_snapshot(tgt)
-
-      # If we have no stored snapshot to compare to, report the build as necessary.
-      if not tssStored:
-         log(log.HIGH, 'metadata: {}: no stored snapshot, build needed\n', tgt)
-         return True
-
-      # Compare current and stored snapshots.
-      if tssCurr != tssStored:
-         log(log.HIGH, 'metadata: {}: (re)build needed\n', tgt)
-         return True
-      else:
-         log(log.HIGH, 'metadata: {}: up-to-date\n', tgt)
-         return False
-
-
    def _get_curr_target_snapshot(self, tgt):
       """Returns a current snapshot for the specified target, creating one first it none such
       exists.
@@ -282,6 +282,34 @@ class MetadataStore(object):
          self._m_dictCurrTargetSnapshots[tgt] = tssCurr
 
       return tssCurr
+
+
+   def has_target_snapshot_changed(self, tgt):
+      """Checks if the specified target needs to be rebuilt: compares the current signature of its
+      dependencies with the signatures stored in the target’s snapshot, returning True if any
+      differences are detected.
+
+      The new signatures are stored internally, and will be used to update the target’s snapshot
+      once MetadataStore.update_target_snapshot() is called.
+
+      make.target.Target tgt
+         Target for which to get a new snapshot to compare with the stored one.
+      bool return
+         True if any files have changed since the last build, or False otherwise.
+      """
+
+      log = self._m_log
+
+      tssStored = self._m_dictStoredTargetSnapshots.get(tgt)
+      tssCurr = self._get_curr_target_snapshot(tgt)
+
+      # If we have no stored snapshot to compare to, report the build as necessary.
+      if not tssStored:
+         log(log.HIGH, 'metadata: {}: no stored snapshot, build needed\n', tgt)
+         return True
+
+      # Compare current and stored snapshots.
+      return not tssCurr.equals_stored(tssStored, log)
 
 
    def update_target_snapshot(self, tgt):
@@ -322,10 +350,10 @@ class MetadataStore(object):
             eltTarget.setAttribute('name', tgt.name)
          elif tgt.file_path:
             eltTarget.setAttribute('path', tgt.file_path)
-         for sFilePath, fsig in tss._m_dictDepsSignatures.items():
+         for sFilePath, fs in tss._m_dictDepsSignatures.items():
             eltFile = eltTarget.appendChild(doc.createElement('file'))
             eltFile.setAttribute('path', sFilePath)
-            fsig.save(eltFile)
+            fs.save(eltFile)
 
       # Write the document to file.
       with open(self._m_sFilePath, 'w') as fileMetadata:

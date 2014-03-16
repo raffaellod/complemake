@@ -229,8 +229,8 @@ class Target(Dependency):
          True if a build is needed, or False otherwise.
       """
 
-      # Now compare the metadata with what’s in the store.
-      return self._m_mk()._m_mds.compare_target_snapshot(self)
+      # Now compare the current metadata with what’s in the store.
+      return self._m_mk()._m_mds.has_target_snapshot_changed(self)
 
 
    def _get_name(self):
