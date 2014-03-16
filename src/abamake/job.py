@@ -380,19 +380,19 @@ class JobController(object):
       order, using a set for the builds scheduled to avoid duplicates (targets that are a dependency
       for more than one target).
 
-      Target tgt
+      make.target.Target tgt
          Target the build of which should be scheduled.
       """
 
       # Check if we already scheduled this target.
       if tgt not in self._m_setScheduledBuilds:
-         # Schedule the dependencies (visit leaves).
+         # Schedule the target’s dependencies (visit leaves).
          for dep in tgt.get_dependencies():
             if isinstance(dep, make.target.Target):
-               # Recursively schedule jobs for this dependency target.
+               # Recursively schedule this dependency target.
                self.schedule_build(dep)
 
-         # Visit the node: schedule a job for the target.
+         # Schedule a job for the target (visit node).
          self._m_setScheduledBuilds.add(tgt)
 
 

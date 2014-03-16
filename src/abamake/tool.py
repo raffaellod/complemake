@@ -86,6 +86,39 @@ class Tool(object):
       self._m_listInputFilePaths.append(sInputFilePath)
 
 
+   def create_job(self, mk, tgt):
+      """Returns a job that, when run, results in the execution of the tool.
+
+      The default implementation schedules a job whose command line is composed by calling
+      Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
+
+      make.Make mk
+         Make instance.
+      make.target.Target tgt
+         Target that this job will build.
+      make.job.Job return
+         Job scheduled.
+      """
+
+      # Build the arguments list.
+      listArgs = [self._sm_sFilePath]
+
+      self._run_add_cmd_flags(listArgs)
+
+      if self._m_sOutputFilePath:
+         if not mk.job_controller.dry_run:
+            # Make sure that the output directory exists.
+            os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
+         # Get the compiler-specific command-line argument to specify an output file path.
+         sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
+         # Add the output file path.
+         listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
+
+      self._run_add_cmd_inputs(listArgs)
+
+      return make.job.ExternalCommandJob(self._get_quiet_cmd(), {'args': listArgs})
+
+
    @classmethod
    def get_default_impl(cls):
       """Returns the default implementation for this base class. For example, if GCC is detected,
@@ -146,11 +179,8 @@ class Tool(object):
          Iterable containing the quiet command name and the output file path(s).
       """
 
-      if self._smc_sQuietName is None:
-         sQuietName = os.path.basename(self._sm_sFilePath)
-      else:
-         sQuietName = self._smc_sQuietName
-      return sQuietName, (self._m_sOutputFilePath or '')
+      return (self._smc_sQuietName or os.path.basename(self._sm_sFilePath).upper()), \
+             (self._m_sOutputFilePath or '')
 
 
    def _set_output_file_path(self, sOutputFilePath):
@@ -189,41 +219,6 @@ class Tool(object):
       # Add the source file paths, if any.
       if self._m_listInputFilePaths:
          listArgs.extend(self._m_listInputFilePaths)
-
-
-   def schedule_job(self, mk, tgt):
-      """Schedules a job that, when run, results in the execution of the tool.
-
-      The default implementation schedules a job, the command line of which is composed by calling
-      Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
-
-      make.Make mk
-         Make instance.
-      make.target.Target tgt
-         Target that this job will build.
-      make.job.Job return
-         Job scheduled.
-      """
-
-      # Build the arguments list.
-      listArgs = [self._sm_sFilePath]
-
-      self._run_add_cmd_flags(listArgs)
-
-      if self._m_sOutputFilePath:
-         if not mk.job_controller.dry_run:
-            # Make sure that the output directory exists.
-            os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
-         # Get the compiler-specific command-line argument to specify an output file path.
-         sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
-         # Add the output file path.
-         listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
-
-      self._run_add_cmd_inputs(listArgs)
-
-      return make.job.ExternalCommandJob(self._get_quiet_cmd(), {
-         'args': listArgs,
-      })
 
 
    def _translate_abstract_flag(self, iFlag):

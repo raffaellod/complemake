@@ -327,7 +327,7 @@ class ProcessedSourceTarget(Target):
       """See Target.build()."""
 
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool().schedule_job(self._m_mk(), self)
+      return self._get_tool().create_job(self._m_mk(), self)
 
 
    def _generate_file_path(self):
@@ -431,7 +431,7 @@ class ExecutableTarget(Target):
 
       # TODO: add other external dependencies.
 
-      return lnk.schedule_job(mk, self)
+      return lnk.create_job(mk, self)
 
 
    def configure_compiler(self, tool):
@@ -618,7 +618,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             break
 
       listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.job.ExternalCommandJob(('CMP', self._m_sName), {'args': listArgs,})
+      return make.job.ExternalCommandJob(('CMP', self._m_sName), {'args': listArgs})
 
 
    def is_build_needed(self):
