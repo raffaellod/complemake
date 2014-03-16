@@ -135,8 +135,6 @@ class Job(object):
 
       self._m_iterQuietCmd = iterQuietCmd
       self._m_tgt = tgt
-      # Schedule this job.
-      mk.job_controller.schedule_job(self)
 
 
    def get_quiet_command(self):
@@ -231,12 +229,10 @@ class JobController(object):
    _m_bKeepGoing = False
    # Weak reference to the owning make.Make instance.
    _m_mk = None
-   # Running jobs (Popen -> Job).
+   # Running jobs for each target build (RunningJob -> Target).
    _m_dictRunningJobs = None
-   # Scheduled jobs.
-   _m_setScheduledJobs = None
-   # Scheduled jobs (Target -> Job). The values are the same as, Make._m_setScheduledJobs.
-   _m_dictTargetScheduledJobs = None
+   # Scheduled target builds.
+   _m_setScheduledBuilds = None
 
 
    def __init__(self, mk):
@@ -249,8 +245,7 @@ class JobController(object):
       self._m_mk = weakref.ref(mk)
       self._m_dictRunningJobs = {}
       self.running_jobs_max = multiprocessing.cpu_count()
-      self._m_setScheduledJobs = set()
-      self._m_dictTargetScheduledJobs = {}
+      self._m_setScheduledBuilds = set()
 
 
    def _collect_completed_jobs(self, cJobsToComplete):
@@ -273,16 +268,15 @@ class JobController(object):
       cFailedJobs = 0
       # The termination condition is in the middle.
       while True:
-         # This loop restarts the for loop, since we modify _m_dictRunningJobs. The termination
+         # This loop restarts the for loop, since we modify self._m_dictRunningJobs. The termination
          # condition is a break statement.
          while True:
             # Poll each running job.
             for rj in self._m_dictRunningJobs.keys():
                iRet = rj.poll()
                if iRet is not None:
-                  # Remove the job from the running jobs.
-                  job = self._m_dictRunningJobs.pop(rj)
-                  tgt = job._m_tgt
+                  # Remove the target build from the running jobs.
+                  tgt = self._m_dictRunningJobs.pop(rj)
                   cCompletedJobs += 1
                   if iRet == 0 or self._m_bIgnoreErrors:
                      # The job completed successfully or we’re ignoring its failure: any dependent
@@ -297,7 +291,7 @@ class JobController(object):
                         # long as we have scheduled jobs that don’t depend on it.
                         self._unschedule_builds_blocked_by(tgt)
                      cFailedJobs += 1
-                  # Since we modified self._m_setScheduledJobs, we have to stop iterating over it.
+                  # Since we modified self._m_dictRunningJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.
                   break
             else:
@@ -336,18 +330,6 @@ class JobController(object):
    """)
 
 
-   def get_target_job(self, tgt):
-      """Retrieves the job associated to a target.
-
-      Target tgt
-         Target for which to retrieve a job.
-      Job return
-         Job scheduled by tgt.build(), or None if tgt.build() has not been called yet.
-      """
-
-      return self._m_dictTargetScheduledJobs.get(tgt)
-
-
    def _get_ignore_errors(self):
       return self._m_bIgnoreErrors
 
@@ -358,6 +340,18 @@ class JobController(object):
       If True, scheduled jobs will continue to be run even after a job they depend on fails. If
       False, a failed job causes execution to stop according to the value of keep_going.
    """)
+
+
+   def is_target_build_scheduled(self, tgt):
+      """Returns True if the build of the specified targets has been scheduled.
+
+      Target tgt
+         Target to check for.
+      bool return
+         True if the build of tgt has been scheduled, or False otherwise.
+      """
+
+      return tgt in self._m_setScheduledBuilds
 
 
    def _get_keep_going(self):
@@ -380,12 +374,9 @@ class JobController(object):
          Count of jobs that completed in failure.
       """
 
-      # This is the earliest point we know we can reset this.
-      self._m_dictTargetScheduledJobs.clear()
-
       log = self._m_mk().log
       cFailedJobsTotal = 0
-      while self._m_setScheduledJobs:
+      while self._m_setScheduledBuilds:
          # Make sure any completed jobs are collected.
          cFailedJobs = self._collect_completed_jobs(0)
          # Make sure we have at least one free job slot.
@@ -398,9 +389,8 @@ class JobController(object):
          if cFailedJobs > 0 and not self._m_bKeepGoing:
             break
 
-         # Find a job that is ready to be executed.
-         for job in self._m_setScheduledJobs:
-            tgt = job._m_tgt
+         # Find a target that is ready to be built.
+         for tgt in self._m_setScheduledBuilds:
             if not tgt.is_build_blocked():
                # Execute this job.
                bBuild = tgt.is_build_needed()
@@ -410,6 +400,7 @@ class JobController(object):
                   log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
                   bBuild = True
                if bBuild:
+                  job = tgt.build()
                   if log.verbosity >= log.LOW:
                      sys.stdout.write(job.get_verbose_command() + '\n')
                   else:
@@ -428,10 +419,10 @@ class JobController(object):
                   # Create an always-successful job instead of starting the real job.
                   rj = RunningNoopJob(0)
                # Move the job from scheduled to running jobs.
-               self._m_dictRunningJobs[rj] = job
-               self._m_setScheduledJobs.remove(job)
-               # Since we modified self._m_setScheduledJobs, we have to stop iterating over it; the
-               # outer while loop will get back here, eventually.
+               self._m_dictRunningJobs[rj] = tgt
+               self._m_setScheduledBuilds.remove(tgt)
+               # Since we modified self._m_setScheduledBuilds, we have to stop iterating over it;
+               # the outer while loop will get back here, eventually.
                break
       # There are no more scheduled jobs, just wait for the running ones to complete.
       cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
@@ -444,15 +435,14 @@ class JobController(object):
    running_jobs_max = None
 
 
-   def schedule_job(self, job):
-      """Used by Job.__init__() to add itself to the set of scheduled jobs.
+   def schedule_build(self, tgt):
+      """Schedules the build of a target.
 
-      Job job
-         Job to schedule.
+      make.target.Target tgt
+         Target to build.
       """
 
-      self._m_setScheduledJobs.add(job)
-      self._m_dictTargetScheduledJobs[job._m_tgt] = job
+      self._m_setScheduledBuilds.add(tgt)
 
 
    def _unschedule_builds_blocked_by(self, tgt):
@@ -467,6 +457,6 @@ class JobController(object):
          # Use set.discard() instead of set.remove() since it may have already been removed due to a
          # previous unrelated call to this method, e.g. another job failed before the one that
          # caused this call.
-         self._m_setScheduledJobs.discard(tgtBlocked)
+         self._m_setScheduledBuilds.discard(tgtBlocked)
          self._unschedule_builds_blocked_by(tgtBlocked)
 

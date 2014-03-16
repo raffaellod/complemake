@@ -93,7 +93,7 @@ class Make(object):
 
       mk = make.Make()
       mk.parse('project.abcmk')
-      mk.schedule_target_jobs(mk.get_target_by_name('projectbin'))
+      mk.schedule_target_build(mk.get_target_by_name('projectbin'))
       mk.run_scheduled_jobs()
    """
 
@@ -321,7 +321,7 @@ class Make(object):
       return cFailedJobsTotal
 
 
-   def schedule_target_jobs(self, tgt):
+   def schedule_target_build(self, tgt):
       """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
 
       Recursively visits the dependency tree for the target in a leaves-first order, collecting Job
@@ -332,16 +332,13 @@ class Make(object):
       """
 
       # Check if we already have a Job for this target.
-      job = self._m_jc.get_target_job(tgt)
-      if job is None:
+      if not self._m_jc.is_target_build_scheduled(tgt):
          # Visit leaves.
          for dep in tgt.get_dependencies():
             if isinstance(dep, target.Target):
                # Recursively schedule jobs for this dependency target.
-               self.schedule_target_jobs(dep)
+               self.schedule_target_build(dep)
 
-         # Visit the node: schedule a job for the target, passing it any dependency jobs.
-         job = tgt.build()
-         # TODO: how about phonies or “virtual targets”?
-         assert job is not None, 'no jobs scheduled for target {}'.format(tgt)
+         # Visit the node: schedule a job for the target.
+         self._m_jc.schedule_build(tgt)
 
