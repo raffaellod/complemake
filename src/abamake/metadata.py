@@ -26,8 +26,6 @@ import sys
 import xml.dom
 import xml.dom.minidom
 
-import make.target
-
 
 
 ####################################################################################################

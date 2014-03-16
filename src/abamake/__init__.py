@@ -32,7 +32,6 @@ import xml.dom.minidom
 import make.job as job
 import make.metadata as metadata
 import make.target as target
-import make.tool as tool
 
 
 

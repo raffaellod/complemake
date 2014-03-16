@@ -25,7 +25,6 @@ import re
 import sys
 import weakref
 
-import make
 import make.job
 import make.tool
 

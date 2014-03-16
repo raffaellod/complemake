@@ -26,7 +26,6 @@ import os
 import re
 import subprocess
 
-import make
 import make.job
 
 
