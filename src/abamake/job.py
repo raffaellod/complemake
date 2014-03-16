@@ -35,6 +35,9 @@ import make.target
 class Job(object):
    """Job to be executed by a JobController instance."""
 
+   __slots__ = ()
+
+
    def get_quiet_command(self):
       """Returns a command summary for Make to print out in quiet mode.
 
@@ -114,12 +117,14 @@ class NoopJob(Job):
 class ExternalCommandJob(Job):
    """Models a job consisting in the invocation of an external program."""
 
-   # Command summary to print out in quiet mode.
-   _m_iterQuietCmd = None
-   # Controlled Popen instance.
-   _m_popen = None
-   # Arguments to be passed to Popen’s constructor.
-   _m_dictPopenArgs = None
+   __slots__ = (
+      # Command summary to print out in quiet mode.
+      '_m_iterQuietCmd',
+      # Controlled Popen instance.
+      '_m_popen',
+      # Arguments to be passed to Popen’s constructor.
+      '_m_dictPopenArgs',
+   )
 
 
    def __init__(self, iterQuietCmd, dictPopenArgs):
@@ -134,6 +139,7 @@ class ExternalCommandJob(Job):
       super().__init__()
       self._m_iterQuietCmd = iterQuietCmd
       self._m_dictPopenArgs = dictPopenArgs
+      self._m_popen = None
 
 
    def get_quiet_command(self):
