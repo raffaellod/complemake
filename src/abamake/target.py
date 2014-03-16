@@ -602,22 +602,30 @@ class ComparisonUnitTestTarget(UnitTestTarget):
    the expected output.
    """
 
-   # Path to the file containing the expected command output.
-   _m_sExpectedOutputFilePath = None
-
-
    def build(self):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
-      # Find the dependency target that generates the output we want to compare.
-      for tgt in self._m_listDependencies:
-         if isinstance(tgt, ProcessedSourceTarget):
-            tgtToCompare = tgt
-            break
+      # Pick the two dependencies to compare.
+      depComparands = []
+      for dep in self._m_listDependencies:
+         if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
+            depComparands.append(dep)
+      if len(depComparands) != 2:
+         raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
-      listArgs = ['cmp', '-s', tgtToCompare.file_path, self._m_sExpectedOutputFilePath]
-      return make.job.ExternalCommandJob(('CMP', self._m_sName), {'args': listArgs})
+      # Compare the targets.
+      # TODO: do the comparison asynchronously, via a Job?
+      with open(depComparands[0].file_path) as fileDep1:
+         sDep1 = fileDep1.read()
+      with open(depComparands[1].file_path) as fileDep2:
+         sDep2 = fileDep2.read()
+      bEqual = (sDep1 == sDep2)
+
+      return make.job.NoopJob(
+         0 if bEqual else 1, ('CMP', self._m_sName),
+         '[internal:compare] {} {}'.format(depComparands[0].file_path, depComparands[1].file_path)
+      )
 
 
    def is_build_needed(self):
@@ -633,13 +641,6 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
       mk = self._m_mk()
       if elt.nodeName == 'source':
-         # Check if we already found a <source> child element (dependency).
-         for tgt in self._m_listDependencies:
-            if isinstance(tgt, ProcessedSourceTarget):
-               raise Exception(
-                  ('a tool output comparison like “{}” unit test can only have a single <source> ' +
-                     'element').format(self._m_sName)
-               )
          # Pick the correct target class based on the file name extension and the tool to use.
          sFilePath = elt.getAttribute('path')
          sTool = elt.getAttribute('tool')
@@ -656,8 +657,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          self.add_dependency(tgtObj)
          return True
       if elt.nodeName == 'expected-output':
-         self._m_sExpectedOutputFilePath = elt.getAttribute('path')
-         self.add_dependency(ForeignDependency(self._m_sExpectedOutputFilePath))
+         self.add_dependency(ForeignDependency(elt.getAttribute('path')))
          return True
       return super().parse_makefile_child(elt)
 
