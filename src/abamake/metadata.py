@@ -22,7 +22,6 @@
 
 from datetime import datetime
 import os
-import sys
 import xml.dom
 import xml.dom.minidom
 

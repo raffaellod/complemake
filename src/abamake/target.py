@@ -22,7 +22,6 @@
 
 import os
 import re
-import sys
 import weakref
 
 import make.job
