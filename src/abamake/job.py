@@ -22,7 +22,6 @@
 
 import multiprocessing
 import subprocess
-import sys
 import time
 import weakref
 
@@ -341,20 +340,21 @@ class JobController(object):
                elif self._m_bForceBuild:
                   log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
                   bBuild = True
+               else:
+                  log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
+
                if bBuild:
                   job = tgt.build()
                   if log.verbosity >= log.LOW:
-                     sys.stdout.write(job.get_verbose_command() + '\n')
+                     log(log.LOW, '{}\n', job.get_verbose_command())
                   else:
-                     iterQuietCmd = job.get_quiet_command()
-                     sys.stdout.write(
-                        '{:^8} {}\n'.format(iterQuietCmd[0], ' '.join(iterQuietCmd[1:]))
-                     )
+                     iterCmd = job.get_quiet_command()
+                     log(log.QUIET, '{:^8} {}\n'.format(iterCmd[0], ' '.join(iterCmd[1:])))
                   if not self._m_bDryRun:
                      job.start()
                else:
-                  log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
                   job = NoopJob(0)
+
                # Move the target from scheduled builds to running jobs.
                self._m_dictRunningJobs[job] = tgt
                self._m_setScheduledBuilds.remove(tgt)
