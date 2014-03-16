@@ -134,7 +134,7 @@ def _main(iterArgs):
 
    # Build all selected targets: first schedule the jobs building them, then run them.
    for tgt in iterTargets:
-      mk.schedule_target_build(tgt)
+      mk.job_controller.schedule_build(tgt)
    return mk.run_scheduled_jobs()
 
 

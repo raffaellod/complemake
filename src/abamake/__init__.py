@@ -93,7 +93,7 @@ class Make(object):
 
       mk = make.Make()
       mk.parse('project.abcmk')
-      mk.schedule_target_build(mk.get_target_by_name('projectbin'))
+      mk.job_controller.schedule_build(mk.get_target_by_name('projectbin'))
       mk.run_scheduled_jobs()
    """
 
@@ -319,26 +319,4 @@ class Make(object):
          self._m_mds = None
 
       return cFailedJobsTotal
-
-
-   def schedule_target_build(self, tgt):
-      """Schedules jobs for the specified target and all its dependencies, avoiding duplicate jobs.
-
-      Recursively visits the dependency tree for the target in a leaves-first order, collecting Job
-      instances returned by Target.build() for all the dependencies.
-
-      Target tgt
-         Target instance for which a job should be scheduled by calling its build() method.
-      """
-
-      # Check if we already have a Job for this target.
-      if not self._m_jc.is_target_build_scheduled(tgt):
-         # Visit leaves.
-         for dep in tgt.get_dependencies():
-            if isinstance(dep, target.Target):
-               # Recursively schedule jobs for this dependency target.
-               self.schedule_target_build(dep)
-
-         # Visit the node: schedule a job for the target.
-         self._m_jc.schedule_build(tgt)
 

@@ -26,6 +26,8 @@ import sys
 import time
 import weakref
 
+import make.target
+
 
 
 ####################################################################################################
@@ -342,18 +344,6 @@ class JobController(object):
    """)
 
 
-   def is_target_build_scheduled(self, tgt):
-      """Returns True if the build of the specified targets has been scheduled.
-
-      Target tgt
-         Target to check for.
-      bool return
-         True if the build of tgt has been scheduled, or False otherwise.
-      """
-
-      return tgt in self._m_setScheduledBuilds
-
-
    def _get_keep_going(self):
       return self._m_bKeepGoing
 
@@ -436,13 +426,26 @@ class JobController(object):
 
 
    def schedule_build(self, tgt):
-      """Schedules the build of a target.
+      """Schedules the build of the specified target and all its dependencies.
 
-      make.target.Target tgt
-         Target to build.
+      The implementation recursively visits the dependency tree for the target in a leaves-first
+      order, using a set for the builds scheduled to avoid duplicates (targets that are a dependency
+      for more than one target).
+
+      Target tgt
+         Target the build of which should be scheduled.
       """
 
-      self._m_setScheduledBuilds.add(tgt)
+      # Check if we already scheduled this target.
+      if tgt not in self._m_setScheduledBuilds:
+         # Schedule the dependencies (visit leaves).
+         for dep in tgt.get_dependencies():
+            if isinstance(dep, make.target.Target):
+               # Recursively schedule jobs for this dependency target.
+               self.schedule_build(dep)
+
+         # Visit the node: schedule a job for the target.
+         self._m_setScheduledBuilds.add(tgt)
 
 
    def _unschedule_builds_blocked_by(self, tgt):
