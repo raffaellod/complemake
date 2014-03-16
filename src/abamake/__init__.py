@@ -63,9 +63,17 @@ class Logger(object):
 
 
    def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
-      """Writes a formatted string to the level matching iLevel.
+      """Logs a formatted string.
 
-      TODO: comment.
+      int iLevel
+         Minimum logging level. If the log verbosity setting is below this value, the log entry will
+         not be printed.
+      str sFormat
+         Format string.
+      iter(object*) *iterArgs
+         Forwarded to sFormat.format().
+      dict(str: object) **dictKwArgs
+         Forwarded to sFormat.format().
       """
 
       if self.verbosity >= iLevel:
@@ -128,7 +136,7 @@ class Make(object):
    def _add_target(self, tgt):
       """Adds a target to the relevant dictionaries.
 
-      Target tgt
+      make.target.Target tgt
          Target to add.
       """
 
@@ -155,7 +163,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      Target return
+      make.target.Target return
          Target that builds sFilePath, or oFallback if no such target was defined in the makefile.
       """
 
@@ -174,7 +182,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      Target return
+      make.target.Target return
          Target named sName, or oFallback if no such target was defined in the makefile.
       """
 
@@ -292,6 +300,8 @@ class Make(object):
 
    def print_targets_graph(self):
       """Prints to stdout a graph of target dependencies."""
+
+      # TODO: rewrite so that it does what it’s supposed to.
 
       # Targets explicitly declared in the parsed makefile (name -> target).
       for sName, tgt in self._m_dictNamedTargets.items():

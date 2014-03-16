@@ -118,7 +118,7 @@ class Target(Dependency):
       """Constructor. Generates the target’s file path by calling Target._generate_file_path(), then
       adds itself to the Make instance’s target lists.
 
-      Make mk
+      make.Make mk
          Make instance.
       str sName
          See Target.name.
@@ -158,7 +158,7 @@ class Target(Dependency):
    def build(self):
       """Builds the output.
 
-      Job return
+      make.job.Job return
          Scheduled job.
       """
 
@@ -206,7 +206,7 @@ class Target(Dependency):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
 
-      Tool return
+      make.tool.Tool return
          Ready-to-use tool.
       """
 
@@ -305,7 +305,7 @@ class ProcessedSourceTarget(Target):
    def __init__(self, mk, sName, sSourceFilePath, sFinalOutputFilePath = None):
       """Constructor. See Target.__init__().
 
-      Make mk
+      make.Make mk
          Make instance.
       str sName
          See Target.name.
@@ -438,7 +438,7 @@ class ExecutableTarget(Target):
       """Configures the specified Tool instance to generate code suitable for linking in this
       Target.
 
-      Tool tool
+      make.tool.Tool tool
          Tool (compiler) to configure.
       """
 

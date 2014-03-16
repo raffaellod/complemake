@@ -54,7 +54,7 @@ class FileSignature(object):
 
       str sFilePath
          Path to the file for which a signature should be generated.
-      FileSignature return
+      make.metadata.FileSignature return
          Generated signature.
       """
 
@@ -69,7 +69,7 @@ class FileSignature(object):
 
       xml.dom.Element eltFile
          <file> element to parse.
-      FileSignature return
+      make.metadata.FileSignature return
          Loaded signature.
       """
 
@@ -120,7 +120,7 @@ class TargetSnapshot(object):
 
       make.target.Target tgt
          Target.
-      dict(str: FileSignature) dictDepsSignatures
+      dict(str: make.metadata.FileSignature) dictDepsSignatures
          File paths associated to their signature; one for each dependency of the target.
       xml.dom.Element eltTarget
          XML Element to parse to load the target dependencies’ signatures.
