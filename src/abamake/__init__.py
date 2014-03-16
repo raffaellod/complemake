@@ -102,7 +102,7 @@ class Make(object):
       mk = make.Make()
       mk.parse('project.abcmk')
       mk.job_controller.schedule_build(mk.get_target_by_name('projectbin'))
-      mk.build_scheduled_targets()
+      mk.job_controller.build_scheduled_targets()
    """
 
    # See Make.job_controller.
@@ -310,23 +310,4 @@ class Make(object):
       # intermediate targets not explicitly declared with a named target element.
       for sFilePath, tgt in self._m_dictTargets.items():
          print('Target {}'.format(tgt.file_path))
-
-
-   def build_scheduled_targets(self):
-      """Conditionally builds any targets scheduled for build.
-
-      int return
-         Count of jobs that completed in failure.
-      """
-
-      try:
-         cFailedJobsTotal = self._m_jc.build_scheduled_targets()
-      finally:
-         # Write any new metadata.
-         if self._m_mds and not self._m_jc.dry_run:
-            self._m_log(self._m_log.HIGH, 'metadata: updating\n')
-            self._m_mds.write()
-         self._m_mds = None
-
-      return cFailedJobsTotal
 
