@@ -41,8 +41,9 @@ class Job(object):
    def get_quiet_command(self):
       """Returns a command summary for Make to print out in quiet mode.
 
-      iterable(str, str+) return
-         Job’s command summary.
+      iterable(str, str*) return
+         Job command summary: an iterable containing the short name and relevant (input or output)
+         files for the tool.
       """
 
       raise NotImplementedError(
@@ -54,7 +55,7 @@ class Job(object):
       """Returns a command-line for Make to print out in verbose mode.
 
       str return
-         Job’s command line.
+         Job command line.
       """
 
       raise NotImplementedError(
@@ -76,7 +77,7 @@ class Job(object):
    def start(self):
       """Starts the job."""
 
-      raise NotImplementedError('Job.start() must be overridden in ' + type(self).__name__)
+      pass
 
 
 
@@ -88,20 +89,42 @@ class NoopJob(Job):
    """
 
    __slots__ = (
+      # Command summary to print out in quiet mode.
+      '_m_iterQuietCmd',
       # Value that poll() will return.
       '_m_iRet',
+      # Command to print out in verbose mode.
+      '_m_sVerboseCmd',
    )
 
 
-   def __init__(self, iRet):
+   def __init__(self, iRet, iterQuietCmd = ('NOOP',), sVerboseCmd = '[internal:noop]'):
       """Constructor.
 
       int iRet
          Value that poll() will return.
+      iterable(str, str*) iterQuietCmd
+         “Quiet mode” command; see return value of Job.get_quiet_command().
+      str sVerboseCmd
+         “Verbose mode” command; see return value of Job.get_verbose_command().
       """
 
       super().__init__()
+      self._m_iterQuietCmd = iterQuietCmd
       self._m_iRet = iRet
+      self._m_sVerboseCmd = sVerboseCmd
+
+
+   def get_quiet_command(self):
+      """See Job.get_quiet_command()."""
+
+      return self._m_iterQuietCmd
+
+
+   def get_verbose_command(self):
+      """See Job.get_verbose_command()."""
+
+      return self._m_sVerboseCmd
 
 
    def poll(self):
@@ -118,12 +141,12 @@ class ExternalCommandJob(Job):
    """Models a job consisting in the invocation of an external program."""
 
    __slots__ = (
-      # Command summary to print out in quiet mode.
-      '_m_iterQuietCmd',
       # Controlled Popen instance.
       '_m_popen',
       # Arguments to be passed to Popen’s constructor.
       '_m_dictPopenArgs',
+      # Command summary to print out in quiet mode.
+      '_m_iterQuietCmd',
    )
 
 
