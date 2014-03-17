@@ -22,6 +22,7 @@
 
 import multiprocessing
 import subprocess
+import threading
 import time
 import weakref
 
@@ -206,6 +207,69 @@ class ExternalCommandJob(Job):
 
 
 ####################################################################################################
+# ExternalPipedCommandJob
+
+class ExternalPipedCommandJob(ExternalCommandJob):
+   """Same as ExternalCommandJob, but supports piping input and/or output.
+
+   Internally, separates thread communicate with the process through the pipes, joining the main
+   thread and making the output available when the process terminates.
+   """
+
+   __slots__ = (
+      # Collects the job process’ standard error output.
+      '_m_sStdErr',
+      # Collects the job process’ standard output.
+      '_m_sStdOut',
+      # Thread that reads from the job process’ stderr into _m_sStdErr.
+      '_m_thrReadErr',
+      # Thread that reads from the job process’ stdout into _m_sStdOut.
+      '_m_thrReadOut',
+   )
+
+
+   def poll(self):
+      """See ExternalCommandJob.poll()."""
+
+      iRet = super().poll()
+      if iRet is not None:
+         # The process terminated, so wait for the I/O threads to do the same.
+         if self._m_thrReadErr:
+            self._m_thrReadErr.join()
+         if self._m_thrReadOut:
+            self._m_thrReadOut.join()
+
+
+   def _read_stderr(self):
+      """Reads from the job process’ stderr."""
+
+      self._m_sStdErr += self._m_popen.stderr.read()
+
+
+   def _read_stdout(self):
+      """Reads from the job process’ stdout."""
+
+      self._m_sStdOut += self._m_popen.stdout.read()
+
+
+   def start(self):
+      """See ExternalCommandJob.start()."""
+
+      super().start()
+
+      # Prepare the read buffers and start the threads to fill them.
+      if self._m_dictPopenArgs['stderr'] == subprocess.PIPE:
+         self._m_sStdErr = ''
+         self._m_thrReadErr = threading.Thread(target = self._read_stderr)
+         self._m_thrReadErr.start()
+      if self._m_dictPopenArgs['stdout'] == subprocess.PIPE:
+         self._m_sStdOut = ''
+         self._m_thrReadOut = threading.Thread(target = self._read_stdout)
+         self._m_thrReadOut.start()
+
+
+
+####################################################################################################
 # JobController
 
 class JobController(object):
@@ -335,7 +399,10 @@ class JobController(object):
          # This loop restarts the for loop, since we modify self._m_dictRunningJobs. The termination
          # condition is a break statement.
          while True:
-            # Poll each running job.
+            # Give the running jobs some lovin’ by polling.
+            # TODO: with event-based waiting we should know exactly which event was triggered (i.e.
+            # what it is that needs attention), so we won’t need to iterate (_m_dictRunningJobs will
+            # need a different key though).
             for job in self._m_dictRunningJobs.keys():
                iRet = job.poll()
                if iRet is not None:
