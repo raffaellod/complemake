@@ -474,8 +474,7 @@ class ExecutableTarget(Target):
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath, self._m_sFilePath)
          self.add_dependency(tgtObj)
-         return True
-      if elt.nodeName == 'dynlib':
+      elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
          sName = elt.getAttribute('name')
          # If the library is a known target (i.e. it’s built by this makefile), assign it as a
@@ -484,8 +483,7 @@ class ExecutableTarget(Target):
          if dep is None:
             dep = ForeignLibDependency(sName)
          self.add_dependency(dep)
-         return True
-      if elt.nodeName == 'unittest':
+      elif elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName, None)
@@ -494,8 +492,9 @@ class ExecutableTarget(Target):
                'could not find definition of referenced unit test: {}'.format(sName)
             )
          tgtUnitTest.add_dependency(self)
-         return True
-      return super().parse_makefile_child(elt)
+      else:
+         return super().parse_makefile_child(elt)
+      return True
 
 
 
@@ -658,18 +657,17 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          tgtObj = clsObjTarget(mk, None, sFilePath)
          # Add the target as a dependency to this target.
          self.add_dependency(tgtObj)
-         return True
-      if elt.nodeName == 'expected-output':
+      elif elt.nodeName == 'expected-output':
          self.add_dependency(ForeignDependency(elt.getAttribute('path')))
-         return True
-      if elt.nodeName == 'output-transform':
+      elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
             self._m_reFilter = re.compile('ABCMK_CMP_BEGIN.*?ABCMK_CMP_END', re.DOTALL)
          else:
             raise Exception('unsupported output transformation')
-         return True
-      return super().parse_makefile_child(elt)
+      else:
+         return super().parse_makefile_child(elt)
+      return True
 
 
    def _read_file(self, sFilePath):
@@ -806,7 +804,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
 
 
    def parse_makefile_child(self, elt):
-      """See ExecutableTarget.parse_makefile_child() and UnitTestTarget.parse_makefile_child()."""
+      """See UnitTestTarget.parse_makefile_child()."""
 
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
@@ -814,9 +812,8 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
          super().add_dependency(ForeignDependency(self._m_sScriptFilePath))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-         return True
-      if super().parse_makefile_child(elt):
-         return True
-      # Non-unit test-specific elements are probably for the build target to process.
-      return self._m_eutbt.parse_makefile_child(elt)
+      elif not super().parse_makefile_child(elt):
+         # Non-unit test-specific elements are probably for the build target to process.
+         return self._m_eutbt.parse_makefile_child(elt)
+      return True
 
