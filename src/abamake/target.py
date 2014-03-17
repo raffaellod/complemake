@@ -308,13 +308,13 @@ class ProcessedSourceTarget(Target):
    int/ directory relative to the output base directory.
    """
 
-   # Path to the file that this target’s output will be linked into.
-   _m_sFinalOutputFilePath = None
+   # Target that that this target’s output will be linked into.
+   _m_tgtFinalOutput = None
    # Source from which the target is built.
    _m_sSourceFilePath = None
 
 
-   def __init__(self, mk, sName, sSourceFilePath, sFinalOutputFilePath = None):
+   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See Target.__init__().
 
       make.Make mk
@@ -323,13 +323,16 @@ class ProcessedSourceTarget(Target):
          See Target.name.
       str sSourceFilePath
          Source from which the target is built.
-      str sFinalOutputFilePath
-         Path to the file that this target’s output will be linked into. If omitted, no output-
-         driven configuration will be applied to the Tool instance generating this output.
+      make.target.Target tgtFinalOutput
+         Target that this target’s output will be linked into. If omitted, no output-driven
+         configuration will be applied to the Tool instance generating this output.
       """
 
       self._m_sSourceFilePath = sSourceFilePath
-      self._m_sFinalOutputFilePath = sFinalOutputFilePath
+      if tgtFinalOutput:
+         self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput)
+      else:
+         self._m_tgtFinalOutput = None
       super().__init__(mk, sName)
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
@@ -397,10 +400,9 @@ class CxxObjectTarget(ObjectTarget):
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
-      if self._m_sFinalOutputFilePath:
+      if self._m_tgtFinalOutput:
          # Let the final output configure the compiler.
-         tgtFinalOutput = self._m_mk().get_target_by_file_path(self._m_sFinalOutputFilePath)
-         tgtFinalOutput.configure_compiler(cxx)
+         self._m_tgtFinalOutput().configure_compiler(cxx)
 
       # TODO: add file-specific flags.
       return cxx
@@ -486,7 +488,7 @@ class ExecutableTarget(Target):
          else:
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, None, sFilePath, self._m_sFilePath)
+         tgtObj = clsObjTarget(mk, None, sFilePath, self)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
