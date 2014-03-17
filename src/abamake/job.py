@@ -341,20 +341,22 @@ class JobController(object):
                if iRet is not None:
                   # Remove the target build from the running jobs.
                   tgt = self._m_dictRunningJobs.pop(job)
+                  # If we decided not to run the job requested by the target (due to e.g. “dry run”
+                  # mode), pass None instead, so Target.build_complete() doesn’t need to know how to
+                  # tell the difference.
+                  if self._m_bDryRun or isinstance(job, SkippedBuildJob):
+                     job = None
+                  tgt.build_complete(job, iRet, self._m_bIgnoreErrors)
+
+                  # Keep track of completed/failed jobs.
                   cCompletedJobs += 1
-                  if iRet == 0 or self._m_bIgnoreErrors:
-                     # The job completed successfully or we’re ignoring its failure: any dependent
-                     # jobs can now be released.
-                     tgt.release_blocked_builds()
-                     # If the job was successfully executed, update any files’ metadata.
-                     if iRet == 0 and not self._m_bDryRun and not isinstance(job, SkippedBuildJob):
-                        mds.update_target_snapshot(tgt)
-                  else:
+                  if iRet != 0 and not self._m_bIgnoreErrors:
                      if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
                         self._unschedule_builds_blocked_by(tgt)
                      cFailedJobs += 1
+
                   # Since we modified self._m_dictRunningJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.
                   break

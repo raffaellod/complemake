@@ -163,6 +163,28 @@ class Target(Dependency):
       raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
 
 
+   def build_complete(self, job, iRet, bIgnoreErrors):
+      """Invoked by the JobController when the job executed to build this target completes, either
+      in success or in failure.
+
+      make.job.Job job
+         Job instance, or None if the job was not started (due to e.g. “dry run” mode).
+      int iRet
+         Return value of the job’s execution. If job is None, this will be 0 (success).
+      bool bIgnoreErrors
+         If True, the job should be considered successfully completed even if iRet != 0.
+      """
+
+      if iRet == 0 or bIgnoreErrors:
+         # Release all dependent targets.
+         for tgt in self._m_listDependents:
+            # These are weak references.
+            tgt()._m_cBuildBlocks -= 1
+         # If the job really completed successfully, update the target snapshot.
+         if iRet == 0 and job is not None:
+            self._m_mk().metadata.update_target_snapshot(self)
+
+
    def get_dependencies(self):
       """Iterates over the dependencies (make.target.Dependency instances) for this target.
 
@@ -250,14 +272,6 @@ class Target(Dependency):
 
       # Default implementation: expect no child elements.
       return False
-
-
-   def release_blocked_builds(self):
-      """Releases the build of any targets that this one was blocking."""
-
-      for tgt in self._m_listDependents:
-         # These are weak references.
-         tgt()._m_cBuildBlocks -= 1
 
 
    @classmethod
