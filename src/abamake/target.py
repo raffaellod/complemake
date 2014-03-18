@@ -616,18 +616,34 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
-      # Pick the two dependencies to compare.
-      depComparands = []
+      # Get a name to display for the two dependencies to compare.
+      tgtGenerator = None
+      listComparands = []
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
-            depComparands.append(dep)
-      if len(depComparands) != 2:
+            listComparands.append(dep.file_path)
+         elif isinstance(dep, ExecutableUnitTestBuildTarget):
+            # The output of this target will be one of the two comparands.
+            tgtGenerator = dep
+            listComparands.append('stdout({})'.format(dep.file_path))
+      if len(listComparands) != 2:
          raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
-      return make.job.NoopJob(
-         0, ('CMP', self._m_sName),
-         '[internal:compare] {} {}'.format(depComparands[0].file_path, depComparands[1].file_path)
-      )
+      if tgtGenerator:
+         listArgs = []
+         listArgs.append(self._m_eutbt.file_path)
+         # One of the comparands is a generator: schedule a job to execute it and capture its
+         # output, which we’ll compare in build_complete().
+         return make.job.ExternalPipedCommandJob(['TEST'] + listComparands, {
+            'args': listArgs,
+            'env' : tgtGenerator.get_exec_environ(),
+         })
+      else:
+         # No generator to execute; we’ll compare the two files in build_complete().
+         return make.job.NoopJob(
+            0, ['CMP'] + listComparands,
+            '[internal:compare] {} {}'.format(*listComparands)
+         )
 
 
    def build_complete(self, job, iRet, bIgnoreErrors):
@@ -636,18 +652,17 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       if iRet != 0 and not bIgnoreErrors:
          return iRet
 
-      # Pick (again) the two dependencies to compare.
-      depComparands = []
+      # Extract and transform the contents of the two dependencies to compare.
+      listComparands = []
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
-            depComparands.append(dep)
+            with open(dep.file_path, 'r') as fileComparand:
+               listComparands.append(self._transform_comparand(fileComparand.read()))
+         elif isinstance(dep, ExecutableUnitTestBuildTarget):
+            listComparands.append(self._transform_comparand(dep))
 
       # Compare the targets.
-      sDepFilePath1 = depComparands[0].file_path
-      sDepFilePath2 = depComparands[1].file_path
-      sDep1 = self._read_file(sDepFilePath1)
-      sDep2 = self._read_file(sDepFilePath2)
-      if sDep1 == sDep2:
+      if listComparands[0] == listComparands[1]:
          return 0
       else:
          return 1
@@ -693,25 +708,22 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       return True
 
 
-   def _read_file(self, sFilePath):
-      """Reads the contents of a file, processes them according to any <output-transform> rules
-      specified in the makefile, and returns the resulting string.
+   def _transform_comparand(self, s):
+      """Transforms a string according to any <output-transform> rules specified in the makefile,
+      and returns the result.
 
-      str sFilePath
-         Path to the file to read.
+      str s
+         String to tranform.
       str return
-         Contents of the file, processed according any active <output-transform> rules.
+         Processed string.
       """
-
-      with open(sFilePath) as fileInput:
-         sFile = fileInput.read()
 
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply transformations.
       if self._m_reFilter:
-         sFile = '\n'.join(self._m_reFilter.findall(sFile))
+         s = '\n'.join(self._m_reFilter.findall(s))
 
-      return sFile
+      return s
 
 
 ####################################################################################################
@@ -783,6 +795,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       """
 
       super().__init__(mk, sName)
+
       # Add the build target as a dependency.
       eutbt = ExecutableUnitTestBuildTarget(mk, sName)
       self._m_eutbt = eutbt
@@ -800,7 +813,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
 
 
    def build(self):
-      """See Target.build()."""
+      """See UnitTestTarget.build()."""
 
       # Build the command line to invoke.
       if self._m_sScriptFilePath:
