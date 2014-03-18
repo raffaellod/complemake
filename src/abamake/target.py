@@ -93,6 +93,28 @@ class ForeignLibDependency(ForeignDependency):
 
 
 ####################################################################################################
+# OutputRerefenceDependency
+
+class OutputRerefenceDependency(ForeignDependency):
+   """File used as a reference to validate expected outputs."""
+
+   pass
+
+
+
+####################################################################################################
+# UnitTestExecScriptDependency
+
+class UnitTestExecScriptDependency(ForeignDependency):
+   """Executable that runs a unit test according to a “script”. Used to mimic interation with a
+   shell that ABC Make does not implement.
+   """
+
+   pass
+
+
+
+####################################################################################################
 # Target
 
 class Target(Dependency):
@@ -620,7 +642,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       tgtGenerator = None
       listComparands = []
       for dep in self._m_listDependencies:
-         if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
+         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             listComparands.append(dep.file_path)
          elif isinstance(dep, ExecutableUnitTestBuildTarget):
             # The output of this target will be one of the two comparands.
@@ -655,7 +677,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       # Extract and transform the contents of the two dependencies to compare.
       listComparands = []
       for dep in self._m_listDependencies:
-         if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
+         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             with open(dep.file_path, 'r') as fileComparand:
                listComparands.append(self._transform_comparand(fileComparand.read()))
          elif isinstance(dep, ExecutableUnitTestBuildTarget):
@@ -696,7 +718,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          mk.add_target(tgtObj)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'expected-output':
-         self.add_dependency(ForeignDependency(elt.getAttribute('path')))
+         self.add_dependency(OutputRerefenceDependency(elt.getAttribute('path')))
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
@@ -842,7 +864,7 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       if elt.nodeName == 'script':
          self._m_sScriptFilePath = elt.getAttribute('path')
          # Note that we don’t invoke our overridden method.
-         super().add_dependency(ForeignDependency(self._m_sScriptFilePath))
+         super().add_dependency(UnitTestExecScriptDependency(self._m_sScriptFilePath))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
       elif not super().parse_makefile_child(elt):
