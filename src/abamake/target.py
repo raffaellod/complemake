@@ -175,10 +175,11 @@ class Target(Dependency):
 
 
    def build(self):
-      """Builds the output.
+      """Instantiates a job that will build the output.
 
       make.job.Job return
-         Scheduled job.
+         Scheduled job, or None if there’s nothing to be built. Some minor processing may still
+         occur synchronously to the main thread in Target.build_complete().
       """
 
       raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
@@ -638,63 +639,95 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       """See Target.build(). In addition to building the unit test, it also schedules its execution.
       """
 
-      # Get a name to display for the two dependencies to compare.
-      tgtGenerator = None
-      listComparands = []
+      # Collect dependencies according to their type.
+      tgtBuiltUnitTest = None
+      depExecScript = None
+      cComparands = 0
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            listComparands.append(dep.file_path)
+            cComparands += 1
          elif isinstance(dep, ExecutableUnitTestBuildTarget):
             # The output of this target will be one of the two comparands.
-            tgtGenerator = dep
-            listComparands.append('stdout({})'.format(dep.file_path))
-      if len(listComparands) != 2:
+            tgtBuiltUnitTest = dep
+            cComparands += 1
+         elif isinstance(dep, UnitTestExecScriptDependency):
+            depExecScript = dep
+      # Either there’s no comparison to be made, or we have two comparands.
+      if cComparands != 0 and cComparands != 2:
          raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
-      if tgtGenerator:
-         listArgs = []
-         listArgs.append(self._m_eutbt.file_path)
-         # One of the comparands is a generator: schedule a job to execute it and capture its
-         # output, which we’ll compare in build_complete().
-         return make.job.ExternalPipedCommandJob(['TEST'] + listComparands, {
+      if tgtBuiltUnitTest:
+         # One of the dependencies is a unit test to execute: prepare its command line.
+         if depExecScript:
+            # We also have a “script” to drive the unit test.
+            listArgs = [depExecScript.file_path]
+            # TODO: support more arguments, once they’re recognized by parse_makefile_child().
+         else:
+            listArgs = []
+         listArgs.append(tgtBuiltUnitTest.file_path)
+
+         if cComparands:
+            # The unit test generates one of the comparands: execute it with a n output-capturing
+            # job; we’ll then compare its output in build_complete().
+            clsJob = make.job.ExternalPipedCommandJob
+         else:
+            # No need to capture the output, just use an execution job.
+            clsJob = make.job.ExternalCommandJob
+         return clsJob(('TEST', self._m_sName), {
             'args': listArgs,
-            'env' : tgtGenerator.get_exec_environ(),
+            'env' : tgtBuiltUnitTest.get_exec_environ(),
          })
       else:
-         # No generator to execute; we’ll compare the two files in build_complete().
-         return make.job.NoopJob(
-            0, ['CMP'] + listComparands,
-            '[internal:compare] {} {}'.format(*listComparands)
-         )
+         # No unit test to execute; we’ll compare the two pre-built files in build_complete().
+         return None
 
 
    def build_complete(self, job, iRet, bIgnoreErrors):
       """See UnitTestTarget.build_complete()."""
 
+      iRet = super().build_complete(job, iRet, bIgnoreErrors)
       if iRet != 0 and not bIgnoreErrors:
          return iRet
 
-      # Extract and transform the contents of the two dependencies to compare.
+      # Extract and transform the contents of the two dependencies to compare, and generate a
+      # display name for them.
+      listCmpNames = []
       listComparands = []
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
+            # Add as comparand the contents of this dependency file.
+            listCmpNames.append(dep.file_path)
             with open(dep.file_path, 'r') as fileComparand:
                listComparands.append(self._transform_comparand(fileComparand.read()))
          elif isinstance(dep, ExecutableUnitTestBuildTarget):
-            listComparands.append(self._transform_comparand(dep))
+            # Add as comparand the output of the job that just completed.
+            listCmpNames.append('stdout({})'.format(dep.file_path))
+            listComparands.append(self._transform_comparand(job.get_stdout()))
 
-      # Compare the targets.
-      if listComparands[0] == listComparands[1]:
-         return 0
+      if listComparands:
+         assert len(listComparands) == 2, \
+            'ComparisonUnitTestTarget.build() did not correctly validate the count of comparands'
+
+         log = self._m_mk().log
+         if log.verbosity >= log.LOW:
+            log(log.LOW, '[internal:compare] {} {}\n', *listCmpNames)
+         else:
+            log(log.QUIET, '{:^8} {} <=> {}\n', 'CMP', *listCmpNames)
+
+         # Compare the targets.
+         if listComparands[0] == listComparands[1]:
+            return 0
+         else:
+            return 1
       else:
-         return 1
+         return iRet
 
 
    def is_build_needed(self):
-      """See Target.is_build_needed()."""
+      """See UnitTestTarget.is_build_needed()."""
 
-      # TODO: make unit test execution incremental like everything else by storing something in the
-      # metadata store.
+      # TODO: decide whether to make unit test execution incremental like everything else; support
+      # is already there via MetadataStore.
       return True
 
 
@@ -725,6 +758,10 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             self._m_reFilter = re.compile('ABCMK_CMP_BEGIN.*?ABCMK_CMP_END', re.DOTALL)
          else:
             raise Exception('unsupported output transformation')
+      elif elt.nodeName == 'script':
+         self.add_dependency(UnitTestExecScriptDependency(elt.getAttribute('path')))
+         # TODO: support <script name="…"> to refer to a program built by the same makefile.
+         # TODO: support more attributes, such as command-line args for the script.
       else:
          return super().parse_makefile_child(elt)
       return True

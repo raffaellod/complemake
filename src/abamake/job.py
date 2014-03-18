@@ -365,6 +365,13 @@ class JobController(object):
                   if bBuild:
                      # Obtain a job to build this target.
                      job = tgt.build()
+                     if job is None:
+                        # tgt’s Target.build() didn’t create a job; probably it only performs
+                        # post-build steps, for whatever reason.
+                        bBuild = False
+
+                  if bBuild:
+                     # We have a job, run it.
                      if log.verbosity >= log.LOW:
                         log(log.LOW, '{}\n', job.get_verbose_command())
                      else:
@@ -374,7 +381,8 @@ class JobController(object):
                         # Execute the build job.
                         job.start()
                   else:
-                     # Start a no-op job with an exit code of 0 (success).
+                     # Even if we’re not building anything, this class’ algorithm still requires a
+                     # placeholder job: start a no-op job with an exit code of 0 (success).
                      job = SkippedBuildJob()
 
                   # Move the target from scheduled builds to running jobs.
