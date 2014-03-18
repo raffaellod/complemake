@@ -113,8 +113,8 @@ class Target(Dependency):
 
 
    def __init__(self, mk, sName = None):
-      """Constructor. Generates the target’s file path by calling Target._generate_file_path(), then
-      adds itself to the Make instance’s target lists.
+      """Constructor. It initializes the file_path to None, because it’s assumed that a derived
+      class will know better.
 
       make.Make mk
          Make instance.
@@ -122,14 +122,13 @@ class Target(Dependency):
          See Target.name.
       """
 
+      super().__init__(None)
+
       self._m_cBuildBlocks = 0
       self._m_listDependencies = []
       self._m_listDependents = []
-      self._m_sName = sName
       self._m_mk = weakref.ref(mk)
-      super().__init__(self._generate_file_path())
-      # Add self to any applicable targets lists.
-      mk._add_target(self)
+      self._m_sName = sName
 
 
    def __str__(self):
@@ -206,20 +205,6 @@ class Target(Dependency):
       for tgt in self._m_listDependents:
          # These are weak references.
          yield tgt()
-
-
-   def _generate_file_path(self):
-      """Generates and returns a file path for the target, based on other member varialbes set
-      beforehand and the configuration of the provided Make instance. Called by Target.__init__().
-
-      The default implementation doesn’t generate a file path because no output file is assumed.
-
-      str return
-         Target file path; same as Dependency.file_path.
-      """
-
-      # No output file.
-      return None
 
 
    def _get_tool(self):
@@ -328,12 +313,14 @@ class ProcessedSourceTarget(Target):
          configuration will be applied to the Tool instance generating this output.
       """
 
+      super().__init__(mk, sName)
+
       self._m_sSourceFilePath = sSourceFilePath
+      self._m_sFilePath = os.path.join(mk.output_dir, 'int', sSourceFilePath)
       if tgtFinalOutput:
          self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput)
       else:
          self._m_tgtFinalOutput = None
-      super().__init__(mk, sName)
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
@@ -345,12 +332,6 @@ class ProcessedSourceTarget(Target):
       return self._get_tool().create_job(self._m_mk(), self)
 
 
-   def _generate_file_path(self):
-      """See Target._generate_file_path()."""
-
-      return os.path.join(self._m_mk().output_dir, 'int', self._m_sSourceFilePath)
-
-
 
 ####################################################################################################
 # CxxPreprocessedTarget
@@ -358,10 +339,12 @@ class ProcessedSourceTarget(Target):
 class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
-   def _generate_file_path(self):
-      """See ProcessedSourceTarget._generate_file_path()."""
+   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+      """Constructor. See ProcessedSourceTarget.__init__()."""
 
-      return super()._generate_file_path() + '.i'
+      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
+
+      self._m_sFilePath += '.i'
 
 
    def _get_tool(self):
@@ -379,11 +362,12 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 class ObjectTarget(ProcessedSourceTarget):
    """Intermediate object target."""
 
-   def _generate_file_path(self):
-      """See ProcessedSourceTarget._generate_file_path()."""
+   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+      """Constructor. See ProcessedSourceTarget.__init__()."""
 
-      return super()._generate_file_path() + \
-         make.tool.CxxCompiler.get_default_impl().object_suffix
+      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
+
+      self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
 
 
 
@@ -416,6 +400,15 @@ class ExecutableTarget(Target):
    """Executable program target. The output file will be placed in a bin/ directory relative to the
    output base directory.
    """
+
+   def __init__(self, mk, sName):
+      """Constructor. See Target.__init__()."""
+
+      super().__init__(mk, sName)
+
+      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
+
 
    def build(self):
       """See Target.build()."""
@@ -460,13 +453,6 @@ class ExecutableTarget(Target):
       pass
 
 
-   def _generate_file_path(self):
-      """See Target._generate_file_path()."""
-
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(self._m_mk().output_dir, 'bin', '' + self._m_sName + '')
-
-
    def _get_tool(self):
       """See Target._get_tool()."""
 
@@ -489,6 +475,7 @@ class ExecutableTarget(Target):
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath, self)
+         mk.add_target(tgtObj)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
@@ -522,6 +509,15 @@ class DynLibTarget(ExecutableTarget):
    output base directory.
    """
 
+   def __init__(self, mk, sName):
+      """Constructor. See ExecutableTarget.__init__()."""
+
+      super().__init__(mk, sName)
+
+      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
+
+
    def configure_compiler(self, tool):
       """See ExecutableTarget.configure_compiler()."""
 
@@ -531,13 +527,6 @@ class DynLibTarget(ExecutableTarget):
          # Allow building both a dynamic library and its clients using the same header file, by
          # changing “import” to “export” when this macro is defined.
          tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
-
-
-   def _generate_file_path(self):
-      """See ExecutableTarget._generate_file_path()."""
-
-      # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
-      return os.path.join(self._m_mk().output_dir, 'lib', 'lib' + self._m_sName + '.so')
 
 
    def _get_tool(self):
@@ -671,7 +660,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             raise Exception('unsupported source file type')
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath)
-         # Add the target as a dependency to this target.
+         mk.add_target(tgtObj)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'expected-output':
          self.add_dependency(ForeignDependency(elt.getAttribute('path')))
@@ -720,12 +709,13 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
    def __init__(self, mk, sName = None):
       """See ExecutableTarget.__init__()."""
 
-      super().__init__(mk, sName)
-      # Remove self from mk’s named targets, to let the execution target use sName instead.
-      # TODO: don’t poke Make’s privates.
-      del mk._m_dictNamedTargets[sName]
-      # Give up the name to the execution target.
+      # sName is only used to generate _m_sFilePath; don’t pass it to ExecutableTarget.__init__().
+      super().__init__(mk, '')
+
+      # Clear the name.
       self._m_sName = None
+      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', 'unittest', '' + sName + '')
 
 
    def get_exec_environ(self):
@@ -748,13 +738,6 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
          sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
          dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
-
-
-   def _generate_file_path(self):
-      """See ExecutableTarget._generate_file_path()."""
-
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      return os.path.join(self._m_mk().output_dir, 'bin', 'unittest', '' + self._m_sName + '')
 
 
 
@@ -781,10 +764,13 @@ class ExecutableUnitTestExecTarget(UnitTestTarget):
       """See UnitTestTarget.__init__(). Also instantiates the related ExecutableUnitTestBuildTarget.
       """
 
-      self._m_eutbt = ExecutableUnitTestBuildTarget(mk, sName)
       super().__init__(mk, sName)
-      # Add the build target as a dependency. Note that we don’t invoke our overridden method.
-      super().add_dependency(self._m_eutbt)
+      # Add the build target as a dependency.
+      eutbt = ExecutableUnitTestBuildTarget(mk, sName)
+      self._m_eutbt = eutbt
+      mk.add_target(eutbt)
+      # Note that we don’t invoke our overridden method.
+      super().add_dependency(eutbt)
 
 
    def add_dependency(self, dep):

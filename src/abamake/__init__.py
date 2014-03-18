@@ -132,8 +132,8 @@ class Make(object):
       self._m_dictTargets = {}
 
 
-   def _add_target(self, tgt):
-      """Adds a target to the relevant dictionaries.
+   def add_target(self, tgt):
+      """Adds a target to the applicable dictionaries, making sure no duplicates are added.
 
       make.target.Target tgt
          Target to add.
@@ -287,6 +287,7 @@ class Make(object):
          clsTarget = target.Target.select_subclass(eltTarget)
          # Instantiate the Target-derived class, assigning it its name.
          tgt = clsTarget(self, sName)
+         self.add_target(tgt)
          listNodesAndTargets.append((tgt, eltTarget))
 
       # Now that all the targets have been instantiated, we can have them parse their definitions.
