@@ -252,6 +252,26 @@ class ExternalPipedCommandJob(ExternalCommandJob):
       self._m_sStdOut += self._m_popen.stdout.read()
 
 
+   def get_stderr(self):
+      """Returns the job process’ stderr.
+
+      str return
+         Error output.
+      """
+
+      return self._m_sStdErr
+
+
+   def get_stdout(self):
+      """Returns the job process’ stdout.
+
+      str return
+         Output.
+      """
+
+      return self._m_sStdOut
+
+
    def start(self):
       """See ExternalCommandJob.start()."""
 
