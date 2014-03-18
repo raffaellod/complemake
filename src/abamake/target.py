@@ -624,18 +624,33 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       if len(depComparands) != 2:
          raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
+      return make.job.NoopJob(
+         0, ('CMP', self._m_sName),
+         '[internal:compare] {} {}'.format(depComparands[0].file_path, depComparands[1].file_path)
+      )
+
+
+   def build_complete(self, job, iRet, bIgnoreErrors):
+      """See UnitTestTarget.build_complete()."""
+
+      if iRet != 0 and not bIgnoreErrors:
+         return iRet
+
+      # Pick (again) the two dependencies to compare.
+      depComparands = []
+      for dep in self._m_listDependencies:
+         if isinstance(dep, (ProcessedSourceTarget, ForeignDependency)):
+            depComparands.append(dep)
+
       # Compare the targets.
-      # TODO: do the reads and comparison asynchronously, via ComparisonJob?
       sDepFilePath1 = depComparands[0].file_path
       sDepFilePath2 = depComparands[1].file_path
       sDep1 = self._read_file(sDepFilePath1)
       sDep2 = self._read_file(sDepFilePath2)
-      bEqual = (sDep1 == sDep2)
-
-      return make.job.NoopJob(
-         0 if bEqual else 1, ('CMP', self._m_sName),
-         '[internal:compare] {} {}'.format(sDepFilePath1, sDepFilePath2)
-      )
+      if sDep1 == sDep2:
+         return 0
+      else:
+         return 1
 
 
    def is_build_needed(self):
