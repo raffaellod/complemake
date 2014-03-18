@@ -172,6 +172,8 @@ class Target(Dependency):
          Return value of the job’s execution. If job is None, this will be 0 (success).
       bool bIgnoreErrors
          If True, the job should be considered successfully completed even if iRet != 0.
+      int return
+         New return value. Used to report errors in the output of the build job.
       """
 
       if iRet == 0 or bIgnoreErrors:
@@ -182,6 +184,7 @@ class Target(Dependency):
          # If the job really completed successfully, update the target snapshot.
          if iRet == 0 and job is not None:
             self._m_mk().metadata.update_target_snapshot(self)
+      return iRet
 
 
    def get_dependencies(self):

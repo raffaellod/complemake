@@ -413,7 +413,8 @@ class JobController(object):
                   # tell the difference.
                   if self._m_bDryRun or isinstance(job, SkippedBuildJob):
                      job = None
-                  tgt.build_complete(job, iRet, self._m_bIgnoreErrors)
+                  # Target.build_complete() can change a success into a failure.
+                  iRet = tgt.build_complete(job, iRet, self._m_bIgnoreErrors)
 
                   # Keep track of completed/failed jobs.
                   cCompletedJobs += 1
