@@ -273,7 +273,7 @@ class Target(Dependency):
 
 
    def parse_makefile_child(self, elt):
-      """Validates and processes the specified child element of the target’s <target> element.
+      """Validates and processes the specified child element of the target’s XML element.
 
       xml.dom.Element elt
          Element to parse.
@@ -285,10 +285,29 @@ class Target(Dependency):
       return False
 
 
+   def remove_dependency(self, dep):
+      """Removes a target dependency.
+
+      make.target.Dependency dep
+         Dependency.
+      """
+
+      self._m_listDependencies.remove(dep)
+      # If the dependency is a target built by the same makefile, remove the reverse dependency link
+      # (dependent) and decrement the block count for this target.
+      if isinstance(dep, Target):
+         # Can’t just use dep._m_listDependents.remove(self) because the list contains weak
+         # references, so self would not be found.
+         for i, depRev in enumerate(dep._m_listDependents):
+            if depRev() is self:
+               del dep._m_listDependents[i]
+         self._m_cBuildBlocks -= 1
+
+
    @classmethod
    def select_subclass(cls, eltTarget):
-      """Returns the Target-derived class that should be instantiated to model the specified
-      <target> element.
+      """Returns the Target-derived class that should be instantiated to model the specified XML
+      element.
 
       xml.dom.Element eltTarget
          Element to parse.
@@ -298,9 +317,7 @@ class Target(Dependency):
 
       sType = eltTarget.nodeName
       if sType == 'unittest':
-         # In order to know which UnitTestTarget-derived class to instantiate, we have to look-ahead
-         # into the <target> element.
-         cls = UnitTestTarget.select_subclass(eltTarget)
+         cls = UnitTestTarget
       elif sType == 'exe':
          cls = ExecutableTarget
       elif sType == 'dynlib':
@@ -570,93 +587,44 @@ class DynLibTarget(ExecutableTarget):
 # UnitTestTarget
 
 class UnitTestTarget(Target):
-   """Generic unit test target."""
+   """Target that executes a unit test."""
 
-   def parse_makefile_child(self, elt):
-      """See Target.parse_makefile_child()."""
+   # Filter (regex) to apply to the comparison operands.
+   _m_reFilter = None
+   # UnitTestBuildTarget instance that builds the unit test executable invoked as part of this
+   # target.
+   _m_tgtUnitTestBuild = None
 
-      if elt.nodeName == 'unittest':
-         raise SyntaxError('<unittest> not allowed in <target type="unittest">')
-      return super().parse_makefile_child(elt)
 
-
-   @classmethod
-   def select_subclass(cls, eltTarget):
-      """Returns the UnitTestTarget-derived class that should be instantiated to model the specified
-      <target> element. Logically similar to Target.select_subclass(), but not an override.
-
-      xml.dom.Element eltTarget
-         Element to parse.
-      type return
-         Model class for eltTarget.
+   def add_dependency(self, dep):
+      """See Target.add_dependency(). Overridden to reroute dependencies to the build target, if
+      any.
       """
 
-      cls = None
-      sName = eltTarget.getAttribute('name')
-      for ndChild in eltTarget.childNodes:
-         if ndChild.nodeType != ndChild.ELEMENT_NODE:
-            continue
-         # Determine what class should be instantiated according to the current node (ndChild).
-         clsCurr = None
-         if ndChild.nodeName == 'source':
-            if ndChild.hasAttribute('tool'):
-               # A <target> with a <source> with tool="…" override is not going to generate an
-               # executable.
-               clsCurr = ComparisonUnitTestTarget
-            else:
-               # A <target> with <source> (default tool) will generate an executable.
-               clsCurr = ExecutableUnitTestExecTarget
-         elif ndChild.nodeName == 'dynlib' or ndChild.nodeName == 'script':
-            # Linking to dynamic libraries or using execution scripts is a prerogative of executable
-            # unit tests only.
-            clsCurr = ExecutableUnitTestExecTarget
-         if clsCurr:
-            # If we already picked cls, make sure it was the same as clsCurr.
-            if cls and cls is not clsCurr:
-               raise SyntaxError(
-                  'unit test target “{}” specifies conflicting execution modes'.format(sName)
-               )
-            cls = clsCurr
-      if cls is None:
-         raise SyntaxError('invalid empty unit test target “{}” element'.format(sName))
-      return cls
-
-
-
-####################################################################################################
-# ComparisonUnitTestTarget
-
-class ComparisonUnitTestTarget(UnitTestTarget):
-   """Unit test target that compares the output of a tool (e.g. C preprocessor) against a file with
-   the expected output.
-   """
-
-   # Filter (regex) to apply to the comparands.
-   _m_reFilter = None
+      if self._m_tgtUnitTestBuild:
+         # Forward the dependency to the build target.
+         self._m_tgtUnitTestBuild.add_dependency(dep)
+      else:
+         # Our dependency.
+         super().add_dependency(dep)
 
 
    def build(self):
-      """See Target.build(). In addition to building the unit test, it also schedules its execution.
-      """
+      """See Target.build(). It executes the unit test built by the build target, if any."""
 
       # Collect dependencies according to their type.
-      tgtBuiltUnitTest = None
       depExecScript = None
-      cComparands = 0
+      cStaticComparands = 0
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            cComparands += 1
-         elif isinstance(dep, ExecutableUnitTestBuildTarget):
-            # The output of this target will be one of the two comparands.
-            tgtBuiltUnitTest = dep
-            cComparands += 1
+            cStaticComparands += 1
+         elif isinstance(dep, UnitTestBuildTarget):
+            # The output of tgtUnitTestBuild will be one of the two comparison operands.
+            assert dep is self._m_tgtUnitTestBuild
          elif isinstance(dep, UnitTestExecScriptDependency):
             depExecScript = dep
-      # Either there’s no comparison to be made, or we have two comparands.
-      if cComparands != 0 and cComparands != 2:
-         raise Exception('target {} can only compare two files/outputs'.format(self._m_sName))
 
-      if tgtBuiltUnitTest:
+      if self._m_tgtUnitTestBuild:
          # One of the dependencies is a unit test to execute: prepare its command line.
          if depExecScript:
             # We also have a “script” to drive the unit test.
@@ -664,26 +632,32 @@ class ComparisonUnitTestTarget(UnitTestTarget):
             # TODO: support more arguments, once they’re recognized by parse_makefile_child().
          else:
             listArgs = []
-         listArgs.append(tgtBuiltUnitTest.file_path)
+         listArgs.append(self._m_tgtUnitTestBuild.file_path)
 
-         if cComparands:
-            # The unit test generates one of the comparands: execute it with a n output-capturing
-            # job; we’ll then compare its output in build_complete().
+         if cStaticComparands > 1:
+            raise Exception(
+               '{}: can’t compare the unit test output against more than one file'.format(self)
+            )
+         if cStaticComparands:
+            # We’ll need to compare the output of the unit test, so execute it with an output-
+            # capturing job; we’ll then compare its output in build_complete().
             clsJob = make.job.ExternalPipedCommandJob
          else:
             # No need to capture the output, just use an execution job.
             clsJob = make.job.ExternalCommandJob
          return clsJob(('TEST', self._m_sName), {
             'args': listArgs,
-            'env' : tgtBuiltUnitTest.get_exec_environ(),
+            'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
          })
       else:
+         if cStaticComparands != 2:
+            raise Exception('{}: need exactly two files/outputs to compare'.format(self))
          # No unit test to execute; we’ll compare the two pre-built files in build_complete().
          return None
 
 
    def build_complete(self, job, iRet, bIgnoreErrors):
-      """See UnitTestTarget.build_complete()."""
+      """See Target.build_complete()."""
 
       iRet = super().build_complete(job, iRet, bIgnoreErrors)
       if iRet != 0 and not bIgnoreErrors:
@@ -695,18 +669,21 @@ class ComparisonUnitTestTarget(UnitTestTarget):
       listComparands = []
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            # Add as comparand the contents of this dependency file.
+            # Add as comparison operand the contents of this dependency file.
             listCmpNames.append(dep.file_path)
             with open(dep.file_path, 'r') as fileComparand:
-               listComparands.append(self._transform_comparand(fileComparand.read()))
-         elif isinstance(dep, ExecutableUnitTestBuildTarget):
-            # Add as comparand the output of the job that just completed.
-            listCmpNames.append('stdout({})'.format(dep.file_path))
-            listComparands.append(self._transform_comparand(job.get_stdout()))
+               listComparands.append(self._transform_comparison_operand(fileComparand.read()))
 
       if listComparands:
+         if self._m_tgtUnitTestBuild:
+            # We have a build target and at least another comparison operand, so the job that just
+            # completed must be of type ExternalPipedCommandJob, and we’ll add its output as
+            # comparison operand.
+            listCmpNames.append('stdout({})'.format(self._m_tgtUnitTestBuild.file_path))
+            listComparands.append(self._transform_comparison_operand(job.get_stdout()))
+
          assert len(listComparands) == 2, \
-            'ComparisonUnitTestTarget.build() did not correctly validate the count of comparands'
+            'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
          log = self._m_mk().log
          if log.verbosity >= log.LOW:
@@ -724,7 +701,7 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
 
    def is_build_needed(self):
-      """See UnitTestTarget.is_build_needed()."""
+      """See Target.is_build_needed()."""
 
       # TODO: decide whether to make unit test execution incremental like everything else; support
       # is already there via MetadataStore.
@@ -732,26 +709,33 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
 
    def parse_makefile_child(self, elt):
-      """See UnitTestTarget.parse_makefile_child()."""
+      """See Target.parse_makefile_child()."""
 
       mk = self._m_mk()
-      if elt.nodeName == 'source':
-         # Pick the correct target class based on the file name extension and the tool to use.
+      if elt.nodeName == 'unittest':
+         raise SyntaxError('<unittest> not allowed in <unittest>')
+      elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
+         # Due to specifying a non-default tool, this <source> does not generate an object file or
+         # an executable.
          sFilePath = elt.getAttribute('path')
          sTool = elt.getAttribute('tool')
+         # Pick the correct target class based on the file name extension and the tool to use.
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             if sTool == 'preproc':
                clsObjTarget = CxxPreprocessedTarget
             else:
                raise Exception('unknown tool “{}” for source file “{}”'.format(sTool, sFilePath))
          else:
-            raise Exception('unsupported source file type')
+            raise Exception('unsupported source file type: “{}”'.format(sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath)
          mk.add_target(tgtObj)
-         self.add_dependency(tgtObj)
+         # Note that we don’t invoke our add_dependency() override.
+         super().add_dependency(tgtObj)
       elif elt.nodeName == 'expected-output':
-         self.add_dependency(OutputRerefenceDependency(elt.getAttribute('path')))
+         dep = OutputRerefenceDependency(elt.getAttribute('path'))
+         # Note that we don’t invoke our add_dependency() override.
+         super().add_dependency(dep)
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
@@ -759,15 +743,55 @@ class ComparisonUnitTestTarget(UnitTestTarget):
          else:
             raise Exception('unsupported output transformation')
       elif elt.nodeName == 'script':
-         self.add_dependency(UnitTestExecScriptDependency(elt.getAttribute('path')))
+         dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-      else:
-         return super().parse_makefile_child(elt)
+         # Note that we don’t invoke our add_dependency() override.
+         super().add_dependency(dep)
+      elif not super().parse_makefile_child(elt):
+         # This child element may indicate that this target requires a separate build target to
+         # create the unit test executable.
+         #
+         # If we still don’t have an associated build target, instantiate one and transfer to it all
+         # the dependencies of any type not added by this method override, then allow it to process
+         # this child element.
+         # If the build target doesn’t know what to do with it, we’ll forward its False return
+         # value, which means that ABC Make will terminate and the erroneous creation of a build
+         # target won’t have any ill effect.
+         # If the build target can handle it, then self will have correctly changed into a build +
+         # run pair with its build target.
+         tgtUnitTestBuild = self._m_tgtUnitTestBuild
+         if not tgtUnitTestBuild:
+            # Create the build target.
+            tgtUnitTestBuild = UnitTestBuildTarget(mk, self._m_sName)
+            mk.add_target(tgtUnitTestBuild)
+
+            # Transfer any dependencies we don’t handle.
+            i = 0
+            listDeps = self._m_listDependencies
+            while i < len(listDeps):
+               dep = listDeps[i]
+               if isinstance(dep, (
+                  CxxPreprocessedTarget, OutputRerefenceDependency, UnitTestExecScriptDependency,
+               )):
+                  # Keep this dependency and move on to the next one.
+                  i += 1
+               else:
+                  # Transfer this dependency to the build target.
+                  tgtUnitTestBuild.add_dependency(dep)
+                  self.remove_dependency(dep)
+
+            # Add the build target as a dependency.
+            # Note that we don’t invoke our add_dependency() override.
+            super().add_dependency(tgtUnitTestBuild)
+            self._m_tgtUnitTestBuild = tgtUnitTestBuild
+
+         # Let the build target decide whether this child element is valid or not.
+         return tgtUnitTestBuild.parse_makefile_child(elt)
       return True
 
 
-   def _transform_comparand(self, s):
+   def _transform_comparison_operand(self, s):
       """Transforms a string according to any <output-transform> rules specified in the makefile,
       and returns the result.
 
@@ -786,13 +810,11 @@ class ComparisonUnitTestTarget(UnitTestTarget):
 
 
 ####################################################################################################
-# ExecutableUnitTestBuildTarget
+# UnitTestBuildTarget
 
-class ExecutableUnitTestBuildTarget(ExecutableTarget):
+class UnitTestBuildTarget(ExecutableTarget):
    """Builds an executable unit test. The output file will be placed in a bin/unittest/ directory
    relative to the output base directory.
-
-   One instance of this class is created for every instance of ExecutableUnitTestExecTarget.
    """
 
    def __init__(self, mk, sName = None):
@@ -827,85 +849,4 @@ class ExecutableUnitTestBuildTarget(ExecutableTarget):
          sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
          dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
-
-
-
-####################################################################################################
-# ExecutableUnitTestExecTarget
-
-class ExecutableUnitTestExecTarget(UnitTestTarget):
-   """Executes an executable unit test.
-
-   Instantiating this class generates two targets: the first one is a ExecutableUnitTestBuildTarget,
-   and takes care of building the unit test’s executable; the second one is of this type, and is
-   only needed to run the unit test. The target name is taken by the latter; the former is only
-   assigned the path to the file it generates.
-   """
-
-   # ExecutableUnitTestBuildTarget instance that builds the unit test executable invoked by building
-   # this object.
-   _m_eutbt = None
-   # Path to the script file that will be invoked to execute the unit test.
-   _m_sScriptFilePath = None
-
-
-   def __init__(self, mk, sName = None):
-      """See UnitTestTarget.__init__(). Also instantiates the related ExecutableUnitTestBuildTarget.
-      """
-
-      super().__init__(mk, sName)
-
-      # Add the build target as a dependency.
-      eutbt = ExecutableUnitTestBuildTarget(mk, sName)
-      self._m_eutbt = eutbt
-      mk.add_target(eutbt)
-      # Note that we don’t invoke our overridden method.
-      super().add_dependency(eutbt)
-
-
-   def add_dependency(self, dep):
-      """See UnitTestTarget.add_dependency(). Overridden to add the dependency to the build target
-      instead of this one; this target should only depend on the unit test build target.
-      """
-
-      self._m_eutbt.add_dependency(dep)
-
-
-   def build(self):
-      """See UnitTestTarget.build()."""
-
-      # Build the command line to invoke.
-      if self._m_sScriptFilePath:
-         listArgs = [self._m_sScriptFilePath]
-      else:
-         listArgs = []
-      listArgs.append(self._m_eutbt.file_path)
-
-      return make.job.ExternalCommandJob(('TEST', self._m_sName), {
-         'args': listArgs,
-         'env' : self._m_eutbt.get_exec_environ(),
-      })
-
-
-   def is_build_needed(self):
-      """See Target.is_build_needed()."""
-
-      # TODO: make unit test execution incremental like everything else by storing something in the
-      # metadata store.
-      return True
-
-
-   def parse_makefile_child(self, elt):
-      """See UnitTestTarget.parse_makefile_child()."""
-
-      if elt.nodeName == 'script':
-         self._m_sScriptFilePath = elt.getAttribute('path')
-         # Note that we don’t invoke our overridden method.
-         super().add_dependency(UnitTestExecScriptDependency(self._m_sScriptFilePath))
-         # TODO: support <script name="…"> to refer to a program built by the same makefile.
-         # TODO: support more attributes, such as command-line args for the script.
-      elif not super().parse_makefile_child(elt):
-         # Non-unit test-specific elements are probably for the build target to process.
-         return self._m_eutbt.parse_makefile_child(elt)
-      return True
 
