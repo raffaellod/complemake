@@ -725,10 +725,16 @@ class UnitTestTarget(Target):
                'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
             log = self._m_mk().log
-            if log.verbosity >= log.LOW:
-               log(log.LOW, '[internal:compare] {} {}\n', *listCmpNames)
+            if self._m_bBinaryCompare:
+               sCmpV = 'internal:binary-compare'
+               sCmpQ = 'CMPBIN'
             else:
-               log(log.QUIET, '{:^8} {} <=> {}\n', 'CMP', *listCmpNames)
+               sCmpV = 'internal:text-compare'
+               sCmpQ = 'CMPTXT'
+            if log.verbosity >= log.LOW:
+               log(log.LOW, '[{}] {} {}\n', sCmpV, *listCmpNames)
+            else:
+               log(log.QUIET, '{:^8} {} <=> {}\n', sCmpQ, *listCmpNames)
 
             # Compare the targets.
             if listCmpOperands[0] == listCmpOperands[1]:
@@ -795,7 +801,6 @@ class UnitTestTarget(Target):
                raise Exception(
                   '{}: conflicting comparison modes specified for different operands'.format(self)
                )
-
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
