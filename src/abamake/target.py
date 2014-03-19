@@ -621,6 +621,9 @@ class DynLibTarget(ExecutableTarget):
 class UnitTestTarget(Target):
    """Target that executes a unit test."""
 
+   # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
+   # treated as strings.
+   _m_bBinaryCompare = None
    # Filter (regex) to apply to the comparison operands.
    _m_reFilter = None
    # UnitTestBuildTarget instance that builds the unit test executable invoked as part of this
@@ -680,7 +683,7 @@ class UnitTestTarget(Target):
          return clsJob(('TEST', self._m_sName), {
             'args'              : listArgs,
             'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
-            'universal_newlines': True,
+            'universal_newlines': not self._m_bBinaryCompare,
          })
       else:
          if cStaticComparands != 2:
@@ -697,23 +700,28 @@ class UnitTestTarget(Target):
          # Extract and transform the contents of the two dependencies to compare, and generate a
          # display name for them.
          listCmpNames = []
-         listComparands = []
+         listCmpOperands = []
+         if self._m_bBinaryCompare:
+            sFileMode = 'b'
+         else:
+            sFileMode = ''
          for dep in self._m_listDependencies:
             if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
                # Add as comparison operand the contents of this dependency file.
                listCmpNames.append(dep.file_path)
-               with open(dep.file_path, 'r') as fileComparand:
-                  listComparands.append(self._transform_comparison_operand(fileComparand.read()))
+               with open(dep.file_path, 'r' + sFileMode) as fileComparand:
+                  listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
 
-         if listComparands:
+         if listCmpOperands:
             if self._m_tgtUnitTestBuild:
                # We have a build target and at least another comparison operand, so the job that
                # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
                # comparison operand.
-               listCmpNames.append('stdout({})'.format(self._m_tgtUnitTestBuild.file_path))
-               listComparands.append(self._transform_comparison_operand(job.get_stdout()))
+               sUnitTestStdOutFilePath = self._m_tgtUnitTestBuild.file_path + '.stdout'
+               listCmpNames.append(sUnitTestStdOutFilePath)
+               listCmpOperands.append(self._transform_comparison_operand(job.get_stdout()))
 
-            assert len(listComparands) == 2, \
+            assert len(listCmpOperands) == 2, \
                'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
             log = self._m_mk().log
@@ -723,10 +731,15 @@ class UnitTestTarget(Target):
                log(log.QUIET, '{:^8} {} <=> {}\n', 'CMP', *listCmpNames)
 
             # Compare the targets.
-            if listComparands[0] == listComparands[1]:
+            if listCmpOperands[0] == listCmpOperands[1]:
                iRet = 0
             else:
                iRet = 1
+               # The comparison failed; if we have a build target, save its output to a file to help
+               # diagnosing the problem.
+               if self._m_tgtUnitTestBuild:
+                  with open(sUnitTestStdOutFilePath, 'w' + sFileMode) as fileStdOut:
+                     fileStdOut.write(job.get_stdout())
       return iRet
 
 
@@ -768,6 +781,21 @@ class UnitTestTarget(Target):
          dep = OutputRerefenceDependency(elt.getAttribute('path'))
          # Note that we don’t invoke our add_dependency() override.
          super().add_dependency(dep)
+         sMode = elt.getAttribute('mode')
+         if sMode:
+            if sMode == 'binary':
+               bBinaryCompare = True
+            elif sMode == 'text':
+               bBinaryCompare = False
+            else:
+               raise SyntaxError('{}: invalid comparison mode for {}: {}'.format(self, dep, sMode))
+            if self._m_bBinaryCompare is None:
+               self._m_bBinaryCompare = bBinaryCompare
+            elif self._m_bBinaryCompare != bBinaryCompare:
+               raise Exception(
+                  '{}: conflicting comparison modes specified for different operands'.format(self)
+               )
+
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
@@ -836,7 +864,11 @@ class UnitTestTarget(Target):
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply transformations.
       if self._m_reFilter:
-         s = '\n'.join(self._m_reFilter.findall(s))
+         if self._m_bBinaryCompare:
+            oJoiner = b'\n'
+         else:
+            oJoiner = '\n'
+         s = oJoiner.join(self._m_reFilter.findall(s))
 
       return s
 

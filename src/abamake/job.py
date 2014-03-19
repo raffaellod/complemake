@@ -270,7 +270,7 @@ class ExternalPipedCommandJob(ExternalCommandJob):
    def get_stderr(self):
       """Returns the job process’ stderr.
 
-      str return
+      object return
          Error output.
       """
 
@@ -280,7 +280,7 @@ class ExternalPipedCommandJob(ExternalCommandJob):
    def get_stdout(self):
       """Returns the job process’ stdout.
 
-      str return
+      object return
          Output.
       """
 
