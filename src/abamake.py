@@ -121,6 +121,8 @@ def _main(iterArgs):
    # Load the makefile.
    mk.parse(sMakefilePath)
 
+#   mk.print_target_graphs()
+
    # If there are more argument, they will be treated as target named, indicating that only a subset
    # of the targets should be built; otherwise all named targets will be built.
    if iArg < iArgEnd:

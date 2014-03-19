@@ -304,16 +304,22 @@ class Make(object):
                raise SyntaxError('unexpected element: <{}>'.format(nd.nodeName))
 
 
-   def print_targets_graph(self):
-      """Prints to stdout a graph of target dependencies."""
+   def print_target_graphs(self):
+      """Prints to stdout a graph with all the targets’ dependencies and one with their reverse
+      dependencies.
+      """
 
-      # TODO: rewrite so that it does what it’s supposed to.
+      print('Dependencies')
+      print('------------')
+      for tgt in self._m_dictNamedTargets.values():
+         print(str(tgt))
+         tgt.dump_dependencies('  ')
+      print('')
 
-      # Targets explicitly declared in the parsed makefile (name -> target).
-      for sName, tgt in self._m_dictNamedTargets.items():
-         print('Target “{}” {}'.format(sName, tgt.file_path))
-      # All targets specified by the parsed makefile (file path -> Target), including implicit and
-      # intermediate targets not explicitly declared with a named target element.
-      for sFilePath, tgt in self._m_dictTargets.items():
-         print('Target {}'.format(tgt.file_path))
+      print('Reverse dependencies')
+      print('--------------------')
+      for tgt in self._m_dictNamedTargets.values():
+         print(str(tgt))
+         tgt.dump_dependents('  ')
+      print('')
 

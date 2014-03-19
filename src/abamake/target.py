@@ -221,6 +221,25 @@ class Target(Dependency):
          yield dep
 
 
+   def dump_dependencies(self, sIndent = ''):
+      """TODO: comment."""
+
+      for dep in self._m_listDependencies:
+         print(sIndent + str(dep))
+         if isinstance(dep, Target):
+            dep.dump_dependencies(sIndent + '  ')
+
+
+   def dump_dependents(self, sIndent = ''):
+      """TODO: comment."""
+
+      for wdep in self._m_listDependents:
+         dep = wdep()
+         print(sIndent + str(dep))
+         if isinstance(dep, Target):
+            dep.dump_dependents(sIndent + '  ')
+
+
    def get_dependents(self):
       """Iterates over the targets (make.target.Target instances) dependent on this target.
 
