@@ -217,13 +217,13 @@ class ExternalPipedCommandJob(ExternalCommandJob):
    """
 
    __slots__ = (
-      # Collects the job process’ standard error output.
-      '_m_sStdErr',
+      # Collects the job process’ standard error output. Can be bytes or str.
+      '_m_oStdErr',
       # Collects the job process’ standard output.
-      '_m_sStdOut',
-      # Thread that reads from the job process’ stderr into _m_sStdErr.
+      '_m_oStdOut',
+      # Thread that reads from the job process’ stderr into _m_oStdErr.
       '_m_thrReadErr',
-      # Thread that reads from the job process’ stdout into _m_sStdOut.
+      # Thread that reads from the job process’ stdout into _m_oStdOut.
       '_m_thrReadOut',
    )
 
@@ -233,8 +233,10 @@ class ExternalPipedCommandJob(ExternalCommandJob):
 
       super().__init__(iterQuietCmd, dictPopenArgs)
 
-      self._m_sStdErr = None
-      self._m_sStdOut = None
+      self._m_dictPopenArgs['stdout'] = subprocess.PIPE
+
+      self._m_oStdErr = None
+      self._m_oStdOut = None
       self._m_thrReadErr = None
       self._m_thrReadOut = None
 
@@ -248,8 +250,7 @@ class ExternalPipedCommandJob(ExternalCommandJob):
          # The process terminated, so wait for the I/O threads to do the same.
          if self._m_thrReadErr:
             self._m_thrReadErr.join()
-         if self._m_thrReadOut:
-            self._m_thrReadOut.join()
+         self._m_thrReadOut.join()
 
       return iRet
 
@@ -257,13 +258,13 @@ class ExternalPipedCommandJob(ExternalCommandJob):
    def _read_stderr(self):
       """Reads from the job process’ stderr."""
 
-      self._m_sStdErr += self._m_popen.stderr.read()
+      self._m_oStdErr += self._m_popen.stderr.read()
 
 
    def _read_stdout(self):
       """Reads from the job process’ stdout."""
 
-      self._m_sStdOut += self._m_popen.stdout.read()
+      self._m_oStdOut += self._m_popen.stdout.read()
 
 
    def get_stderr(self):
@@ -273,7 +274,7 @@ class ExternalPipedCommandJob(ExternalCommandJob):
          Error output.
       """
 
-      return self._m_sStdErr
+      return self._m_oStdErr
 
 
    def get_stdout(self):
@@ -283,7 +284,7 @@ class ExternalPipedCommandJob(ExternalCommandJob):
          Output.
       """
 
-      return self._m_sStdOut
+      return self._m_oStdOut
 
 
    def start(self):
@@ -292,14 +293,17 @@ class ExternalPipedCommandJob(ExternalCommandJob):
       super().start()
 
       # Prepare the read buffers and start the threads to fill them.
+      if self._m_dictPopenArgs.get('universal_newlines'):
+         self._m_oStdErr = ''
+         self._m_oStdOut = ''
+      else:
+         self._m_oStdErr = b''
+         self._m_oStdOut = b''
       if self._m_dictPopenArgs.get('stderr') is subprocess.PIPE:
-         self._m_sStdErr = ''
          self._m_thrReadErr = threading.Thread(target = self._read_stderr)
          self._m_thrReadErr.start()
-      if self._m_dictPopenArgs.get('stdout') is subprocess.PIPE:
-         self._m_sStdOut = ''
-         self._m_thrReadOut = threading.Thread(target = self._read_stdout)
-         self._m_thrReadOut.start()
+      self._m_thrReadOut = threading.Thread(target = self._read_stdout)
+      self._m_thrReadOut.start()
 
 
 
