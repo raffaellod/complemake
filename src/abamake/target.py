@@ -477,7 +477,7 @@ class ExecutableTarget(Target):
                lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
                bOutputLibPathAdded = True
          else:
-            raise Exception('unclassified linker input: {}'.format(dep.file_path))
+            raise Exception('{}: unclassified linker input: {}'.format(self, dep))
 
       # TODO: add other external dependencies.
 
@@ -515,7 +515,7 @@ class ExecutableTarget(Target):
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             clsObjTarget = CxxObjectTarget
          else:
-            raise Exception('unsupported source file type')
+            raise Exception('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath, self)
          mk.add_target(tgtObj)
@@ -535,7 +535,7 @@ class ExecutableTarget(Target):
          tgtUnitTest = mk.get_target_by_name(sName, None)
          if tgtUnitTest is None:
             raise Exception(
-               'could not find definition of referenced unit test: {}'.format(sName)
+               '{}: could not find definition of referenced unit test: {}'.format(self, sName)
             )
          tgtUnitTest.add_dependency(self)
       else:
@@ -724,9 +724,11 @@ class UnitTestTarget(Target):
             if sTool == 'preproc':
                clsObjTarget = CxxPreprocessedTarget
             else:
-               raise Exception('unknown tool “{}” for source file “{}”'.format(sTool, sFilePath))
+               raise Exception(
+                  '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
+               )
          else:
-            raise Exception('unsupported source file type: “{}”'.format(sFilePath))
+            raise Exception('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath)
          mk.add_target(tgtObj)
@@ -741,7 +743,7 @@ class UnitTestTarget(Target):
          if sFilter:
             self._m_reFilter = re.compile('ABCMK_CMP_BEGIN.*?ABCMK_CMP_END', re.DOTALL)
          else:
-            raise Exception('unsupported output transformation')
+            raise Exception('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
          dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
