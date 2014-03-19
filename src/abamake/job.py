@@ -319,8 +319,6 @@ class JobController(object):
    _m_bDryRun = False
    # See JobController.force_build.
    _m_bForceBuild = False
-   # See JobController.ignore_errors.
-   _m_bIgnoreErrors = False
    # See JobController.keep_going.
    _m_bKeepGoing = False
    # Weak reference to the owning make.Make instance.
@@ -427,9 +425,6 @@ class JobController(object):
       operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
       only performs cleanup for jobs that have already completed, without waiting.
 
-      Returns the count of failed jobs, unless ignore_errors is True, in which case it will always
-      return 0.
-
       int cJobsToComplete
          Count of jobs to wait for.
       int return
@@ -460,11 +455,11 @@ class JobController(object):
                   if self._m_bDryRun or isinstance(job, SkippedBuildJob):
                      job = None
                   # Target.build_complete() can change a success into a failure.
-                  iRet = tgt.build_complete(job, iRet, self._m_bIgnoreErrors)
+                  iRet = tgt.build_complete(job, iRet)
 
                   # Keep track of completed/failed jobs.
                   cCompletedJobs += 1
-                  if iRet != 0 and not self._m_bIgnoreErrors:
+                  if iRet != 0:
                      if self._m_bKeepGoing:
                         # Unschedule any dependent jobs, so we can continue ignoring this failure as
                         # long as we have scheduled jobs that don’t depend on it.
@@ -507,18 +502,6 @@ class JobController(object):
 
    force_build = property(_get_force_build, _set_force_build, doc = """
       If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
-   """)
-
-
-   def _get_ignore_errors(self):
-      return self._m_bIgnoreErrors
-
-   def _set_ignore_errors(self, bIgnoreErrors):
-      self._m_bIgnoreErrors = bIgnoreErrors
-
-   ignore_errors = property(_get_ignore_errors, _set_ignore_errors, doc = """
-      If True, scheduled jobs will continue to be run even after a job they depend on fails. If
-      False, a failed job causes execution to stop according to the value of keep_going.
    """)
 
 

@@ -51,8 +51,6 @@ def _main(iterArgs):
             mk.job_controller.dry_run = True
          elif sArg == '--force-build':
             mk.job_controller.force_build = True
-         elif sArg == '--ignore-errors':
-            mk.job_controller.ignore_errors = True
          elif sArg.startswith('--jobs'):
             if sArg[len('--jobs')] == '=':
                cJobs = int(sArg[len('--jobs') + 1:])
@@ -70,8 +68,6 @@ def _main(iterArgs):
             sArgChar = sArg[ich]
             if sArgChar == 'f':
                mk.job_controller.force_build = True
-            elif sArgChar == 'i':
-               mk.job_controller.ignore_errors = True
             elif sArgChar == 'j':
                # TODO: make this parsing more generic and more flexible.
                ichNumberLast = ich + 1

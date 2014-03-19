@@ -185,7 +185,7 @@ class Target(Dependency):
       raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
 
 
-   def build_complete(self, job, iRet, bIgnoreErrors):
+   def build_complete(self, job, iRet):
       """Invoked by the JobController when the job executed to build this target completes, either
       in success or in failure.
 
@@ -193,19 +193,17 @@ class Target(Dependency):
          Job instance, or None if the job was not started (due to e.g. “dry run” mode).
       int iRet
          Return value of the job’s execution. If job is None, this will be 0 (success).
-      bool bIgnoreErrors
-         If True, the job should be considered successfully completed even if iRet != 0.
       int return
          New return value. Used to report errors in the output of the build job.
       """
 
-      if iRet == 0 or bIgnoreErrors:
+      if iRet == 0:
          # Release all dependent targets.
          for tgt in self._m_listDependents:
             # These are weak references.
             tgt()._m_cBuildBlocks -= 1
-         # If the job really completed successfully, update the target snapshot.
-         if iRet == 0 and job:
+         # If a job was really run (not None), update the target snapshot.
+         if job:
             self._m_mk().metadata.update_target_snapshot(self)
       return iRet
 
@@ -676,48 +674,45 @@ class UnitTestTarget(Target):
          return None
 
 
-   def build_complete(self, job, iRet, bIgnoreErrors):
+   def build_complete(self, job, iRet):
       """See Target.build_complete()."""
 
-      iRet = super().build_complete(job, iRet, bIgnoreErrors)
-      if iRet != 0 and not bIgnoreErrors:
-         return iRet
+      iRet = super().build_complete(job, iRet)
+      if iRet == 0:
+         # Extract and transform the contents of the two dependencies to compare, and generate a
+         # display name for them.
+         listCmpNames = []
+         listComparands = []
+         for dep in self._m_listDependencies:
+            if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
+               # Add as comparison operand the contents of this dependency file.
+               listCmpNames.append(dep.file_path)
+               with open(dep.file_path, 'r') as fileComparand:
+                  listComparands.append(self._transform_comparison_operand(fileComparand.read()))
 
-      # Extract and transform the contents of the two dependencies to compare, and generate a
-      # display name for them.
-      listCmpNames = []
-      listComparands = []
-      for dep in self._m_listDependencies:
-         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            # Add as comparison operand the contents of this dependency file.
-            listCmpNames.append(dep.file_path)
-            with open(dep.file_path, 'r') as fileComparand:
-               listComparands.append(self._transform_comparison_operand(fileComparand.read()))
+         if listComparands:
+            if self._m_tgtUnitTestBuild:
+               # We have a build target and at least another comparison operand, so the job that
+               # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
+               # comparison operand.
+               listCmpNames.append('stdout({})'.format(self._m_tgtUnitTestBuild.file_path))
+               listComparands.append(self._transform_comparison_operand(job.get_stdout()))
 
-      if listComparands:
-         if self._m_tgtUnitTestBuild:
-            # We have a build target and at least another comparison operand, so the job that just
-            # completed must be of type ExternalPipedCommandJob, and we’ll add its output as
-            # comparison operand.
-            listCmpNames.append('stdout({})'.format(self._m_tgtUnitTestBuild.file_path))
-            listComparands.append(self._transform_comparison_operand(job.get_stdout()))
+            assert len(listComparands) == 2, \
+               'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
-         assert len(listComparands) == 2, \
-            'UnitTestTarget.build() did not correctly validate the count of comparison operands'
+            log = self._m_mk().log
+            if log.verbosity >= log.LOW:
+               log(log.LOW, '[internal:compare] {} {}\n', *listCmpNames)
+            else:
+               log(log.QUIET, '{:^8} {} <=> {}\n', 'CMP', *listCmpNames)
 
-         log = self._m_mk().log
-         if log.verbosity >= log.LOW:
-            log(log.LOW, '[internal:compare] {} {}\n', *listCmpNames)
-         else:
-            log(log.QUIET, '{:^8} {} <=> {}\n', 'CMP', *listCmpNames)
-
-         # Compare the targets.
-         if listComparands[0] == listComparands[1]:
-            return 0
-         else:
-            return 1
-      else:
-         return iRet
+            # Compare the targets.
+            if listComparands[0] == listComparands[1]:
+               iRet = 0
+            else:
+               iRet = 1
+      return iRet
 
 
    def is_build_needed(self):
