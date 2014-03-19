@@ -205,7 +205,7 @@ class Target(Dependency):
             # These are weak references.
             tgt()._m_cBuildBlocks -= 1
          # If the job really completed successfully, update the target snapshot.
-         if iRet == 0 and job is not None:
+         if iRet == 0 and job:
             self._m_mk().metadata.update_target_snapshot(self)
       return iRet
 

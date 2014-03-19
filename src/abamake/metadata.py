@@ -374,11 +374,9 @@ class MetadataStore(object):
       )
       eltRoot = doc.appendChild(doc.createElement('abcmk-metadata'))
 
-      # Combine current and stored target snapshots, and add them to their section.
-      dictTargetSnapshots = self._m_dictStoredTargetSnapshots.copy()
-      dictTargetSnapshots.update(self._m_dictCurrTargetSnapshots)
+      # Add the stored target snapshots to their section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
-      for tss in dictTargetSnapshots.values():
+      for tss in self._m_dictStoredTargetSnapshots.values():
          eltTgtSnaps.appendChild(tss.to_xml(doc))
 
       # Write the document to file.
@@ -389,6 +387,5 @@ class MetadataStore(object):
       # we just wrote to.
       self._m_dictCurrTargetSnapshots = {}
       self._m_dictSignatures = {}
-      self._m_dictStoredTargetSnapshots = dictTargetSnapshots
       self._m_bDirty = False
 
