@@ -130,6 +130,8 @@ class Target(Dependency):
    _m_listDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
+   # Mapping between Target subclasses and XML element names.
+   _smc_dictSubclassElementNames = {}
    # See Target.name.
    _m_sName = None
 
@@ -155,6 +157,22 @@ class Target(Dependency):
 
    def __str__(self):
       return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
+
+
+   class xml_element(object):
+      """Decorator to teach Target.select_subclass() the association of the decorated class with an
+      XML element name.
+
+      str sNodeName
+         Name of the element to associate with the decorated class.
+      """
+
+      def __init__(self, sNodeName):
+         self._m_sNodeName = sNodeName
+
+      def __call__(self, clsDerived):
+         Target._smc_dictSubclassElementNames[self._m_sNodeName] = clsDerived
+         return clsDerived
 
 
    def add_dependency(self, dep):
@@ -332,16 +350,7 @@ class Target(Dependency):
          Model class for eltTarget.
       """
 
-      sType = eltTarget.nodeName
-      if sType == 'unittest':
-         cls = UnitTestTarget
-      elif sType == 'exe':
-         cls = ExecutableTarget
-      elif sType == 'dynlib':
-         cls = DynLibTarget
-      else:
-         raise Exception('unsupported target type <{}>'.format(sType))
-      return cls
+      return cls._smc_dictSubclassElementNames.get(eltTarget.nodeName)
 
 
 
@@ -456,6 +465,7 @@ class CxxObjectTarget(ObjectTarget):
 ####################################################################################################
 # ExecutableTarget
 
+@Target.xml_element('exe')
 class ExecutableTarget(Target):
    """Executable program target. The output file will be placed in a bin/ directory relative to the
    output base directory.
@@ -564,6 +574,7 @@ class ExecutableTarget(Target):
 ####################################################################################################
 # DynLibTarget
 
+@Target.xml_element('dynlib')
 class DynLibTarget(ExecutableTarget):
    """Dynamic library target. The output file will be placed in a lib/ directory relative to the
    output base directory.
@@ -603,6 +614,7 @@ class DynLibTarget(ExecutableTarget):
 ####################################################################################################
 # UnitTestTarget
 
+@Target.xml_element('unittest')
 class UnitTestTarget(Target):
    """Target that executes a unit test."""
 

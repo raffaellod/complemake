@@ -258,6 +258,47 @@ class Make(object):
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
 
 
+   def _parse_collect_targets(self, eltParent, listTargetsAndNodes, bTopLevel = True):
+      """Recursively parses and collects all the targets defined in the specified XML element.
+
+      xml.dom.Element eltParent
+         Parent XML element to parse.
+      list(tuple(make.target.Target, xml.dom.Element)*) listTargetsAndNodes
+         List of parsed targets and their associated XML nodes. This method will add to this list
+         any additional targets parsed.
+      bool bTopLevel
+         If True, this method will raise exceptions in case of non-target XML nodes; otherwise it
+         assumes that a later invocation of Target.parse_makefile_child() will validate the contents
+         of eltParent.
+      """
+
+      for elt in eltParent.childNodes:
+         # Skip whitespace/comment nodes and nodes without children.
+         if not self._is_node_whitespace(elt) and elt.hasChildNodes():
+            if elt.nodeType == elt.ELEMENT_NODE:
+               # Pick a make.target.Target subclass for this target type.
+               clsTarget = target.Target.select_subclass(elt)
+               if clsTarget:
+                  # Every target must have a name attribute.
+                  sName = elt.getAttribute('name')
+                  if not sName:
+                     raise SyntaxError('<{}>: missing “name” attribute'.format(elt.nodeName))
+                  # Instantiate the Target-derived class, assigning it its name.
+                  tgt = clsTarget(self, sName)
+                  self.add_target(tgt)
+                  listTargetsAndNodes.append((tgt, elt))
+                  # Scan for nested target definitions.
+                  self._parse_collect_targets(elt, listTargetsAndNodes, False)
+               elif bTopLevel:
+                  raise SyntaxError(
+                     '<{}>: not a target definition XML element'.format(elt.nodeName)
+                  )
+            elif bTopLevel:
+               raise SyntaxError(
+                  'expected target definition XML element, found: {}'.format(elt.nodeName)
+               )
+
+
    def _parse_doc(self, doc):
       """Parses a DOM representation of an ABC makefile.
 
@@ -267,41 +308,26 @@ class Make(object):
 
       doc.documentElement.normalize()
 
-      # Do a first scan of the top level elements, to find invalid nodes and unrecognized target
-      # types. In the process, we instantiate all the target elements, so
-      # Target.parse_makefile_child() can assign the dependencies even if they don’t appear in the
-      # correct order in the makefile. This also allows to determine on-the-fly whether a referenced
-      # <dynlib> is a target we should build or if we should expect to find it somewhere else.
-      listNodesAndTargets = []
-      for eltTarget in doc.documentElement.childNodes:
-         if self._is_node_whitespace(eltTarget):
-            # Skip whitespace/comment nodes.
-            continue
-         if eltTarget.nodeType != eltTarget.ELEMENT_NODE:
-            raise SyntaxError('expected target, found: {}'.format(eltTarget.nodeName))
-         # Every target must have a name attribute.
-         sName = eltTarget.getAttribute('name')
-         if not sName:
-            raise Exception('missing target name')
-         # Pick a Target-derived class for this target type.
-         clsTarget = target.Target.select_subclass(eltTarget)
-         # Instantiate the Target-derived class, assigning it its name.
-         tgt = clsTarget(self, sName)
-         self.add_target(tgt)
-         listNodesAndTargets.append((tgt, eltTarget))
+      # Do a first scan of the document to instantiate all the defined targets and associated with
+      # their respective XML elements. By instantiating all targets upfront we allow for
+      # Target.parse_makefile_child() to always find a referenced target even it it was defined
+      # after the target on which parse_makefile_child() is called, and to determine on-the-fly
+      # whether a referenced <dynlib> is a target we should build or if we should expect to find it
+      # somewhere else.
+      listTargetsAndNodes = []
+      self._parse_collect_targets(doc.documentElement, listTargetsAndNodes)
 
       # Now that all the targets have been instantiated, we can have them parse their definitions.
-      for tgt, eltTarget in listNodesAndTargets:
+      for tgt, eltTarget in listTargetsAndNodes:
          for nd in eltTarget.childNodes:
-            if self._is_node_whitespace(nd):
-               # Skip whitespace/comment nodes.
-               continue
-            if nd.nodeType != nd.ELEMENT_NODE:
-               raise SyntaxError('expected element node, found: '.format(nd.nodeName))
-            if not tgt.parse_makefile_child(nd):
-               # Target.parse_makefile_child() returns False when it doesn’t know how to handle the
-               # specified element.
-               raise SyntaxError('unexpected element: <{}>'.format(nd.nodeName))
+            # Skip whitespace/comment nodes.
+            if not self._is_node_whitespace(nd):
+               if nd.nodeType != nd.ELEMENT_NODE:
+                  raise SyntaxError('{}: expected XML element, found: {}'.format(tgt, nd.nodeName))
+               if not tgt.parse_makefile_child(nd):
+                  # Target.parse_makefile_child() returns False when it doesn’t know how to handle
+                  # the specified child element.
+                  raise SyntaxError('{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName))
 
 
    def print_target_graphs(self):
