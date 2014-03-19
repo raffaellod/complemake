@@ -431,12 +431,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 class ObjectTarget(ProcessedSourceTarget):
    """Intermediate object target."""
 
-   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
-      """Constructor. See ProcessedSourceTarget.__init__()."""
-
-      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
-
-      self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
+   pass
 
 
 
@@ -445,6 +440,14 @@ class ObjectTarget(ProcessedSourceTarget):
 
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
+
+   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+      """Constructor. See ObjectTarget.__init__()."""
+
+      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
+
+      self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
+
 
    def _get_tool(self):
       """See ObjectTarget._get_tool()."""
