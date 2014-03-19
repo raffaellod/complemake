@@ -557,8 +557,8 @@ class DynLibTarget(ExecutableTarget):
 
       super().__init__(mk, sName)
 
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
-      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
+      # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
+      self._m_sFilePath = os.path.join(mk.output_dir, 'lib', 'lib' + sName + '.so')
 
 
    def configure_compiler(self, tool):
