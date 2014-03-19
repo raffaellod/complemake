@@ -228,16 +228,30 @@ class ExternalPipedCommandJob(ExternalCommandJob):
    )
 
 
+   def __init__(self, iterQuietCmd, dictPopenArgs):
+      """Constructor. See ExternalCommandJob.__init__()."""
+
+      super().__init__(iterQuietCmd, dictPopenArgs)
+
+      self._m_sStdErr = None
+      self._m_sStdOut = None
+      self._m_thrReadErr = None
+      self._m_thrReadOut = None
+
+
    def poll(self):
       """See ExternalCommandJob.poll()."""
 
       iRet = super().poll()
+
       if iRet is not None:
          # The process terminated, so wait for the I/O threads to do the same.
          if self._m_thrReadErr:
             self._m_thrReadErr.join()
          if self._m_thrReadOut:
             self._m_thrReadOut.join()
+
+      return iRet
 
 
    def _read_stderr(self):
@@ -278,11 +292,11 @@ class ExternalPipedCommandJob(ExternalCommandJob):
       super().start()
 
       # Prepare the read buffers and start the threads to fill them.
-      if self._m_dictPopenArgs['stderr'] == subprocess.PIPE:
+      if self._m_dictPopenArgs.get('stderr') is subprocess.PIPE:
          self._m_sStdErr = ''
          self._m_thrReadErr = threading.Thread(target = self._read_stderr)
          self._m_thrReadErr.start()
-      if self._m_dictPopenArgs['stdout'] == subprocess.PIPE:
+      if self._m_dictPopenArgs.get('stdout') is subprocess.PIPE:
          self._m_sStdOut = ''
          self._m_thrReadOut = threading.Thread(target = self._read_stdout)
          self._m_thrReadOut.start()
