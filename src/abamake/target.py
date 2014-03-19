@@ -665,8 +665,9 @@ class UnitTestTarget(Target):
             # No need to capture the output, just use an execution job.
             clsJob = make.job.ExternalCommandJob
          return clsJob(('TEST', self._m_sName), {
-            'args': listArgs,
-            'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
+            'args'              : listArgs,
+            'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
+            'universal_newlines': True,
          })
       else:
          if cStaticComparands != 2:
