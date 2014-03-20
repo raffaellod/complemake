@@ -676,15 +676,17 @@ class UnitTestTarget(Target):
          if cStaticComparands:
             # We’ll need to compare the output of the unit test, so execute it with an output-
             # capturing job; we’ll then compare its output in build_complete().
-            clsJob = make.job.ExternalPipedCommandJob
+            return make.job.PipedExternalCommandJob(('TEST', self._m_sName), {
+               'args'              : listArgs,
+               'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
+               'universal_newlines': not self._m_bBinaryCompare,
+            }, self._m_tgtUnitTestBuild.file_path)
          else:
             # No need to capture the output, just use an execution job.
-            clsJob = make.job.ExternalCommandJob
-         return clsJob(('TEST', self._m_sName), {
-            'args'              : listArgs,
-            'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
-            'universal_newlines': not self._m_bBinaryCompare,
-         })
+            return make.job.ExternalCommandJob(('TEST', self._m_sName), {
+               'args': listArgs,
+               'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
+            })
       else:
          if cStaticComparands != 2:
             raise Exception('{}: need exactly two files/outputs to compare'.format(self))
@@ -717,8 +719,7 @@ class UnitTestTarget(Target):
                # We have a build target and at least another comparison operand, so the job that
                # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
                # comparison operand.
-               sUnitTestStdOutFilePath = self._m_tgtUnitTestBuild.file_path + '.stdout'
-               listCmpNames.append(sUnitTestStdOutFilePath)
+               listCmpNames.append(job.stdout_file_path)
                listCmpOperands.append(self._transform_comparison_operand(job.get_stdout()))
 
             assert len(listCmpOperands) == 2, \
@@ -741,11 +742,6 @@ class UnitTestTarget(Target):
                iRet = 0
             else:
                iRet = 1
-               # The comparison failed; if we have a build target, save its output to a file to help
-               # diagnosing the problem.
-               if self._m_tgtUnitTestBuild:
-                  with open(sUnitTestStdOutFilePath, 'w' + sFileMode) as fileStdOut:
-                     fileStdOut.write(job.get_stdout())
       return iRet
 
 

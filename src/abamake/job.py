@@ -207,38 +207,42 @@ class ExternalCommandJob(Job):
 
 
 ####################################################################################################
-# ExternalPipedCommandJob
+# PipedExternalCommandJob
 
-class ExternalPipedCommandJob(ExternalCommandJob):
-   """Same as ExternalCommandJob, but supports piping input and/or output.
+class PipedExternalCommandJob(ExternalCommandJob):
+   """Same as ExternalCommandJob, but captures stdout and stderr of the process to files and allows
+   to analyze them when the job completes.
 
-   Internally, separates thread communicate with the process through the pipes, joining the main
-   thread and making the output available when the process terminates.
+   Internally, separate threads communicate with the process through the pipes, joining the main
+   thread when the process terminates.
    """
 
    __slots__ = (
-      # Collects the job process’ standard error output. Can be bytes or str.
-      '_m_oStdErr',
-      # Collects the job process’ standard output.
+      # See PipedExternalCommandJob.stderr_file_path.
+      '_m_sStdErrFilePath',
+      # Collects the job process’ output.
       '_m_oStdOut',
-      # Thread that reads from the job process’ stderr into _m_oStdErr.
+      # See PipedExternalCommandJob.stdout_file_path.
+      '_m_sStdOutFilePath',
+      # Thread that reads from the job process’ stderr into _m_sStdErr.
       '_m_thrReadErr',
       # Thread that reads from the job process’ stdout into _m_oStdOut.
       '_m_thrReadOut',
    )
 
 
-   def __init__(self, iterQuietCmd, dictPopenArgs):
+   def __init__(self, iterQuietCmd, dictPopenArgs, sOutFilePathPrefix):
       """Constructor. See ExternalCommandJob.__init__()."""
 
       super().__init__(iterQuietCmd, dictPopenArgs)
 
+      # Make sure that the process’ output is piped to us.
+      self._m_dictPopenArgs['stderr'] = subprocess.PIPE
       self._m_dictPopenArgs['stdout'] = subprocess.PIPE
 
-      self._m_oStdErr = None
-      self._m_oStdOut = None
-      self._m_thrReadErr = None
-      self._m_thrReadOut = None
+      # Prepare the output file paths.
+      self._m_sStdErrFilePath = sOutFilePathPrefix + '.stderr'
+      self._m_sStdOutFilePath = sOutFilePathPrefix + '.stdout'
 
 
    def poll(self):
@@ -248,33 +252,33 @@ class ExternalPipedCommandJob(ExternalCommandJob):
 
       if iRet is not None:
          # The process terminated, so wait for the I/O threads to do the same.
-         if self._m_thrReadErr:
-            self._m_thrReadErr.join()
+         self._m_thrReadErr.join()
          self._m_thrReadOut.join()
-
       return iRet
 
 
    def _read_stderr(self):
       """Reads from the job process’ stderr."""
 
-      self._m_oStdErr += self._m_popen.stderr.read()
+      with open(self._m_sStdOutFilePath, 'w') as fileStdErr:
+         for sLine in self._m_popen.stderr:
+            # TODO: queue each sLine.rstrip('\r\n') for UnitTestTarget (or others?) to process.
+            fileStdErr.write(sLine)
 
 
    def _read_stdout(self):
       """Reads from the job process’ stdout."""
 
-      self._m_oStdOut += self._m_popen.stdout.read()
-
-
-   def get_stderr(self):
-      """Returns the job process’ stderr.
-
-      object return
-         Error output.
-      """
-
-      return self._m_oStdErr
+      if self._m_dictPopenArgs.get('universal_newlines'):
+         with open(self._m_sStdOutFilePath, 'w') as fileStdOut:
+            self._m_oStdOut = ''
+            for sLine in self._m_popen.stdout:
+               self._m_oStdOut += sLine
+               fileStdOut.write(sLine)
+      else:
+         self._m_oStdOut = self._m_popen.stdout.read()
+         with open(self._m_sStdOutFilePath, 'wb') as fileStdOut:
+            fileStdOut.write(self._m_oStdOut)
 
 
    def get_stdout(self):
@@ -287,21 +291,30 @@ class ExternalPipedCommandJob(ExternalCommandJob):
       return self._m_oStdOut
 
 
+   def _get_stderr_file_path(self):
+      return self._m_sStdErrFilePath
+
+   stderr_file_path = property(_get_stderr_file_path, """
+      Path to the file containing the error output of the process.
+   """)
+
+
+   def _get_stdout_file_path(self):
+      return self._m_sStdOutFilePath
+
+   stdout_file_path = property(_get_stdout_file_path, """
+      Path to the file containing the output of the process.
+   """)
+
+
    def start(self):
       """See ExternalCommandJob.start()."""
 
       super().start()
 
       # Prepare the read buffers and start the threads to fill them.
-      if self._m_dictPopenArgs.get('universal_newlines'):
-         self._m_oStdErr = ''
-         self._m_oStdOut = ''
-      else:
-         self._m_oStdErr = b''
-         self._m_oStdOut = b''
-      if self._m_dictPopenArgs.get('stderr') is subprocess.PIPE:
-         self._m_thrReadErr = threading.Thread(target = self._read_stderr)
-         self._m_thrReadErr.start()
+      self._m_thrReadErr = threading.Thread(target = self._read_stderr)
+      self._m_thrReadErr.start()
       self._m_thrReadOut = threading.Thread(target = self._read_stdout)
       self._m_thrReadOut.start()
 
