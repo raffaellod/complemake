@@ -779,20 +779,17 @@ class UnitTestTarget(Target):
          dep = OutputRerefenceDependency(elt.getAttribute('path'))
          # Note that we don’t invoke our add_dependency() override.
          super().add_dependency(dep)
+      elif elt.nodeName == 'compare':
          sMode = elt.getAttribute('mode')
          if sMode:
+            if self._m_bBinaryCompare is not None:
+               raise Exception('{}: comparison mode already specified'.format(self))
             if sMode == 'binary':
-               bBinaryCompare = True
+               self._m_bBinaryCompare = True
             elif sMode == 'text':
-               bBinaryCompare = False
+               self._m_bBinaryCompare = False
             else:
-               raise SyntaxError('{}: invalid comparison mode for {}: {}'.format(self, dep, sMode))
-            if self._m_bBinaryCompare is None:
-               self._m_bBinaryCompare = bBinaryCompare
-            elif self._m_bBinaryCompare != bBinaryCompare:
-               raise Exception(
-                  '{}: conflicting comparison modes specified for different operands'.format(self)
-               )
+               raise SyntaxError('{}: invalid comparison mode: {}'.format(self, sMode))
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
