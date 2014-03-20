@@ -660,7 +660,13 @@ class UnitTestTarget(Target):
             depExecScript = dep
 
       if self._m_tgtUnitTestBuild:
-         # One of the dependencies is a unit test to execute: prepare its command line.
+         # One of the dependencies is a unit test to execute.
+         if cStaticComparands > 1:
+            raise Exception(
+               '{}: can’t compare the unit test output against more than one file'.format(self)
+            )
+
+         # Prepare the command line.
          if depExecScript:
             # We also have a “script” to drive the unit test.
             listArgs = [depExecScript.file_path]
@@ -669,24 +675,13 @@ class UnitTestTarget(Target):
             listArgs = []
          listArgs.append(self._m_tgtUnitTestBuild.file_path)
 
-         if cStaticComparands > 1:
-            raise Exception(
-               '{}: can’t compare the unit test output against more than one file'.format(self)
-            )
-         if cStaticComparands:
-            # We’ll need to compare the output of the unit test, so execute it with an output-
-            # capturing job; we’ll then compare its output in build_complete().
-            return make.job.PipedExternalCommandJob(('TEST', self._m_sName), {
-               'args'              : listArgs,
-               'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
-               'universal_newlines': not self._m_bBinaryCompare,
-            }, self._m_tgtUnitTestBuild.file_path)
-         else:
-            # No need to capture the output, just use an execution job.
-            return make.job.ExternalCommandJob(('TEST', self._m_sName), {
-               'args': listArgs,
-               'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
-            })
+         # When running a unit test, always log stdout and stderr. If we also need to compare the
+         # its output later, this will buffer it, so we can use it in build_complete().
+         return make.job.PipedExternalCommandJob(('TEST', self._m_sName), {
+            'args'              : listArgs,
+            'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
+            'universal_newlines': not self._m_bBinaryCompare,
+         }, self._m_tgtUnitTestBuild.file_path)
       else:
          if cStaticComparands != 2:
             raise Exception('{}: need exactly two files/outputs to compare'.format(self))

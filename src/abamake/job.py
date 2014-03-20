@@ -276,7 +276,7 @@ class PipedExternalCommandJob(ExternalCommandJob):
       # universal_newlines = True, its stderr is already a TextIO instance; otherwise, we have to
       # make one ourselves on top of the process’ stderr.
       fileStdErrPipe = self._m_popen.stderr
-      if not self._m_dictPopenArgs.get('universal_newlines'):
+      if not self._m_dictPopenArgs.get('universal_newlines', False):
          fileStdErrPipe = io.TextIOWrapper(fileStdErrPipe)
       with open(self._m_sStdErrFilePath, 'w') as fileStdErr:
          for sLine in fileStdErrPipe:
