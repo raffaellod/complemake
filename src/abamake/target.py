@@ -806,14 +806,14 @@ class UnitTestTarget(Target):
          # This child element may indicate that this target requires a separate build target to
          # create the unit test executable.
          #
-         # If we still don’t have an associated build target, instantiate one and transfer to it all
-         # the dependencies of any type not added by this method override, then allow it to process
-         # this child element.
-         # If the build target doesn’t know what to do with it, we’ll forward its False return
-         # value, which means that ABC Make will terminate and the erroneous creation of a build
-         # target won’t have any ill effect.
+         # If we still don’t have an associated build target, instantiate one and transfer to it any
+         # dependencies not added by previous calls to this method (we can tell by their type), then
+         # allow it to process this child element.
          # If the build target can handle it, then self will have correctly changed into a build +
          # run pair with its build target.
+         # If the build target doesn’t know what to do with it, we’ll forward its False return
+         # value, which means that ABC Make will terminate and the erroneous creation of a separate
+         # build target won’t have any ill effects.
          tgtUnitTestBuild = self._m_tgtUnitTestBuild
          if not tgtUnitTestBuild:
             # Create the build target.
