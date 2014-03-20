@@ -248,6 +248,9 @@ class PipedExternalCommandJob(ExternalCommandJob):
 
       super().__init__(iterQuietCmd, dictPopenArgs)
 
+      # Make sure the client’s not trying to access stdout/stderr as TextIOBase.
+      assert 'universal_newlines' not in self._m_dictPopenArgs
+
       # Make sure that the process’ output is piped to us.
       self._m_dictPopenArgs['stderr'] = subprocess.PIPE
       self._m_dictPopenArgs['stdout'] = subprocess.PIPE

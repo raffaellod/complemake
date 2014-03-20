@@ -20,6 +20,7 @@
 
 """Classes implementing different types of build target, each aware of how to build itself."""
 
+import locale
 import os
 import re
 import weakref
@@ -675,12 +676,11 @@ class UnitTestTarget(Target):
             listArgs = []
          listArgs.append(self._m_tgtUnitTestBuild.file_path)
 
-         # When running a unit test, always log stdout and stderr. If we also need to compare the
-         # its output later, this will buffer it, so we can use it in build_complete().
+         # When running a unit test, always log stdout and stderr. If we also need to compare its
+         # output later, this job will buffer it, so we can use it in build_complete().
          return make.job.PipedExternalCommandJob(('TEST', self._m_sName), {
-            'args'              : listArgs,
-            'env'               : self._m_tgtUnitTestBuild.get_exec_environ(),
-            'universal_newlines': not self._m_bBinaryCompare,
+            'args': listArgs,
+            'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
          }, self._m_tgtUnitTestBuild.file_path)
       else:
          if cStaticComparands != 2:
@@ -698,17 +698,15 @@ class UnitTestTarget(Target):
          # display name for them.
          listCmpNames = []
          listCmpOperands = []
-         if self._m_bBinaryCompare:
-            sFileMode = 'b'
-         else:
-            sFileMode = ''
          for dep in self._m_listDependencies:
             if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
                # Add as comparison operand the contents of this dependency file.
                listCmpNames.append(dep.file_path)
-               with open(dep.file_path, 'r' + sFileMode) as fileComparand:
+               with open(dep.file_path, 'rb') as fileComparand:
                   listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
 
+         # At this point we expect 0 <= len(listCmpOperands) <= 1, but we’ll check that a few more
+         # lines below.
          if listCmpOperands:
             if self._m_tgtUnitTestBuild:
                # We have a build target and at least another comparison operand, so the job that
@@ -721,12 +719,12 @@ class UnitTestTarget(Target):
                'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
             log = self._m_mk().log
-            if self._m_bBinaryCompare:
-               sCmpV = 'internal:binary-compare'
-               sCmpQ = 'CMPBIN'
-            else:
+            if isinstance(listCmpOperands, str):
                sCmpV = 'internal:text-compare'
                sCmpQ = 'CMPTXT'
+            else:
+               sCmpV = 'internal:binary-compare'
+               sCmpQ = 'CMPBIN'
             if log.verbosity >= log.LOW:
                log(log.LOW, '[{}] {} {}\n', sCmpV, *listCmpNames)
             else:
@@ -779,17 +777,6 @@ class UnitTestTarget(Target):
          dep = OutputRerefenceDependency(elt.getAttribute('path'))
          # Note that we don’t invoke our add_dependency() override.
          super().add_dependency(dep)
-      elif elt.nodeName == 'compare':
-         sMode = elt.getAttribute('mode')
-         if sMode:
-            if self._m_bBinaryCompare is not None:
-               raise Exception('{}: comparison mode already specified'.format(self))
-            if sMode == 'binary':
-               self._m_bBinaryCompare = True
-            elif sMode == 'text':
-               self._m_bBinaryCompare = False
-            else:
-               raise SyntaxError('{}: invalid comparison mode: {}'.format(self, sMode))
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
@@ -845,26 +832,28 @@ class UnitTestTarget(Target):
       return True
 
 
-   def _transform_comparison_operand(self, s):
-      """Transforms a string according to any <output-transform> rules specified in the makefile,
-      and returns the result.
+   def _transform_comparison_operand(self, oCmpOp):
+      """Transforms a comparison operand according to any <output-transform> rules specified in the
+      makefile, and returns the result.
 
-      str s
-         String to tranform.
-      str return
-         Processed string.
+      Some transformations require that the operand is a string; this method will convert a bytes
+      instance into a str in a way that mimic what an io.TextIOBase object would do. This allows to
+      automatically adjust to performing text-based comparisons (as opposed to bytes-based).
+
+      object oCmpOp
+         str or bytes instance to tranform.
+      object return
+         Transformed comparison operand.
       """
 
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply transformations.
       if self._m_reFilter:
-         if self._m_bBinaryCompare:
-            oJoiner = b'\n'
-         else:
-            oJoiner = '\n'
-         s = oJoiner.join(self._m_reFilter.findall(s))
+         if not isinstance(oCmpOp, str):
+            oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
+         oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
 
-      return s
+      return oCmpOp
 
 
 ####################################################################################################
