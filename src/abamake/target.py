@@ -793,7 +793,7 @@ class UnitTestTarget(Target):
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
-            self._m_reFilter = re.compile('ABCMK_CMP_BEGIN.*?ABCMK_CMP_END', re.DOTALL)
+            self._m_reFilter = re.compile(sFilter, re.DOTALL)
          else:
             raise Exception('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
