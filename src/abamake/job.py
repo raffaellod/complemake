@@ -20,6 +20,7 @@
 
 """Job scheduling and execution classes."""
 
+import io
 import multiprocessing
 import subprocess
 import threading
@@ -111,6 +112,7 @@ class NoopJob(Job):
       """
 
       super().__init__()
+
       self._m_iterQuietCmd = iterQuietCmd
       self._m_iRet = iRet
       self._m_sVerboseCmd = sVerboseCmd
@@ -173,6 +175,7 @@ class ExternalCommandJob(Job):
       """
 
       super().__init__()
+
       self._m_iterQuietCmd = iterQuietCmd
       self._m_dictPopenArgs = dictPopenArgs
       self._m_popen = None
@@ -231,8 +234,17 @@ class PipedExternalCommandJob(ExternalCommandJob):
    )
 
 
-   def __init__(self, iterQuietCmd, dictPopenArgs, sOutFilePathPrefix):
-      """Constructor. See ExternalCommandJob.__init__()."""
+   def __init__(self, iterQuietCmd, dictPopenArgs, sOutFilePathsPrefix):
+      """Constructor. See ExternalCommandJob.__init__().
+
+      iterable(str, str*) iterQuietCmd
+         “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
+      dict(str: object) dictPopenArgs
+         Arguments to be passed to Popen’s constructor to execute this job.
+      str sOutFilePathsPrefix
+         File path from which the stdout and stderr log file paths will be derived by concatenating
+         a suffix.
+      """
 
       super().__init__(iterQuietCmd, dictPopenArgs)
 
@@ -241,8 +253,8 @@ class PipedExternalCommandJob(ExternalCommandJob):
       self._m_dictPopenArgs['stdout'] = subprocess.PIPE
 
       # Prepare the output file paths.
-      self._m_sStdErrFilePath = sOutFilePathPrefix + '.stderr'
-      self._m_sStdOutFilePath = sOutFilePathPrefix + '.stdout'
+      self._m_sStdErrFilePath = sOutFilePathsPrefix + '.stderr'
+      self._m_sStdOutFilePath = sOutFilePathsPrefix + '.stdout'
 
 
    def poll(self):
@@ -260,8 +272,14 @@ class PipedExternalCommandJob(ExternalCommandJob):
    def _read_stderr(self):
       """Reads from the job process’ stderr."""
 
-      with open(self._m_sStdOutFilePath, 'w') as fileStdErr:
-         for sLine in self._m_popen.stderr:
+      # We always read from the process’ stderr as a text stream. If the process was started with
+      # universal_newlines = True, its stderr is already a TextIO instance; otherwise, we have to
+      # make one ourselves on top of the process’ stderr.
+      fileStdErrPipe = self._m_popen.stderr
+      if not self._m_dictPopenArgs.get('universal_newlines'):
+         fileStdErrPipe = io.TextIOWrapper(fileStdErrPipe)
+      with open(self._m_sStdErrFilePath, 'w') as fileStdErr:
+         for sLine in fileStdErrPipe:
             # TODO: queue each sLine.rstrip('\r\n') for UnitTestTarget (or others?) to process.
             fileStdErr.write(sLine)
 
