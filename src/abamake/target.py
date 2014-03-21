@@ -739,15 +739,15 @@ class UnitTestTarget(Target):
                sCmpV = 'internal:binary-compare'
                sCmpQ = 'CMPBIN'
             if log.verbosity >= log.LOW:
-               log(log.LOW, '[{}] {} {}\n', sCmpV, *listCmpNames)
+               log(log.LOW, '[{}] {} {}', sCmpV, *listCmpNames)
             else:
-               log(log.QUIET, '{:^8} {} <=> {}\n', sCmpQ, *listCmpNames)
+               log(log.QUIET, '{:^8} {} <=> {}', sCmpQ, *listCmpNames)
 
             # Compare the targets.
             if listCmpOperands[0] == listCmpOperands[1]:
                iRet = 0
             else:
-               log(None, 'error: {} and {} differ\n', *listCmpNames)
+               log(None, 'error: {} and {} differ', *listCmpNames)
                iRet = 1
       return iRet
 

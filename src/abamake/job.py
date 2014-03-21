@@ -269,7 +269,7 @@ class ExternalCmdJob(Job):
       """
 
       log = self._m_log
-      log(None, '{}\n', sLine)
+      log(None, '{}', sLine)
 
 
    def _stderr_reader_thread(self):
@@ -468,12 +468,12 @@ class JobController(object):
                   # Check if this target needs to be built.
                   bBuild = tgt.is_build_needed()
                   if bBuild:
-                     log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes\n', tgt)
+                     log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes', tgt)
                   elif self._m_bForceBuild:
-                     log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced\n', tgt)
+                     log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced', tgt)
                      bBuild = True
                   else:
-                     log(log.MEDIUM, 'controller: {}: up-to-date\n', tgt)
+                     log(log.MEDIUM, 'controller: {}: up-to-date', tgt)
 
                   if bBuild:
                      # Obtain a job to build this target.
@@ -486,10 +486,10 @@ class JobController(object):
                   if bBuild:
                      # We have a job, run it.
                      if log.verbosity >= log.LOW:
-                        log(log.LOW, '{}\n', job.get_verbose_command())
+                        log(log.LOW, '{}', job.get_verbose_command())
                      else:
                         iterCmd = job.get_quiet_command()
-                        log(log.QUIET, '{:^8} {}\n', iterCmd[0], ' '.join(iterCmd[1:]))
+                        log(log.QUIET, '{:^8} {}', iterCmd[0], ' '.join(iterCmd[1:]))
                      if not self._m_bDryRun:
                         # Execute the build job.
                         job.start()

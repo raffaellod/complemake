@@ -152,7 +152,7 @@ class TargetSnapshot(object):
          if fsStored is None:
             log(
                log.HIGH,
-               'metadata: {}: file {} not part of stored snapshot, rebuild needed\n',
+               'metadata: {}: file {} not part of stored snapshot, rebuild needed',
                self._m_tgt, sFilePath
             )
             return False
@@ -160,7 +160,7 @@ class TargetSnapshot(object):
             log(
                log.HIGH,
                'metadata: {}: changes detected in file {} (timestamp was: {}, now: {}), rebuild ' +
-                  'needed\n',
+                  'needed',
                self._m_tgt, sFilePath, fsCurr._m_dtMTime, fsStored._m_dtMTime
             )
             return False
@@ -172,13 +172,13 @@ class TargetSnapshot(object):
          if sFilePath not in self._m_dictDepsSignatures:
             log(
                log.HIGH,
-               'metadata: {}: file {} not part of current snapshot, rebuild needed\n',
+               'metadata: {}: file {} not part of current snapshot, rebuild needed',
                self._m_tgt, sFilePath
             )
             return False
 
       # No changes detected.
-      log(log.HIGH, 'metadata: {}: up-to-date\n', self._m_tgt)
+      log(log.HIGH, 'metadata: {}: up-to-date', self._m_tgt)
       return True
 
 
@@ -252,9 +252,9 @@ class MetadataStore(object):
          doc = xml.dom.minidom.parse(sFilePath)
       except FileNotFoundError:
          # If we can’t load the persistent metadata store, start it anew.
-         log(log.HIGH, 'metadata: empty or missing store: {}\n', sFilePath)
+         log(log.HIGH, 'metadata: empty or missing store: {}', sFilePath)
       else:
-         log(log.HIGH, 'metadata: loading store: {}\n', sFilePath)
+         log(log.HIGH, 'metadata: loading store: {}', sFilePath)
          # Parse the metadata.
          doc.documentElement.normalize()
          with doc.documentElement as eltRoot:
@@ -278,7 +278,7 @@ class MetadataStore(object):
                         self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
                            tgt, eltTarget = eltTarget
                         )
-         log(log.HIGH, 'metadata: store loaded: {}\n', sFilePath)
+         log(log.HIGH, 'metadata: store loaded: {}', sFilePath)
 
 
    def _get_curr_target_snapshot(self, tgt):
@@ -337,7 +337,7 @@ class MetadataStore(object):
 
       # If we have no stored snapshot to compare to, report the build as necessary.
       if not tssStored:
-         log(log.HIGH, 'metadata: {}: no stored snapshot, build needed\n', tgt)
+         log(log.HIGH, 'metadata: {}: no stored snapshot, build needed', tgt)
          return True
 
       # Compare current and stored snapshots.
@@ -352,7 +352,7 @@ class MetadataStore(object):
       """
 
       log = self._m_log
-      log(log.HIGH, 'metadata: {}: updating target snapshot\n', tgt)
+      log(log.HIGH, 'metadata: {}: updating target snapshot', tgt)
       self._m_dictStoredTargetSnapshots[tgt] = self._get_curr_target_snapshot(tgt)
       self._m_bDirty = True
 
@@ -362,9 +362,9 @@ class MetadataStore(object):
 
       log = self._m_log
       if not self._m_bDirty:
-         log(log.HIGH, 'metadata: no changes to write\n')
+         log(log.HIGH, 'metadata: no changes to write')
          return
-      log(log.HIGH, 'metadata: writing changes to store: {}\n', self._m_sFilePath)
+      log(log.HIGH, 'metadata: writing changes to store: {}', self._m_sFilePath)
 
       # Create an empty XML document.
       doc = xml.dom.getDOMImplementation().createDocument(

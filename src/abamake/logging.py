@@ -53,7 +53,8 @@ class Logger(object):
 
 
    def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
-      """Logs a formatted string.
+      """Logs a formatted string. A new-line character will be automatically appended because due
+      to concurrency, a thread should not expect to log a complete line with multiple log calls.
 
       int iLevel
          Minimum logging level. If the log verbosity setting is below this value, the log entry will
@@ -68,7 +69,7 @@ class Logger(object):
       """
 
       if iLevel is None or self.verbosity >= iLevel:
-         s = sFormat.format(*iterArgs, **dictKwArgs)
+         s = sFormat.format(*iterArgs, **dictKwArgs) + '\n'
          # Lock stderr and write to it.
          with self._m_lockStdErr as lock:
             sys.stderr.write(s)
