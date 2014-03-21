@@ -732,7 +732,7 @@ class UnitTestTarget(Target):
                'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
             log = self._m_mk().log
-            if isinstance(listCmpOperands, str):
+            if isinstance(listCmpOperands[0], str):
                sCmpV = 'internal:text-compare'
                sCmpQ = 'CMPTXT'
             else:
