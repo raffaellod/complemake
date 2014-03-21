@@ -219,8 +219,9 @@ class Make(object):
       """
 
       for elt in eltParent.childNodes:
-         # Skip whitespace/comment nodes and nodes without children.
-         if not self._is_node_whitespace(elt) and elt.hasChildNodes():
+         # Skip whitespace/comment nodes (unimportant) and non-top-level-nodes without children
+         # (they’re references, not definitions).
+         if not self._is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
             if elt.nodeType == elt.ELEMENT_NODE:
                # Pick a make.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
