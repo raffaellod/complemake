@@ -115,9 +115,7 @@ class Tool(object):
 
       self._run_add_cmd_inputs(listArgs)
 
-      return make.job.ExternalCommandJob(
-         self._get_quiet_cmd(), {'args': listArgs}, tgt.build_log_path
-      )
+      return make.job.ExternalCmdJob(self._get_quiet_cmd(), {'args': listArgs}, tgt.build_log_path)
 
 
    @classmethod

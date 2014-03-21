@@ -687,7 +687,7 @@ class UnitTestTarget(Target):
 
          # When running a unit test, always log stdout and stderr. If we also need to compare its
          # output later, this job will buffer it, so we can use it in build_complete().
-         return make.job.ExternalCommandCapturingJob(('TEST', self._m_sName), {
+         return make.job.ExternalCmdCapturingJob(('TEST', self._m_sName), {
             'args': listArgs,
             'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
          }, self._m_tgtUnitTestBuild.build_log_path, self._m_tgtUnitTestBuild.file_path + '.out')

@@ -151,9 +151,9 @@ class SkippedBuildJob(NoopJob):
 
 
 ####################################################################################################
-# ExternalCommandJob
+# ExternalCmdJob
 
-class ExternalCommandJob(Job):
+class ExternalCmdJob(Job):
    """Invokes an external program, capturing stdout and stderr.
 
    The standard output is made available to subclasses via the overridable _stdout_chunk_read(); the
@@ -168,7 +168,7 @@ class ExternalCommandJob(Job):
       '_m_dictPopenArgs',
       # Command summary to print out in quiet mode.
       '_m_iterQuietCmd',
-      # See ExternalCommandJob.stderr_file_path.
+      # See ExternalCmdJob.stderr_file_path.
       '_m_sStdErrFilePath',
       # Thread that reads from the job process’ stderr.
       '_m_thrStdErrReader',
@@ -303,28 +303,28 @@ class ExternalCommandJob(Job):
 
 
 ####################################################################################################
-# ExternalCommandCapturingJob
+# ExternalCmdCapturingJob
 
-class ExternalCommandCapturingJob(ExternalCommandJob):
-   """Same as ExternalCommandJob, but captures stdout and stderr of the process to files and allows
-   to analyze them when the job completes.
+class ExternalCmdCapturingJob(ExternalCmdJob):
+   """Same as ExternalCmdJob, but captures stdout and stderr of the process to files and allows to
+   analyze them when the job completes.
 
    Internally, separate threads communicate with the process through the pipes, joining the main
    thread when the process terminates.
    """
 
    __slots__ = (
-      # See ExternalCommandCapturingJob.stdout.
+      # See ExternalCmdCapturingJob.stdout.
       '_m_byStdOut',
       # Collects the job process’ output on disk.
       '_m_fileStdOut',
-      # See ExternalCommandCapturingJob.stdout_file_path.
+      # See ExternalCmdCapturingJob.stdout_file_path.
       '_m_sStdOutFilePath',
    )
 
 
    def __init__(self, iterQuietCmd, dictPopenArgs, sStdErrFilePath, sStdOutFilePath):
-      """Constructor. See ExternalCommandJob.__init__().
+      """Constructor. See ExternalCmdJob.__init__().
 
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
@@ -357,7 +357,7 @@ class ExternalCommandCapturingJob(ExternalCommandJob):
 
 
    def start(self):
-      """See ExternalCommandCapturingJob.start()."""
+      """See ExternalCmdCapturingJob.start()."""
 
       # Make sure that the directory in which we’ll write stdout exists.
       os.makedirs(os.path.dirname(self._m_sStdOutFilePath), 0o755, True)
@@ -383,9 +383,9 @@ class ExternalCommandCapturingJob(ExternalCommandJob):
 
 
    def _stdout_chunk_read(self, byChunk):
-      """See ExternalCommandJob._stdout_chunk_read(). Overridden to accumulate stdout in a member
+      """See ExternalCmdJob._stdout_chunk_read(). Overridden to accumulate stdout in a member
       variable, so that it can be accessed from memory instead of having to be re-read from the file
-      ExternalCommandJob saves it to.
+      ExternalCmdJob saves it to.
       """
 
       self._m_byStdOut += byChunk
