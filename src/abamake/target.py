@@ -227,6 +227,15 @@ class Target(Dependency):
       return iRet
 
 
+   def _get_build_log_path(self):
+      return os.path.join(self._m_mk().output_dir, 'log', self._m_sFilePath + '.log')
+
+   build_log_path = property(_get_build_log_path, doc = """
+      Path to the file where the build log for this target (i.e. the captured stderr of the process
+      that builds it) is saved.
+   """)
+
+
    def get_dependencies(self):
       """Iterates over the dependencies (make.target.Dependency instances) for this target.
 
@@ -678,10 +687,10 @@ class UnitTestTarget(Target):
 
          # When running a unit test, always log stdout and stderr. If we also need to compare its
          # output later, this job will buffer it, so we can use it in build_complete().
-         return make.job.PipedExternalCommandJob(('TEST', self._m_sName), {
+         return make.job.ExternalCommandCapturingJob(('TEST', self._m_sName), {
             'args': listArgs,
             'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
-         }, self._m_tgtUnitTestBuild.file_path)
+         }, self._m_tgtUnitTestBuild.build_log_path, self._m_tgtUnitTestBuild.file_path + '.out')
       else:
          if cStaticComparands != 2:
             raise Exception('{}: need exactly two files/outputs to compare'.format(self))
@@ -713,7 +722,7 @@ class UnitTestTarget(Target):
                # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
                # comparison operand.
                listCmpNames.append(job.stdout_file_path)
-               listCmpOperands.append(self._transform_comparison_operand(job.get_stdout()))
+               listCmpOperands.append(self._transform_comparison_operand(job.stdout))
 
             assert len(listCmpOperands) == 2, \
                'UnitTestTarget.build() did not correctly validate the count of comparison operands'
