@@ -26,61 +26,12 @@ This file contains Make and other core classes.
 
 import os
 import re
-import sys
 import xml.dom.minidom
 
 import make.job as job
+import make.logging as logging
 import make.metadata as metadata
 import make.target as target
-
-
-
-####################################################################################################
-# Logger
-
-class Logger(object):
-   """Logger with multiple verbosity levels."""
-
-   # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
-   # executed, instead of its command-line.
-   QUIET = 1
-   # Print each job’s command-line as-is instead of a short summary.
-   LOW = 2
-   # Like LOW, and also describe what triggers the (re)building of each target.
-   MEDIUM = 3
-   # Like MED, and also show all the files that are being checked for changes.
-   HIGH = 4
-
-
-   def __init__(self):
-      """Constructor."""
-
-      self.verbosity = self.QUIET
-
-
-   def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
-      """Logs a formatted string.
-
-      int iLevel
-         Minimum logging level. If the log verbosity setting is below this value, the log entry will
-         not be printed. If this value is None, the message will be output unconditionally (useful
-         to report errors, for example).
-      str sFormat
-         Format string.
-      iter(object*) *iterArgs
-         Forwarded to sFormat.format().
-      dict(str: object) **dictKwArgs
-         Forwarded to sFormat.format().
-      """
-
-      if iLevel is None or self.verbosity >= iLevel:
-         s = sFormat.format(*iterArgs, **dictKwArgs)
-         sys.stderr.write(s)
-
-
-   # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
-   # executed.
-   verbosity = None
 
 
 
@@ -122,7 +73,7 @@ class Make(object):
       """Constructor."""
 
       self._m_jc = job.JobController(self)
-      self._m_log = Logger()
+      self._m_log = logging.Logger()
       self._m_dictNamedTargets = {}
       self._m_dictTargets = {}
 
