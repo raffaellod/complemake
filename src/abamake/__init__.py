@@ -41,9 +41,6 @@ import make.target as target
 class Logger(object):
    """Logger with multiple verbosity levels."""
 
-   # Error-only verbosity, i.e. only errors will be output. When used with Logger.__call__(), this
-   # specifies an error.
-   ERROR = 0
    # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
    # executed, instead of its command-line.
    QUIET = 1
@@ -66,7 +63,8 @@ class Logger(object):
 
       int iLevel
          Minimum logging level. If the log verbosity setting is below this value, the log entry will
-         not be printed.
+         not be printed. If this value is None, the message will be output unconditionally (useful
+         to report errors, for example).
       str sFormat
          Format string.
       iter(object*) *iterArgs
@@ -75,12 +73,9 @@ class Logger(object):
          Forwarded to sFormat.format().
       """
 
-      if self.verbosity >= iLevel:
+      if iLevel is None or self.verbosity >= iLevel:
          s = sFormat.format(*iterArgs, **dictKwArgs)
-         if iLevel == self.ERROR:
-            sys.stderr.write(s)
-         else:
-            sys.stdout.write(s)
+         sys.stderr.write(s)
 
 
    # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations

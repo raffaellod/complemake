@@ -743,7 +743,7 @@ class UnitTestTarget(Target):
             if listCmpOperands[0] == listCmpOperands[1]:
                iRet = 0
             else:
-               log(log.ERROR, 'error: {} and {} differ\n', *listCmpNames)
+               log(None, 'error: {} and {} differ\n', *listCmpNames)
                iRet = 1
       return iRet
 
