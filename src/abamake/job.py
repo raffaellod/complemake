@@ -156,12 +156,17 @@ class SkippedBuildJob(NoopJob):
 class ExternalCmdJob(Job):
    """Invokes an external program, capturing stdout and stderr.
 
-   The standard output is made available to subclasses via the overridable _stdout_chunk_read(); the
-   error output is published via the overridable _stderr_line_read() and saved to the file path
-   passed to the constructor.
+   The standard output is made available to subclasses via the overridable _stdout_chunk_read(). The
+   default implementation of _stdout_chunk_read() doesn’t do anything.
+   
+   The error output is published via the overridable _stderr_line_read() and saved to the file path
+   passed to the constructor. The default implementation of _stderr_line_read() logs everything, but
+   this can be overridden in a subclass.
    """
 
    __slots__ = (
+      # Logger instance.
+      '_m_log',
       # Controlled Popen instance.
       '_m_popen',
       # Arguments to be passed to Popen’s constructor.
@@ -177,19 +182,22 @@ class ExternalCmdJob(Job):
    )
 
 
-   def __init__(self, iterQuietCmd, dictPopenArgs, sStdErrFilePath):
+   def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """Constructor. See Job.__init__().
 
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
+      make.logging.Logger log
+         Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
       """
 
       super().__init__()
 
+      self._m_log = log
       self._m_popen = None
       self._m_iterQuietCmd = iterQuietCmd
       self._m_dictPopenArgs = dictPopenArgs
@@ -254,13 +262,14 @@ class ExternalCmdJob(Job):
    def _stderr_line_read(self, sLine):
       """Internal method invoked for each stderr line read.
 
-      The default implementation doesn’t do anything.
+      The default implementation logs each line received.
 
       str sLine
          Line of text read from stderr, stripped of any trailing new-line characters.
       """
 
-      pass
+      log = self._m_log
+      log(None, '{}\n', sLine)
 
 
    def _stderr_reader_thread(self):
@@ -323,20 +332,22 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
    )
 
 
-   def __init__(self, iterQuietCmd, dictPopenArgs, sStdErrFilePath, sStdOutFilePath):
+   def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath, sStdOutFilePath):
       """Constructor. See ExternalCmdJob.__init__().
 
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
+      make.logging.Logger log
+         Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
       str sStdOutFilePath
          Path to the file where the stdout of the process will be saved.
       """
 
-      super().__init__(iterQuietCmd, dictPopenArgs, sStdErrFilePath)
+      super().__init__(iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
       self._m_byStdOut = None
       self._m_fileStdOut = None
