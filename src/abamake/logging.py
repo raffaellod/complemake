@@ -75,6 +75,19 @@ class Logger(object):
             sys.stderr.write(s)
 
 
+   def qm_tool_name(self, sToolName):
+      """Returns a “prettier” string for the specified tool, to be displayed in quiet mode.
+
+      str sToolName
+         Tool name.
+      str return
+         “Prettified” tool name.
+      """
+
+      # TODO: support coloring in case stderr is a TTY.
+      return '{:^8}'.format(sToolName)
+
+
    # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
    # executed.
    verbosity = None

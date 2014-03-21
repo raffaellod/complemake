@@ -489,7 +489,7 @@ class JobController(object):
                         log(log.LOW, '{}', job.get_verbose_command())
                      else:
                         iterCmd = job.get_quiet_command()
-                        log(log.QUIET, '{:^8} {}', iterCmd[0], ' '.join(iterCmd[1:]))
+                        log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
                      if not self._m_bDryRun:
                         # Execute the build job.
                         job.start()

@@ -741,7 +741,7 @@ class UnitTestTarget(Target):
             if log.verbosity >= log.LOW:
                log(log.LOW, '[{}] {} {}', sCmpV, *listCmpNames)
             else:
-               log(log.QUIET, '{:^8} {} <=> {}', sCmpQ, *listCmpNames)
+               log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
 
             # Compare the targets.
             if listCmpOperands[0] == listCmpOperands[1]:
