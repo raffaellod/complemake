@@ -85,7 +85,7 @@ class Logger(object):
       """
 
       # TODO: support coloring in case stderr is a TTY.
-      return '{:^8}'.format(sToolName)
+      return '{:<8}'.format(sToolName)
 
 
    # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
