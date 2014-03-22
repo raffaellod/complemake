@@ -440,7 +440,17 @@ class JobController(object):
 
 
    def build_scheduled_targets(self):
-      """Conditionally builds any targets scheduled for build.
+      """Builds any targets scheduled for build by JobController.schedule_build().
+
+      It allows for incremental builds by invoking Target.is_build_needed() before proceeding to
+      build a target; it also supports unconditional builds as determined by the
+      JobController.force_build setting, as well as no-op builds depending on the setting of
+      JobController.dry_run.
+
+      It repeatedly scans the scheduled targets set for targets that are ready to be built, then
+      goes ahead to start the jobs to build them. At the same time, it enforces the limit on the
+      degree of parallelism (see JobControl.running_jobs_max), by waiting for a job slot to free up
+      before attempting to start a new job.
 
       int return
          Count of jobs that completed in failure.
@@ -518,9 +528,19 @@ class JobController(object):
 
 
    def _collect_completed_jobs(self, cJobsToComplete):
-      """Returns only after the specified number of jobs completes and the respective cleanup
-      operations (such as releasing blocked jobs) have been performed. If cJobsToComplete == 0, it
-      only performs cleanup for jobs that have already completed, without waiting.
+      """Called by JobController.build_scheduled_targets(), returns when (at least) the requested
+      number of jobs completes and the respective targets’ Target.build_complete() have been called.
+      If cJobsToComplete == 0, it only invokes Target.build_complete() for targets whose jobs have
+      completed, but it does not wait for any jobs to complete.
+
+      The call to Target.build_complete(), among other things, releases any dependent targets; any
+      dependencies with no other blocks will be built by JobController.build_scheduled_targets().
+
+      When a job terminates in failure and JobController.keep_going is True, the corresponding
+      target and all its dependencies are removed from the scheduled targets with a (recursive) call
+      to JobController._unschedule_builds_blocked_by(), to prevent
+      JobController.build_scheduled_targets() from getting stuck waiting for targets that will never
+      be released.
 
       int cJobsToComplete
          Count of jobs to wait for.
@@ -621,11 +641,8 @@ class JobController(object):
 
 
    def schedule_build(self, tgt):
-      """Schedules the build of the specified target and all its dependencies.
-
-      The implementation recursively visits the dependency tree for the target in a leaves-first
-      order, using a set for the builds scheduled to avoid duplicates (targets that are a dependency
-      for more than one target).
+      """Schedules the build of the specified target and all its dependencies. Any targets that have
+      already been scheduled won’t be scheduled a second time.
 
       make.target.Target tgt
          Target the build of which should be scheduled.
@@ -633,14 +650,12 @@ class JobController(object):
 
       # Check if we already scheduled this target.
       if tgt not in self._m_setScheduledBuilds:
-         # Schedule the target’s dependencies (visit leaves).
+         # Schedule the build of this target.
+         self._m_setScheduledBuilds.add(tgt)
+         # Recursively schedule the build of the dependencies of this target, if Target themselves.
          for dep in tgt.get_dependencies():
             if isinstance(dep, make.target.Target):
-               # Recursively schedule this dependency target.
                self.schedule_build(dep)
-
-         # Schedule a job for the target (visit node).
-         self._m_setScheduledBuilds.add(tgt)
 
 
    def _unschedule_builds_blocked_by(self, tgt):
