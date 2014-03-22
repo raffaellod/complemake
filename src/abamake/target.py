@@ -131,7 +131,8 @@ class Target(Dependency):
    _m_listDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
-   # Mapping between Target subclasses and XML element names.
+   # Mapping between Target subclasses and XML element names. To add to this mapping, decorate a
+   # derived class with @Target.xml_element('xml-element-name').
    _smc_dictSubclassElementNames = {}
    # See Target.name.
    _m_sName = None
@@ -158,22 +159,6 @@ class Target(Dependency):
 
    def __str__(self):
       return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
-
-
-   class xml_element(object):
-      """Decorator to teach Target.select_subclass() the association of the decorated class with an
-      XML element name.
-
-      str sNodeName
-         Name of the element to associate with the decorated class.
-      """
-
-      def __init__(self, sNodeName):
-         self._m_sNodeName = sNodeName
-
-      def __call__(self, clsDerived):
-         Target._smc_dictSubclassElementNames[self._m_sNodeName] = clsDerived
-         return clsDerived
 
 
    def add_dependency(self, dep):
@@ -354,6 +339,9 @@ class Target(Dependency):
       """Returns the Target-derived class that should be instantiated to model the specified XML
       element.
 
+      Subclasses declare their association to an XML element name by using the class decorator
+      @Target.xml_element('xml-element-name').
+
       xml.dom.Element eltTarget
          Element to parse.
       type return
@@ -361,6 +349,22 @@ class Target(Dependency):
       """
 
       return cls._smc_dictSubclassElementNames.get(eltTarget.nodeName)
+
+
+   class xml_element(object):
+      """Decorator to teach Target.select_subclass() the association of the decorated class with an
+      XML element name.
+
+      str sNodeName
+         Name of the element to associate with the decorated class.
+      """
+
+      def __init__(self, sNodeName):
+         self._m_sNodeName = sNodeName
+
+      def __call__(self, clsDerived):
+         Target._smc_dictSubclassElementNames[self._m_sNodeName] = clsDerived
+         return clsDerived
 
 
 
