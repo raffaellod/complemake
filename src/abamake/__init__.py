@@ -18,10 +18,44 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""This module contains the Make class, which parses and executes ABC makefiles (.abcmk), as well as
-Target and its derived classes (make.target.*) and Tool and its derived classes (make.tool.*).
+"""This module contains the implementation of ABC Make.
 
 This file contains Make and other core classes.
+
+See [DOC:6931 ABC Make] for more information.
+"""
+
+"""DOC:6931 ABC Make
+
+ABC Make was created to satisfy these requirements:
+
+•  Cross-platform enough to no longer need to separately maintain a GNU makefile and a Visual Studio
+   solution and projects to build ABC; this is especially important when thinking of ABC as a
+   framework that should simplify building projects with/on top of it;
+
+•  Allow a single makefile per project (impossible with MSBuild);
+
+•  Simplified syntax for a very shallow learning curve, just like ABC itself aims to be easier to
+   use than other C++ frameworks;
+
+•  Minimal-to-no build instructions required in each makefile, and no toolchain-specific commands/
+   flags (this was getting difficult with GNU make);
+
+•  Implicit definition of intermediate targets, so that each makefile needs only mention sources and
+   outputs (already achieved via Makefile.inc for GNU make, and not required for MSBuild);
+
+•  Trivial unit test declaration and execution (this required a lot of made-up conventions for both
+   GNU make and MSBuild);
+
+•  Integration with abc::testing unit testing framework (already accomplished for GNU make, and
+   possible for MSBuild);
+
+•  Default parallel building of independent targets;
+
+•  Command-line options generally compatible with GNU make, to be immediately usable by new users.
+
+
+TODO: link to documentation for abc::testing support in ABC Make.
 """
 
 import os
@@ -39,8 +73,8 @@ import make.target as target
 # Make
 
 class Make(object):
-   """Processes an ABC makefile (.abcmk) by parsing it, scheduling the necessary jobs to build any
-   targets to be built, and then running the jobs with the selected degree of parallelism.
+   """Parses an ABC makefile (.abcmk) and exposes a JobController instance that can be used to
+   schedule target builds and run them.
 
    Example usage:
 
