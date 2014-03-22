@@ -146,7 +146,7 @@ class SkippedBuildJob(NoopJob):
    def __init__(self):
       """See NoopJob.__init__()."""
 
-      super().__init__(0, ('SKIP',), sVerboseCmd = '[internal:skipping build]')
+      super().__init__(0, ('SKIP',), sVerboseCmd = '[internal:skipped-build]')
 
 
 
