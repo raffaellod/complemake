@@ -653,9 +653,8 @@ class JobController(object):
          # Schedule the build of this target.
          self._m_setScheduledBuilds.add(tgt)
          # Recursively schedule the build of the dependencies of this target, if Target themselves.
-         for dep in tgt.get_dependencies():
-            if isinstance(dep, make.target.Target):
-               self.schedule_build(dep)
+         for dep in tgt.get_dependencies(bTargetsOnly = True):
+            self.schedule_build(dep)
 
 
    def _unschedule_builds_blocked_by(self, tgt):

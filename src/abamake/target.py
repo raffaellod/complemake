@@ -221,15 +221,19 @@ class Target(Dependency):
    """)
 
 
-   def get_dependencies(self):
+   def get_dependencies(self, bTargetsOnly = False):
       """Iterates over the dependencies (make.target.Dependency instances) for this target.
 
+      bool bTargetsOnly
+         If True, only make.target.Target instances will be returned; if False, no filtering will
+         occurr.
       make.target.Dependency yield
          Dependency of this target.
       """
 
       for dep in self._m_listDependencies:
-         yield dep
+         if not bTargetsOnly or isinstance(dep, Target):
+            yield dep
 
 
    def dump_dependencies(self, sIndent = ''):
