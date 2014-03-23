@@ -547,8 +547,6 @@ class ExecutableTarget(Target):
             if not bOutputLibPathAdded:
                lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
                bOutputLibPathAdded = True
-         else:
-            raise Exception('{}: unclassified linker input: {}'.format(self, dep))
 
       # TODO: add other external dependencies.
 
