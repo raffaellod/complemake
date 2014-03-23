@@ -650,7 +650,7 @@ class UnitTestTarget(Target):
 
 
    def add_dependency(self, dep):
-      """See Target.add_dependency(). Overridden to reroute dependencies to the build target, if
+      """See Target.add_dependency(). Overridden to re-route dependencies to the build target, if
       any.
       """
 

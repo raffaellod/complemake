@@ -30,7 +30,7 @@ import make
 ####################################################################################################
 # __main__
 
-def _main(iterArgs):
+def main(iterArgs):
    """Implementation of __main__.
 
    iterable(str*) iterArgs
@@ -139,5 +139,5 @@ def _main(iterArgs):
 
 
 if __name__ == '__main__':
-   sys.exit(_main(sys.argv))
+   sys.exit(main(sys.argv))
 
