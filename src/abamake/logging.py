@@ -121,6 +121,35 @@ class Logger(object):
       return '{:<8}'.format(sToolName)
 
 
+   def test_summary(self):
+      """Generates and logs a summary of success/failures for the tests performed."""
+
+      if self._m_cTotalTestAssertions:
+         self.__call__(None, 'Test summary:')
+         self.__call__(
+            None, '  {} test cases, {} passed ({}%), {} failed ({}%)',
+
+            self._m_cTotalTestCases,
+            self._m_cTotalTestCases - self._m_cFailedTestCases,
+            ((self._m_cTotalTestCases - self._m_cFailedTestCases) * 100 + 1) //
+               self._m_cTotalTestCases,
+            self._m_cFailedTestCases,
+            self._m_cFailedTestCases * 100 // self._m_cTotalTestCases,
+         )
+         self.__call__(
+            None, '  {} assertions, {} passed ({}%), {} failed ({}%)',
+
+            self._m_cTotalTestAssertions,
+            self._m_cTotalTestAssertions - self._m_cFailedTestAssertions,
+            ((self._m_cTotalTestAssertions - self._m_cFailedTestAssertions) * 100 + 1) //
+               self._m_cTotalTestAssertions,
+            self._m_cFailedTestAssertions,
+            self._m_cFailedTestAssertions * 100 // self._m_cTotalTestAssertions,
+         )
+      else:
+         self.__call__(None, 'Test cases: no tests performed')
+
+
    # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
    # executed.
    verbosity = None
