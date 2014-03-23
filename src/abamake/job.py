@@ -406,6 +406,69 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
 
 ####################################################################################################
+# AbcUnitTestJob
+
+class AbcUnitTestJob(ExternalCmdCapturingJob):
+   """External program performing tests using the abc::testing framework. Such a program will
+   communicate via stderr its test results (courtesy of abc::testing::runner), which this class will
+   parse and log.
+   """
+
+   __slots__ = (
+      # Title of the test case being currently executed.
+      '_m_sCurrTestCase',
+      # Count of failed assertions for the current test case.
+      '_m_cFailedTestAssertions',
+      # Collects the job process’ output on disk.
+      '_m_fileStdOut',
+      # See ExternalCmdCapturingJob.stdout_file_path.
+      '_m_sStdOutFilePath',
+      # Count of test assertions performed for the current test case.
+      '_m_cTotalTestAssertions',
+   )
+
+
+   def _stderr_line_read(self, sLine):
+      """See ExternalCmdCapturingJob._stderr_line_read(). Overridden to interpret information sent
+      by the abc::testing framework and only show errors (the program’s stderr file log will still
+      contain the entire stderr output anyway).
+      """
+
+      bLog = False
+      if sLine.startswith('ABCMK-TEST-'):
+         sInfo = sLine[len('ABCMK-TEST-'):]
+         if sInfo.startswith('ASSERT-PASS'):
+            self._m_cTotalTestAssertions += 1
+         elif sInfo.startswith('ASSERT-FAIL'):
+            self._m_cTotalTestAssertions += 1
+            self._m_cFailedTestAssertions += 1
+            # Log this failed assertion.
+            sLine = 'test assertion failed: {}'.format(sInfo[len('ASSERT-FAIL') + 1:])
+            bLog = True
+         elif sInfo.startswith('CASE-START'):
+            self._m_sCurrTestCase = sInfo[len('CASE-START') + 1:]
+            self._m_cTotalTestAssertions = 0
+            self._m_cFailedTestAssertions = 0
+         elif sInfo.startswith('CASE-END'):
+            self._m_log.add_testcase_result(
+               self._m_sCurrTestCase, self._m_cTotalTestAssertions, self._m_cFailedTestAssertions
+            )
+            if self._m_cFailedTestAssertions:
+               # Log the failure of this test case.
+               sLine = 'test case failed: {}'.format(self._m_sCurrTestCase)
+               bLog = True
+         else:
+            sLine = 'unknown info from abc::testing program: {}'.format(sLine)
+            bLog = True
+      else:
+         bLog = True
+      if bLog:
+         # self._m_iterQuietCmd[1] is the unit test name.
+         self._m_log(None, '{}: {}', self._m_iterQuietCmd[1], sLine)
+
+
+
+####################################################################################################
 # JobController
 
 class JobController(object):

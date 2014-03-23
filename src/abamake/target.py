@@ -693,9 +693,11 @@ class UnitTestTarget(Target):
             listArgs = []
          listArgs.append(self._m_tgtUnitTestBuild.file_path)
 
-         # When running a unit test, always log stdout and stderr. If we also need to compare its
-         # output later, this job will buffer it, so we can use it in build_complete().
-         return make.job.ExternalCmdCapturingJob(
+         # This will store stdout and stderr of the program to file, and will buffer stdout in
+         # memory so we can use it in build_complete() if we need to, without a disk access.
+         # TODO: use ExternalCmdCapturingJob or AbcUnitTestJob depending on some flag exposed by
+         # UnitTestBuildTarget (e.g. .use_abc_testing, set when linking to abc-testing).
+         return make.job.AbcUnitTestJob(
             ('TEST', self._m_sName), {
                'args': listArgs,
                'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
@@ -862,7 +864,7 @@ class UnitTestTarget(Target):
       automatically adjust to performing text-based comparisons (as opposed to bytes-based).
 
       object oCmpOp
-         str or bytes instance to tranform.
+         str or bytes instance to transform.
       object return
          Transformed comparison operand.
       """

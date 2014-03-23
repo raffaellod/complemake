@@ -31,8 +31,16 @@ import sys
 class Logger(object):
    """Logger with multiple verbosity levels."""
 
+   # Total count of failed test assertions.
+   _m_cFailedTestAssertions = None
+   # Total count of failed test cases.
+   _m_cFailedTestCases = None
    # Lock that must be acquired prior to writing to stderr.
    _m_lockStdErr = None
+   # Total count of test assertions performed.
+   _m_cTotalTestAssertions = None
+   # Total count of test cases executed.
+   _m_cTotalTestCases = None
 
    # No verbosity, i.e. quiet operation (default). Will display a short summary of each job being
    # executed, instead of its command-line.
@@ -48,8 +56,12 @@ class Logger(object):
    def __init__(self):
       """Constructor."""
 
-      self.verbosity = self.QUIET
+      self._m_cFailedTestAssertions = 0
+      self._m_cFailedTestCases = 0
       self._m_lockStdErr = threading.Lock()
+      self._m_cTotalTestAssertions = 0
+      self._m_cTotalTestCases = 0
+      self.verbosity = self.QUIET
 
 
    def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
@@ -73,6 +85,27 @@ class Logger(object):
          # Lock stderr and write to it.
          with self._m_lockStdErr as lock:
             sys.stderr.write(s)
+
+
+   def add_testcase_result(self, sTitle, cTotalAssertions, cFailedAssertions):
+      """Stores the result of a test case for later display as part of the test summary.
+
+      str sTitle
+         Title of the test case.
+      int cTotalAssertions
+         Count of assertions performed.
+      int cFailedAssertions
+         Count of failed assertions.
+      """
+
+      # Update the assertion counts.
+      self._m_cTotalTestAssertions += cTotalAssertions
+      self._m_cFailedTestAssertions += cFailedAssertions
+
+      # Update the test cases counts.
+      self._m_cTotalTestCases += 1
+      if cFailedAssertions:
+         self._m_cFailedTestCases += 1
 
 
    def qm_tool_name(self, sToolName):
