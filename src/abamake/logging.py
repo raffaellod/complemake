@@ -127,7 +127,7 @@ class Logger(object):
       if self._m_cTotalTestAssertions:
          self.__call__(None, 'Test summary:')
          self.__call__(
-            None, '  {} test cases, {} passed ({}%), {} failed ({}%)',
+            None, '  {:5} test cases, {:5} passed ({:3}%), {:5} failed ({:3}%)',
 
             self._m_cTotalTestCases,
             self._m_cTotalTestCases - self._m_cFailedTestCases,
@@ -137,7 +137,7 @@ class Logger(object):
             self._m_cFailedTestCases * 100 // self._m_cTotalTestCases,
          )
          self.__call__(
-            None, '  {} assertions, {} passed ({}%), {} failed ({}%)',
+            None, '  {:5} assertions, {:5} passed ({:3}%), {:5} failed ({:3}%)',
 
             self._m_cTotalTestAssertions,
             self._m_cTotalTestAssertions - self._m_cFailedTestAssertions,
