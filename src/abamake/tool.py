@@ -177,9 +177,9 @@ class Tool(object):
             try:
                with subprocess.Popen(
                   iterArgs, env = Tool._sm_dictUSEngEnv,
-                  stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True
+                  stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
                ) as procTool:
-                  sOut, sErr = procTool.communicate()
+                  sOut = procTool.communicate()[0]
             except FileNotFoundError:
                # This just means that the program is not installed; move on to the next candidate.
                continue
