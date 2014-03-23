@@ -434,6 +434,9 @@ class AbcUnitTestJob(ExternalCmdCapturingJob):
       contain the entire stderr output anyway).
       """
 
+      # TODO: document possible abc::testing output info and link to it from [DOC:6931 ABC Make],
+      # here, and in every involved abc::testing::runner method.
+
       if sLine.startswith('ABCMK-TEST-'):
          sInfo = sLine[len('ABCMK-TEST-'):]
          if sInfo.startswith('ASSERT-PASS'):
