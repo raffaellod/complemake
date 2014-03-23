@@ -112,7 +112,7 @@ class NoopJob(Job):
          “Verbose mode” command; see return value of Job.get_verbose_command().
       """
 
-      super().__init__()
+      Job.__init__(self)
 
       self._m_iterQuietCmd = iterQuietCmd
       self._m_iRet = iRet
@@ -146,7 +146,7 @@ class SkippedBuildJob(NoopJob):
    def __init__(self):
       """See NoopJob.__init__()."""
 
-      super().__init__(0, ('SKIP',), sVerboseCmd = '[internal:skipped-build]')
+      NoopJob.__init__(self, 0, ('SKIP',), sVerboseCmd = '[internal:skipped-build]')
 
 
 
@@ -195,7 +195,7 @@ class ExternalCmdJob(Job):
          Path to the file where the stderr of the process will be saved.
       """
 
-      super().__init__()
+      Job.__init__(self)
 
       self._m_log = log
       self._m_popen = None
@@ -347,7 +347,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          Path to the file where the stdout of the process will be saved.
       """
 
-      super().__init__(iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
+      ExternalCmdJob.__init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
       self._m_byStdOut = None
       self._m_fileStdOut = None
@@ -359,7 +359,8 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       terminates.
       """
 
-      iRet = super().poll()
+      iRet = ExternalCmdJob.poll(self)
+
       if iRet is not None:
          # Note that at this point, _stdout_chunk_read() won’t be called again.
          self._m_fileStdOut.close()
@@ -376,7 +377,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       self._m_byStdOut = b''
       self._m_fileStdOut = open(self._m_sStdOutFilePath, 'wb')
 
-      super().start()
+      ExternalCmdJob.start(self)
 
 
    def _get_stdout(self):

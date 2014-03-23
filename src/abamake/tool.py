@@ -296,7 +296,7 @@ class CxxCompiler(Tool):
       # TODO: remove hard-coded dirs.
       self.add_include_dir('include')
 
-      super()._create_job_add_flags(listArgs)
+      Tool._create_job_add_flags(self, listArgs)
 
       # Add any preprocessor macros.
       if self._m_dictMacros:
@@ -318,7 +318,7 @@ class CxxCompiler(Tool):
       to show the source file path instead of the intermediate one.
       """
 
-      iterQuietCmd = super()._get_quiet_cmd()
+      iterQuietCmd = Tool._get_quiet_cmd(self)
       return [iterQuietCmd[0]] + self._m_listInputFilePaths
 
 
@@ -358,7 +358,7 @@ class GxxCompiler(CxxCompiler):
          '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
       ])
 
-      super()._create_job_add_flags(listArgs)
+      CxxCompiler._create_job_add_flags(self, listArgs)
 
       listArgs.extend([
          '-ggdb',                  # Generate debug info compatible with GDB.
@@ -420,7 +420,7 @@ class MscCompiler(CxxCompiler):
          '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
       ])
 
-      super()._create_job_add_flags(listArgs)
+      CxxCompiler._create_job_add_flags(self, listArgs)
 
       listArgs.extend([
          '/Zi',       # Generate debug info for PDB.
@@ -488,7 +488,7 @@ class Linker(Tool):
    def _create_job_add_inputs(self, listArgs):
       """See Tool._create_job_add_inputs()."""
 
-      super()._create_job_add_inputs(listArgs)
+      Tool._create_job_add_inputs(self, listArgs)
 
       # Add the library search directories.
       if self._m_listLibPaths:
@@ -527,7 +527,7 @@ class GnuLinker(Linker):
    def _create_job_add_flags(self, listArgs):
       """See Linker._create_job_add_flags()."""
 
-      super()._create_job_add_flags(listArgs)
+      Linker._create_job_add_flags(self, listArgs)
 
       listArgs.extend([
          '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
@@ -547,7 +547,7 @@ class GnuLinker(Linker):
       self.add_input_lib('dl')
       self.add_input_lib('pthread')
 
-      super()._create_job_add_inputs(listArgs)
+      Linker._create_job_add_inputs(self, listArgs)
 
 
 
@@ -577,7 +577,7 @@ class MsLinker(Linker):
          '/nologo',              # Suppress brand banner display.
       ])
 
-      super()._create_job_add_flags(listArgs)
+      Linker._create_job_add_flags(self, listArgs)
 
       sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
       listArgs.extend([

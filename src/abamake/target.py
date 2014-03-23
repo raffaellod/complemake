@@ -148,7 +148,7 @@ class Target(Dependency):
          See Target.name.
       """
 
-      super().__init__(None)
+      Dependency.__init__(self, None)
 
       self._m_cBuildBlocks = 0
       self._m_listDependencies = []
@@ -400,7 +400,7 @@ class ProcessedSourceTarget(Target):
          configuration will be applied to the Tool instance generating this output.
       """
 
-      super().__init__(mk, sName)
+      Target.__init__(self, mk, sName)
 
       self._m_sSourceFilePath = sSourceFilePath
       self._m_sFilePath = os.path.join(mk.output_dir, 'int', sSourceFilePath)
@@ -429,7 +429,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ProcessedSourceTarget.__init__()."""
 
-      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
+      ProcessedSourceTarget.__init__(self, mk, sName, sSourceFilePath, tgtFinalOutput)
 
       self._m_sFilePath += '.i'
 
@@ -462,7 +462,7 @@ class CxxObjectTarget(ObjectTarget):
    def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ObjectTarget.__init__()."""
 
-      super().__init__(mk, sName, sSourceFilePath, tgtFinalOutput)
+      ObjectTarget.__init__(self, mk, sName, sSourceFilePath, tgtFinalOutput)
 
       self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
 
@@ -495,7 +495,7 @@ class ExecutableTarget(Target):
    def __init__(self, mk, sName):
       """Constructor. See Target.__init__()."""
 
-      super().__init__(mk, sName)
+      Target.__init__(self, mk, sName)
 
       # TODO: change '' + '' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
@@ -587,7 +587,7 @@ class ExecutableTarget(Target):
             )
          tgtUnitTest.add_dependency(self)
       else:
-         return super().parse_makefile_child(elt)
+         return Target.parse_makefile_child(self, elt)
       return True
 
 
@@ -604,7 +604,7 @@ class DynLibTarget(ExecutableTarget):
    def __init__(self, mk, sName):
       """Constructor. See ExecutableTarget.__init__()."""
 
-      super().__init__(mk, sName)
+      ExecutableTarget.__init__(self, mk, sName)
 
       # TODO: change 'lib' + '.so' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'lib', 'lib' + sName + '.so')
@@ -626,7 +626,7 @@ class DynLibTarget(ExecutableTarget):
       library.
       """
 
-      lnk = super()._get_tool()
+      lnk = ExecutableTarget._get_tool(self)
       lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
@@ -659,7 +659,7 @@ class UnitTestTarget(Target):
          self._m_tgtUnitTestBuild.add_dependency(dep)
       else:
          # Our dependency.
-         super().add_dependency(dep)
+         Target.add_dependency(self, dep)
 
 
    def build(self):
@@ -713,7 +713,7 @@ class UnitTestTarget(Target):
    def build_complete(self, job, iRet):
       """See Target.build_complete()."""
 
-      iRet = super().build_complete(job, iRet)
+      iRet = Target.build_complete(self, job, iRet)
       if iRet == 0:
          # Extract and transform the contents of the two dependencies to compare, and generate a
          # display name for them.
@@ -793,11 +793,11 @@ class UnitTestTarget(Target):
          tgtObj = clsObjTarget(mk, None, sFilePath)
          mk.add_target(tgtObj)
          # Note that we don’t invoke our add_dependency() override.
-         super().add_dependency(tgtObj)
+         Target.add_dependency(self, tgtObj)
       elif elt.nodeName == 'expected-output':
          dep = OutputRerefenceDependency(elt.getAttribute('path'))
          # Note that we don’t invoke our add_dependency() override.
-         super().add_dependency(dep)
+         Target.add_dependency(self, dep)
       elif elt.nodeName == 'output-transform':
          sFilter = elt.getAttribute('filter')
          if sFilter:
@@ -809,8 +809,8 @@ class UnitTestTarget(Target):
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          # Note that we don’t invoke our add_dependency() override.
-         super().add_dependency(dep)
-      elif not super().parse_makefile_child(elt):
+         Target.add_dependency(self, dep)
+      elif not Target.parse_makefile_child(self, elt):
          # This child element may indicate that this target requires a separate build target to
          # create the unit test executable.
          #
@@ -845,7 +845,7 @@ class UnitTestTarget(Target):
 
             # Add the build target as a dependency.
             # Note that we don’t invoke our add_dependency() override.
-            super().add_dependency(tgtUnitTestBuild)
+            Target.add_dependency(self, tgtUnitTestBuild)
             self._m_tgtUnitTestBuild = tgtUnitTestBuild
 
          # Let the build target decide whether this child element is valid or not.
@@ -889,7 +889,7 @@ class UnitTestBuildTarget(ExecutableTarget):
       """See ExecutableTarget.__init__()."""
 
       # sName is only used to generate _m_sFilePath; don’t pass it to ExecutableTarget.__init__().
-      super().__init__(mk, '')
+      ExecutableTarget.__init__(self, mk, '')
 
       # Clear the name.
       self._m_sName = None
