@@ -195,7 +195,7 @@ class Tool(object):
                   cls.__name__
                ) +
                '\n'.join(['  {:7}  {}'.format(
-                  clsDeriv._smc_iterDetectArgs[0], clsDeriv.__doc__.lstrip('.')
+                  clsDeriv._smc_iterDetectArgs[0], clsDeriv.__doc__.rstrip('.')
                ) for clsDeriv in cls.__subclasses__()])
             )
 
