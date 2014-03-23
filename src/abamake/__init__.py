@@ -343,9 +343,14 @@ class Make(object):
       speed-efficient because it only visits each subtree once.
 
       See also the recursion step Make._validate_dependency_subtree().
+
+      bool return
+         True if the dependency graph is valid, of False if any issues are detected and logged.
       """
 
+      # No previous ancerstors considered for the targets enumerated by this function.
       listDependents = []
+      # No subtrees validated yet.
       setValidatedSubtrees = set()
       for tgt in self._m_dictTargets.values():
          if tgt not in setValidatedSubtrees:
@@ -355,14 +360,19 @@ class Make(object):
 
 
    def _validate_dependency_subtree(self, tgtSubRoot, listDependents, setValidatedSubtrees):
-      """Recursion step for Make.validate_dependency_graph().
+      """Recursion step for Make.validate_dependency_graph(). Validates a dependency graph subtree
+      rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or
+      returning False in case of problems with the subtree.
 
       make.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
       set listDependents
-         Ancestors of tgtSubRoot. An ordered set would be faster.
+         Ancestors of tgtSubRoot. An ordered set with fast push/pop would be faster, since we
+         performs a lot of lookups in it.
       set setValidatedSubtrees
          Subtrees already validated. Used to avoid visiting a subtree more than once.
+      bool return
+         True if the subtree is valid, of False otherwise.
       """
 
       # Add this target to the dependents. This allows to find back edges and will even reveal if a
