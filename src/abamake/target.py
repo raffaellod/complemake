@@ -87,9 +87,32 @@ class ForeignSourceDependency(ForeignDependency):
 # ForeignLibDependency
 
 class ForeignLibDependency(ForeignDependency):
-   """Foreign library dependency."""
+   """Foreign library dependency. Supports libraries referenced only by name, as in their typical
+   usage.
+   """
 
-   pass
+   # See ForeignLibDependency.name.
+   _m_sName = None
+
+
+   def __init__(self, sFilePath, sName):
+      """Constructor. See ForeignDependency.__init__().
+
+      str sFilePath
+         See ForeignLibDependency.file_path.
+      str sName
+         See ForeignLibDependency.name.
+      """
+
+      ForeignDependency.__init__(self, sFilePath)
+
+      self._m_sName = sName
+
+
+   def _get_name(self):
+      return self._m_sName
+
+   name = property(_get_name, doc = """Name of the library.""")
 
 
 
@@ -514,7 +537,7 @@ class ExecutableTarget(Target):
          if isinstance(dep, ForeignLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external
             # libraries to link to.
-            lnk.add_input_lib(dep)
+            lnk.add_input_lib(dep.name)
          elif isinstance(dep, ObjectTarget):
             lnk.add_input(dep.file_path)
          elif isinstance(dep, DynLibTarget):
@@ -575,7 +598,7 @@ class ExecutableTarget(Target):
          # dependency of self; else just add the library name.
          dep = mk.get_target_by_name(sName, None)
          if dep is None:
-            dep = ForeignLibDependency(sName)
+            dep = ForeignLibDependency(None, sName)
          self.add_dependency(dep)
       elif elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
