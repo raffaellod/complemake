@@ -70,6 +70,36 @@ import make.target as target
 
 
 ####################################################################################################
+# MakefileError
+
+class MakefileError(Exception):
+   """Indicates a syntactical or semantical error in a makefile."""
+
+   pass
+
+
+
+####################################################################################################
+# MakefileSyntaxError
+
+class MakefileSyntaxError(MakefileError):
+   """Indicates a syntactical error in a makefile."""
+
+   pass
+
+
+
+####################################################################################################
+# TargetReferenceError
+
+class TargetReferenceError(MakefileError):
+   """Raised when a reference to a target can’t be resolved."""
+
+   pass
+
+
+
+####################################################################################################
 # Make
 
 class Make(object):
@@ -122,7 +152,7 @@ class Make(object):
       sName = tgt.name
       sFilePath = tgt.file_path
       if not sName and not sFilePath:
-         raise Exception('a target must have either a name or a file path ({})'.format(tgt))
+         raise MakefileError('a target must have either a name or a file path ({})'.format(tgt))
       if sName:
          if sName in self._m_dictNamedTargets:
             raise KeyError('duplicate target name: {}'.format(sName))
@@ -148,7 +178,7 @@ class Make(object):
 
       tgt = self._m_dictTargets.get(sFilePath, oFallback)
       if tgt is self._RAISE_IF_NOT_FOUND:
-         raise FileNotFoundError('unknown target: {}'.format(sFilePath))
+         raise TargetReferenceError('unknown target: {}'.format(sFilePath))
       return tgt
 
 
@@ -167,7 +197,7 @@ class Make(object):
 
       tgt = self._m_dictNamedTargets.get(sName, oFallback)
       if tgt is self._RAISE_IF_NOT_FOUND:
-         raise NameError('undefined target: {}'.format(sName))
+         raise TargetReferenceError('undefined target: {}'.format(sName))
       return tgt
 
 
@@ -237,7 +267,7 @@ class Make(object):
 
       # Make sure the makefile doesn’t define circular dependencies.
       if not self.validate_dependency_graph():
-         raise Exception('{}: invalid dependency graph'.format(sFilePath))
+         raise MakefileError('{}: invalid dependency graph'.format(sFilePath))
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
@@ -268,7 +298,9 @@ class Make(object):
                   # Every target must have a name attribute.
                   sName = elt.getAttribute('name')
                   if not sName:
-                     raise SyntaxError('<{}>: missing “name” attribute'.format(elt.nodeName))
+                     raise MakefileSyntaxError(
+                        '<{}>: missing “name” attribute'.format(elt.nodeName)
+                     )
                   # Instantiate the Target-derived class, assigning it its name.
                   tgt = clsTarget(self, sName)
                   self.add_target(tgt)
@@ -276,11 +308,11 @@ class Make(object):
                   # Scan for nested target definitions.
                   self._parse_collect_targets(elt, listTargetsAndNodes, False)
                elif bTopLevel:
-                  raise SyntaxError(
+                  raise MakefileSyntaxError(
                      '<{}>: not a target definition XML element'.format(elt.nodeName)
                   )
             elif bTopLevel:
-               raise SyntaxError(
+               raise MakefileSyntaxError(
                   'expected target definition XML element, found: {}'.format(elt.nodeName)
                )
 
@@ -309,11 +341,15 @@ class Make(object):
             # Skip whitespace/comment nodes.
             if not self._is_node_whitespace(nd):
                if nd.nodeType != nd.ELEMENT_NODE:
-                  raise SyntaxError('{}: expected XML element, found: {}'.format(tgt, nd.nodeName))
+                  raise MakefileSyntaxError(
+                     '{}: expected XML element, found: {}'.format(tgt, nd.nodeName)
+                  )
                if not tgt.parse_makefile_child(nd):
                   # Target.parse_makefile_child() returns False when it doesn’t know how to handle
                   # the specified child element.
-                  raise SyntaxError('{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName))
+                  raise MakefileSyntaxError(
+                     '{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName)
+                  )
 
 
    def print_target_graphs(self):
