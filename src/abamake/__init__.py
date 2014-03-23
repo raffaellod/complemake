@@ -234,6 +234,11 @@ class Make(object):
 
       with xml.dom.minidom.parse(sFilePath) as doc:
          self._parse_doc(doc)
+
+      # Make sure the makefile doesn’t define circular dependencies.
+      if not self.validate_dependency_graph():
+         raise Exception('{}: invalid dependency graph'.format(sFilePath))
+
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
 
@@ -329,4 +334,60 @@ class Make(object):
          print(str(tgt))
          tgt.dump_dependents('  ')
       print('')
+
+
+   def validate_dependency_graph(self):
+      """Ensures that no cycles exist in the targets dependency graph.
+
+      Implemented by performing a depth-first search for back edges in the graph; this is very
+      speed-efficient because it only visits each subtree once.
+
+      See also the recursion step Make._validate_dependency_subtree().
+      """
+
+      listDependents = []
+      setValidatedSubtrees = set()
+      for tgt in self._m_dictTargets.values():
+         if not self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees):
+            return False
+      return True
+
+
+   def _validate_dependency_subtree(self, tgtSubRoot, listDependents, setValidatedSubtrees):
+      """Recursion step for Make.validate_dependency_graph().
+
+      make.target.Target tgtSubRoot
+         Target at the root of the subtree to validate.
+      set listDependents
+         Ancestors of tgtSubRoot. An ordered set would be faster.
+      set setValidatedSubtrees
+         Subtrees already validated. Used to avoid visiting a subtree more than once.
+      """
+
+      # Add this target to the dependents. This allows to find back edges and will even reveal if a
+      # target depends on itself.
+      listDependents.append(tgtSubRoot)
+      for tgtDependency in tgtSubRoot.get_dependencies(bTargetsOnly = True):
+         for i, tgtDependent in enumerate(listDependents):
+            if tgtDependent is tgtDependency:
+               # Back edge found: this dependency creates a cycle, and i is the index in
+               # listDependents of the previous occurrence of tgtDependency as ancestor of
+               # tgtSubRoot.
+               log = self._m_log
+               log(None, 'Dependency graph validation failed, cycle detected:')
+               # Log all the nodes in the cycle, starting from the previous occurrence of
+               # tgtDependency. Note that listDependents does include tgtSubRoot.
+               for tgtDependent in listDependents[i:]:
+                  log(None, '  {}', tgtDependent)
+               return False
+         if tgtDependency not in setValidatedSubtrees:
+            # Recurse to verify that this dependency’s subtree doesn’t contain cycles.
+            if not self._validate_dependency_subtree(
+               tgtDependency, listDependents, setValidatedSubtrees
+            ):
+               return False
+      # Restore the dependents and mark this subtree as validated.
+      del listDependents[len(listDependents) - 1]
+      setValidatedSubtrees.add(tgtSubRoot)
+      return True
 
