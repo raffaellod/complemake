@@ -226,7 +226,7 @@ class Target(Dependency):
 
       bool bTargetsOnly
          If True, only make.target.Target instances will be returned; if False, no filtering will
-         occurr.
+         occur.
       make.target.Dependency yield
          Dependency of this target.
       """
@@ -497,7 +497,7 @@ class ExecutableTarget(Target):
 
       super().__init__(mk, sName)
 
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      # TODO: change '' + '' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
 
 
@@ -606,7 +606,7 @@ class DynLibTarget(ExecutableTarget):
 
       super().__init__(mk, sName)
 
-      # TODO: change 'lib' + '.so' from hardcoded to computed by a Platform class.
+      # TODO: change 'lib' + '.so' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'lib', 'lib' + sName + '.so')
 
 
@@ -893,7 +893,7 @@ class UnitTestBuildTarget(ExecutableTarget):
 
       # Clear the name.
       self._m_sName = None
-      # TODO: change '' + '' from hardcoded to computed by a Platform class.
+      # TODO: change '' + '' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'bin', 'unittest', '' + sName + '')
 
 

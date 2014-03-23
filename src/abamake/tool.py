@@ -306,7 +306,7 @@ class CxxCompiler(Tool):
    def _run_add_cmd_flags(self, listArgs):
       """See Tool._run_add_cmd_flags()."""
 
-      # TODO: remove hardcoded dirs.
+      # TODO: remove hard-coded dirs.
       self.add_include_dir('include')
 
       super()._run_add_cmd_flags(listArgs)
