@@ -348,8 +348,9 @@ class Make(object):
       listDependents = []
       setValidatedSubtrees = set()
       for tgt in self._m_dictTargets.values():
-         if not self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees):
-            return False
+         if tgt not in setValidatedSubtrees:
+            if not self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees):
+               return False
       return True
 
 
