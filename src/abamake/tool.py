@@ -120,6 +120,36 @@ class Tool(object):
       )
 
 
+   def _create_job_add_flags(self, listArgs):
+      """Builds the flags portion of the tool’s command line.
+
+      The default implementation applies the flags added with Tool.add_flags() after translating
+      them using Tool._translate_abstract_flag().
+
+      list(str*) listArgs
+         Arguments list.
+      """
+
+      # Add any additional abstract flags, translating them to arguments understood by GCC.
+      if self._m_setAbstractFlags:
+         for iFlag in self._m_setAbstractFlags:
+            listArgs.append(self._translate_abstract_flag(iFlag))
+
+
+   def _create_job_add_inputs(self, listArgs):
+      """Builds the input files portion of the tool’s command line.
+
+      The default implementation adds the input file paths at the end of listArgs.
+
+      list(str*) listArgs
+         Arguments list.
+      """
+
+      # Add the source file paths, if any.
+      if self._m_listInputFilePaths:
+         listArgs.extend(self._m_listInputFilePaths)
+
+
    @classmethod
    def get_default_impl(cls):
       """Returns the default implementation for this base class. For example, if GCC is detected,
@@ -192,36 +222,6 @@ class Tool(object):
    """)
 
 
-   def _create_job_add_flags(self, listArgs):
-      """Builds the flags portion of the tool’s command line.
-
-      The default implementation applies the flags added with Tool.add_flags() after translating
-      them using Tool._translate_abstract_flag().
-
-      list(str*) listArgs
-         Arguments list.
-      """
-
-      # Add any additional abstract flags, translating them to arguments understood by GCC.
-      if self._m_setAbstractFlags:
-         for iFlag in self._m_setAbstractFlags:
-            listArgs.append(self._translate_abstract_flag(iFlag))
-
-
-   def _create_job_add_inputs(self, listArgs):
-      """Builds the input files portion of the tool’s command line.
-
-      The default implementation adds the input file paths at the end of listArgs.
-
-      list(str*) listArgs
-         Arguments list.
-      """
-
-      # Add the source file paths, if any.
-      if self._m_listInputFilePaths:
-         listArgs.extend(self._m_listInputFilePaths)
-
-
    def _translate_abstract_flag(self, iFlag):
       """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
       implementation using a class-specific _smc_dictAbstactToImplFlags dictionary.
@@ -290,19 +290,6 @@ class CxxCompiler(Tool):
       self._m_dictMacros[sName] = sExpansion
 
 
-   def _get_quiet_cmd(self):
-      """See Tool._get_quiet_cmd(). This override substitutes the output file path with the inputs,
-      to show the source file path instead of the intermediate one.
-      """
-
-      iterQuietCmd = super()._get_quiet_cmd()
-      return [iterQuietCmd[0]] + self._m_listInputFilePaths
-
-
-   # Name suffix for intermediate object files.
-   object_suffix = None
-
-
    def _create_job_add_flags(self, listArgs):
       """See Tool._create_job_add_flags()."""
 
@@ -324,6 +311,19 @@ class CxxCompiler(Tool):
          sFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
          for sDir in self._m_listIncludeDirs:
             listArgs.append(sFormat.format(dir = sDir))
+
+
+   def _get_quiet_cmd(self):
+      """See Tool._get_quiet_cmd(). This override substitutes the output file path with the inputs,
+      to show the source file path instead of the intermediate one.
+      """
+
+      iterQuietCmd = super()._get_quiet_cmd()
+      return [iterQuietCmd[0]] + self._m_listInputFilePaths
+
+
+   # Name suffix for intermediate object files.
+   object_suffix = None
 
 
 
@@ -348,9 +348,6 @@ class GxxCompiler(CxxCompiler):
 
 
    # See CxxCompiler.object_suffix.
-   object_suffix = '.o'
-
-
    def _create_job_add_flags(self, listArgs):
       """See CxxCompiler._create_job_add_flags()."""
 
@@ -388,6 +385,9 @@ class GxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
 
+   object_suffix = '.o'
+
+
 
 ####################################################################################################
 # MscCompiler
@@ -408,9 +408,6 @@ class MscCompiler(CxxCompiler):
    # Pattern to compare the output of _smc_iterDetectArgs against.
    _smc_sDetectPattern = r'^Microsoft \(R\).* Optimizing Compiler Version (?P<ver>[.0-9]+) for ' + \
                          r'(?P<target>\S+)$'
-
-   # See CxxCompiler.object_suffix.
-   object_suffix = '.obj'
 
 
    def _create_job_add_flags(self, listArgs):
@@ -433,6 +430,10 @@ class MscCompiler(CxxCompiler):
       listArgs.extend([
          '/Wall',     # Enable all warnings.
       ])
+
+
+   # See CxxCompiler.object_suffix.
+   object_suffix = '.obj'
 
 
 
