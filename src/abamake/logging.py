@@ -126,28 +126,33 @@ class Logger(object):
 
       if self._m_cTotalTestAssertions:
          self.__call__(None, 'Test summary:')
-         self.__call__(
-            None, '  {:5} test cases, {:5} passed ({:3}%), {:5} failed ({:3}%)',
-
-            self._m_cTotalTestCases,
-            self._m_cTotalTestCases - self._m_cFailedTestCases,
-            ((self._m_cTotalTestCases - self._m_cFailedTestCases) * 100 + 1) //
-               self._m_cTotalTestCases,
-            self._m_cFailedTestCases,
-            self._m_cFailedTestCases * 100 // self._m_cTotalTestCases,
-         )
-         self.__call__(
-            None, '  {:5} assertions, {:5} passed ({:3}%), {:5} failed ({:3}%)',
-
-            self._m_cTotalTestAssertions,
-            self._m_cTotalTestAssertions - self._m_cFailedTestAssertions,
-            ((self._m_cTotalTestAssertions - self._m_cFailedTestAssertions) * 100 + 1) //
-               self._m_cTotalTestAssertions,
-            self._m_cFailedTestAssertions,
-            self._m_cFailedTestAssertions * 100 // self._m_cTotalTestAssertions,
-         )
+         self.__call__(None, '  Test cases: {}', self._test_summary_counts(
+            self._m_cTotalTestCases, self._m_cFailedTestCases
+         ))
+         self.__call__(None, '  Assertions: {}', self._test_summary_counts(
+            self._m_cTotalTestAssertions, self._m_cFailedTestAssertions
+         ))
       else:
          self.__call__(None, 'Test cases: no tests performed')
+
+
+   def _test_summary_counts(self, cTotal, cFailed):
+      """Generates a total/passed/failed summary line.
+
+      int cTotal
+         Total count.
+      int cFailed
+         Count of failures.
+      str return
+         String with the summary counts.
+      """
+
+      cPassed = cTotal - cFailed
+      return '{:5} total, {:5} passed ({:3}%), {:5} failed ({:3}%)'.format(
+         cTotal,
+         cPassed, (cPassed * 100 + 1) // cTotal,
+         cFailed,  cFailed * 100      // cTotal,
+      )
 
 
    # Selects a verbosity level (make.Make.*), affecting what is displayed about the operations
