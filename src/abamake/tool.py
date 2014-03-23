@@ -89,7 +89,7 @@ class Tool(object):
       """Returns a job that, when run, results in the execution of the tool.
 
       The default implementation schedules a job whose command line is composed by calling
-      Tool._run_add_cmd_flags() and Tool._run_add_cmd_inputs().
+      Tool._create_job_add_flags() and Tool._create_job_add_inputs().
 
       make.Make mk
          Make instance.
@@ -102,7 +102,7 @@ class Tool(object):
       # Build the arguments list.
       listArgs = [self._sm_sFilePath]
 
-      self._run_add_cmd_flags(listArgs)
+      self._create_job_add_flags(listArgs)
 
       if self._m_sOutputFilePath:
          if not mk.job_controller.dry_run:
@@ -113,7 +113,7 @@ class Tool(object):
          # Add the output file path.
          listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
 
-      self._run_add_cmd_inputs(listArgs)
+      self._create_job_add_inputs(listArgs)
 
       return make.job.ExternalCmdJob(
          self._get_quiet_cmd(), {'args': listArgs}, tgt._m_mk().log, tgt.build_log_path
@@ -192,7 +192,7 @@ class Tool(object):
    """)
 
 
-   def _run_add_cmd_flags(self, listArgs):
+   def _create_job_add_flags(self, listArgs):
       """Builds the flags portion of the tool’s command line.
 
       The default implementation applies the flags added with Tool.add_flags() after translating
@@ -208,7 +208,7 @@ class Tool(object):
             listArgs.append(self._translate_abstract_flag(iFlag))
 
 
-   def _run_add_cmd_inputs(self, listArgs):
+   def _create_job_add_inputs(self, listArgs):
       """Builds the input files portion of the tool’s command line.
 
       The default implementation adds the input file paths at the end of listArgs.
@@ -303,13 +303,13 @@ class CxxCompiler(Tool):
    object_suffix = None
 
 
-   def _run_add_cmd_flags(self, listArgs):
-      """See Tool._run_add_cmd_flags()."""
+   def _create_job_add_flags(self, listArgs):
+      """See Tool._create_job_add_flags()."""
 
       # TODO: remove hard-coded dirs.
       self.add_include_dir('include')
 
-      super()._run_add_cmd_flags(listArgs)
+      super()._create_job_add_flags(listArgs)
 
       # Add any preprocessor macros.
       if self._m_dictMacros:
@@ -351,8 +351,8 @@ class GxxCompiler(CxxCompiler):
    object_suffix = '.o'
 
 
-   def _run_add_cmd_flags(self, listArgs):
-      """See CxxCompiler._run_add_cmd_flags()."""
+   def _create_job_add_flags(self, listArgs):
+      """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
          '-c',                     # Compile without linking.
@@ -361,7 +361,7 @@ class GxxCompiler(CxxCompiler):
          '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
       ])
 
-      super()._run_add_cmd_flags(listArgs)
+      super()._create_job_add_flags(listArgs)
 
       listArgs.extend([
          '-ggdb',                  # Generate debug info compatible with GDB.
@@ -413,8 +413,8 @@ class MscCompiler(CxxCompiler):
    object_suffix = '.obj'
 
 
-   def _run_add_cmd_flags(self, listArgs):
-      """See CxxCompiler._run_add_cmd_flags()."""
+   def _create_job_add_flags(self, listArgs):
+      """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
          '/nologo',   # Suppress brand banner display.
@@ -423,7 +423,7 @@ class MscCompiler(CxxCompiler):
          '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
       ])
 
-      super()._run_add_cmd_flags(listArgs)
+      super()._create_job_add_flags(listArgs)
 
       listArgs.extend([
          '/Zi',       # Generate debug info for PDB.
@@ -484,10 +484,10 @@ class Linker(Tool):
       self._m_listLibPaths.append(sLibPath)
 
 
-   def _run_add_cmd_inputs(self, listArgs):
-      """See Tool._run_add_cmd_inputs()."""
+   def _create_job_add_inputs(self, listArgs):
+      """See Tool._create_job_add_inputs()."""
 
-      super()._run_add_cmd_inputs(listArgs)
+      super()._create_job_add_inputs(listArgs)
 
       # Add the library search directories.
       if self._m_listLibPaths:
@@ -523,10 +523,10 @@ class GnuLinker(Linker):
    _smc_sDetectPattern = r'^GNU ld .*?(?P<ver>[.0-9]+)$'
 
 
-   def _run_add_cmd_flags(self, listArgs):
-      """See Linker._run_add_cmd_flags()."""
+   def _create_job_add_flags(self, listArgs):
+      """See Linker._create_job_add_flags()."""
 
-      super()._run_add_cmd_flags(listArgs)
+      super()._create_job_add_flags(listArgs)
 
       listArgs.extend([
          '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
@@ -538,15 +538,15 @@ class GnuLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
 
-   def _run_add_cmd_inputs(self, listArgs):
-      """See Linker._run_add_cmd_inputs()."""
+   def _create_job_add_inputs(self, listArgs):
+      """See Linker._create_job_add_inputs()."""
 
       # TODO: should not assume that GNU LD will only be used to build for POSIX; the default
       # libraries list should come from a Platform class.
       self.add_input_lib('dl')
       self.add_input_lib('pthread')
 
-      super()._run_add_cmd_inputs(listArgs)
+      super()._create_job_add_inputs(listArgs)
 
 
 
@@ -569,14 +569,14 @@ class MsLinker(Linker):
    _smc_sDetectPattern = r'^Microsoft \(R\) Incremental Linker Version (?P<ver>[.0-9]+)$'
 
 
-   def _run_add_cmd_flags(self, listArgs):
-      """See Linker._run_add_cmd_flags()."""
+   def _create_job_add_flags(self, listArgs):
+      """See Linker._create_job_add_flags()."""
 
       listArgs.extend([
          '/nologo',              # Suppress brand banner display.
       ])
 
-      super()._run_add_cmd_flags(listArgs)
+      super()._create_job_add_flags(listArgs)
 
       sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
       listArgs.extend([
