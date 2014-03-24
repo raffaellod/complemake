@@ -695,23 +695,16 @@ class UnitTestTarget(Target):
    def build(self):
       """See Target.build(). It executes the unit test built by the build target, if any."""
 
-      # Collect dependencies according to their type.
-      depExecScript = None
-      cStaticComparands = 0
-      for dep in self._m_listDependencies:
-         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            cStaticComparands += 1
-         elif isinstance(dep, UnitTestExecScriptDependency):
-            depExecScript = dep
-
       if self._m_tgtUnitTestBuild:
          # One of the dependencies is a unit test to execute.
 
          # Prepare the command line.
-         if depExecScript:
-            # We also have a “script” to drive the unit test.
-            listArgs = [depExecScript.file_path]
-            # TODO: support more arguments, once they’re recognized by parse_makefile_child().
+         for dep in self._m_listDependencies:
+            if isinstance(dep, UnitTestExecScriptDependency):
+               # We also have a “script” to drive the unit test.
+               listArgs = [dep.file_path]
+               # TODO: support more arguments, once they’re recognized by parse_makefile_child().
+               break
          else:
             listArgs = []
          listArgs.append(self._m_tgtUnitTestBuild.file_path)
