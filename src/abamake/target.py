@@ -379,6 +379,14 @@ class Target(Dependency):
       return cls._smc_dictSubclassElementNames.get(eltTarget.nodeName)
 
 
+   def validate(self):
+      """Checks that the target doesn’t have invalid settings that were undetectable by
+      Target.parse_makefile_child().
+      """
+
+      pass
+
+
    class xml_element(object):
       """Decorator to teach Target.select_subclass() the association of the decorated class with an
       XML element name.
@@ -693,18 +701,11 @@ class UnitTestTarget(Target):
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             cStaticComparands += 1
-         elif isinstance(dep, UnitTestBuildTarget):
-            # The output of tgtUnitTestBuild will be one of the two comparison operands.
-            assert dep is self._m_tgtUnitTestBuild
          elif isinstance(dep, UnitTestExecScriptDependency):
             depExecScript = dep
 
       if self._m_tgtUnitTestBuild:
          # One of the dependencies is a unit test to execute.
-         if cStaticComparands > 1:
-            raise make.MakefileError(
-               '{}: can’t compare the unit test output against more than one file'.format(self)
-            )
 
          # Prepare the command line.
          if depExecScript:
@@ -733,8 +734,6 @@ class UnitTestTarget(Target):
             self._m_tgtUnitTestBuild.file_path + '.out'
          )
       else:
-         if cStaticComparands != 2:
-            raise make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
          # No unit test to execute; we’ll compare the two pre-built files in build_complete().
          return None
 
@@ -766,9 +765,6 @@ class UnitTestTarget(Target):
                # comparison operand.
                listCmpNames.append(job.stdout_file_path)
                listCmpOperands.append(self._transform_comparison_operand(job.stdout))
-
-            assert len(listCmpOperands) == 2, \
-               'UnitTestTarget.build() did not correctly validate the count of comparison operands'
 
             log = self._m_mk().log
             if isinstance(listCmpOperands[0], str):
@@ -907,6 +903,32 @@ class UnitTestTarget(Target):
          oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
 
       return oCmpOp
+
+
+   def validate(self):
+      """See Target.validate()."""
+
+      super().validate()
+
+      # Count how many comparison operands have been specified for this target.
+      cCmpOperands = 0
+      for dep in self._m_listDependencies:
+         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
+            cCmpOperands += 1
+         elif isinstance(dep, UnitTestBuildTarget):
+            # The output of the build target will be one of the two comparison operands.
+            assert dep is self._m_tgtUnitTestBuild
+            cCmpOperands += 1
+
+      if cCmpOperands != 0 and cCmpOperands != 2:
+         if self._m_tgtUnitTestBuild:
+            # Expected a unit test to execute and a file to compare its output against.
+            raise make.MakefileError(
+               '{}: can’t compare the unit test output against more than one file'.format(self)
+            )
+         else:
+            # Expected two files to compare.
+            raise make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
 
 
 

@@ -268,6 +268,9 @@ class Make(object):
       # Make sure the makefile doesn’t define circular dependencies.
       if not self.validate_dependency_graph():
          raise MakefileError('{}: invalid dependency graph'.format(sFilePath))
+      # Validate each target.
+      for tgt in self._m_dictTargets.values():
+         tgt.validate()
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
