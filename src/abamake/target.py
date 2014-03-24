@@ -910,23 +910,23 @@ class UnitTestTarget(Target):
 
       super().validate()
 
-      # Count how many comparison operands have been specified for this target.
-      cCmpOperands = 0
+      # Count how many non-output (static) comparison operands have been specified for this target.
+      cStaticCmpOperands = 0
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-            cCmpOperands += 1
+            cStaticCmpOperands += 1
          elif isinstance(dep, UnitTestBuildTarget):
             # The output of the build target will be one of the two comparison operands.
             assert dep is self._m_tgtUnitTestBuild
-            cCmpOperands += 1
 
-      if cCmpOperands != 0 and cCmpOperands != 2:
-         if self._m_tgtUnitTestBuild:
-            # Expected a unit test to execute and a file to compare its output against.
+      if self._m_tgtUnitTestBuild:
+         if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
+            # Expected a file against which to compare the unit test’s output.
             raise make.MakefileError(
                '{}: can’t compare the unit test output against more than one file'.format(self)
             )
-         else:
+      else:
+         if cStaticCmpOperands != 0 and cStaticCmpOperands != 2:
             # Expected two files to compare.
             raise make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
 
