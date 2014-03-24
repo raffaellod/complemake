@@ -361,7 +361,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
       iRet = ExternalCmdJob.poll(self)
 
-      if iRet is not None:
+      if self._m_popen and iRet is not None:
          # Note that at this point, _stdout_chunk_read() won’t be called again.
          self._m_fileStdOut.close()
          self._m_fileStdOut = None

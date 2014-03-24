@@ -742,7 +742,9 @@ class UnitTestTarget(Target):
       """See Target.build_complete()."""
 
       iRet = Target.build_complete(self, job, iRet)
-      if iRet == 0:
+      # Only go ahead in case of success of the job, or if no job was run because there’s no build
+      # target to execute.
+      if iRet == 0 and (job or not self._m_tgtUnitTestBuild):
          # Extract and transform the contents of the two dependencies to compare, and generate a
          # display name for them.
          listCmpNames = []
@@ -754,7 +756,7 @@ class UnitTestTarget(Target):
                with open(dep.file_path, 'rb') as fileComparand:
                   listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
 
-         # At this point we expect 0 <= len(listCmpOperands) <= 1, but we’ll check that a few more
+         # At this point we expect 0 <= len(listCmpOperands) <= 2, but we’ll check that a few more
          # lines below.
          if listCmpOperands:
             if self._m_tgtUnitTestBuild:
