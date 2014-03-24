@@ -782,11 +782,12 @@ class UnitTestTarget(Target):
                log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
 
             # Compare the targets.
-            if listCmpOperands[0] == listCmpOperands[1]:
-               iRet = 0
-            else:
-               log(None, 'error: {} and {} differ', *listCmpNames)
+            bEqual = (listCmpOperands[0] == listCmpOperands[1])
+            if not bEqual:
+               log(None, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
                iRet = 1
+            # This comparison counts as an additional test case with a single assertion.
+            log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
       return iRet
 
 
