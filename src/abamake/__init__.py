@@ -114,19 +114,21 @@ class Make(object):
       mk.job_controller.build_scheduled_targets()
    """
 
+   # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have
+   # a file path assigned (file path -> Target).
+   _m_dictFileTargets = None
    # See Make.job_controller.
    _m_jc = None
    # See Make.log.
    _m_log = None
    # See Make.metadata.
    _m_mds = None
-   # Targets explicitly declared in the parsed makefile (name -> Target).
+   # Targets defined in the makefile that have a name assigned (name -> Target).
    _m_dictNamedTargets = None
    # See Make.output_dir.
    _m_sOutputDir = ''
-   # All targets specified by the parsed makefile (file path -> Target), including implicit and
-   # intermediate targets not explicitly declared with a named target element.
-   _m_dictTargets = None
+   # All targets explicitly or implicitly defined in the makefile.
+   _m_setTargets = None
 
    # Special value used with get_target_by_*() to indicate that a target not found should result in
    # an exception.
@@ -136,10 +138,11 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
+      self._m_dictFileTargets = {}
       self._m_jc = job.JobController(self)
       self._m_log = logging.Logger()
       self._m_dictNamedTargets = {}
-      self._m_dictTargets = {}
+      self._m_setTargets = set()
 
 
    def add_target(self, tgt):
@@ -153,18 +156,19 @@ class Make(object):
       sFilePath = tgt.file_path
       if not sName and not sFilePath:
          raise MakefileError('a target must have either a name or a file path ({})'.format(tgt))
+      if sFilePath:
+         if sFilePath in self._m_dictFileTargets:
+            raise KeyError('duplicate target file path: {}'.format(sFilePath))
+         self._m_dictFileTargets[sFilePath] = tgt
       if sName:
          if sName in self._m_dictNamedTargets:
             raise KeyError('duplicate target name: {}'.format(sName))
          self._m_dictNamedTargets[sName] = tgt
-      if sFilePath:
-         if sFilePath in self._m_dictTargets:
-            raise KeyError('duplicate target file path: {}'.format(sFilePath))
-         self._m_dictTargets[sFilePath] = tgt
+      self._m_setTargets.add(tgt)
 
 
    def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
-      """Returns a target given its path, raising an exception if no such target exists and no
+      """Returns a target given its file path, raising an exception if no such target exists and no
       fallback value was provided.
 
       str sFilePath
@@ -176,15 +180,15 @@ class Make(object):
          Target that builds sFilePath, or oFallback if no such target was defined in the makefile.
       """
 
-      tgt = self._m_dictTargets.get(sFilePath, oFallback)
+      tgt = self._m_dictFileTargets.get(sFilePath, oFallback)
       if tgt is self._RAISE_IF_NOT_FOUND:
          raise TargetReferenceError('unknown target: {}'.format(sFilePath))
       return tgt
 
 
    def get_target_by_name(self, sName, oFallback = _RAISE_IF_NOT_FOUND):
-      """Returns a named (in the makefile) target given its name, raising an exception if no such
-      target exists and no fallback value was provided.
+      """Returns a target given its name as specified in the makefile, raising an exception if no
+      such target exists and no fallback value was provided.
 
       str sName
          Name of the target to look for.
@@ -269,7 +273,7 @@ class Make(object):
       if not self.validate_dependency_graph():
          raise MakefileError('{}: invalid dependency graph'.format(sFilePath))
       # Validate each target.
-      for tgt in self._m_dictTargets.values():
+      for tgt in self._m_setTargets:
          tgt.validate()
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
@@ -391,7 +395,7 @@ class Make(object):
       listDependents = []
       # No subtrees validated yet.
       setValidatedSubtrees = set()
-      for tgt in self._m_dictTargets.values():
+      for tgt in self._m_setTargets:
          if tgt not in setValidatedSubtrees:
             if not self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees):
                return False
