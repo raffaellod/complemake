@@ -25,6 +25,7 @@ import os
 import re
 import weakref
 
+import make
 import make.job
 import make.tool
 
@@ -584,7 +585,7 @@ class ExecutableTarget(Target):
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             clsObjTarget = CxxObjectTarget
          else:
-            raise MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
+            raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath, self)
          mk.add_target(tgtObj)
@@ -603,7 +604,7 @@ class ExecutableTarget(Target):
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName, None)
          if tgtUnitTest is None:
-            raise TargetReferenceError(
+            raise make.TargetReferenceError(
                '{}: could not find definition of referenced unit test: {}'.format(self, sName)
             )
          tgtUnitTest.add_dependency(self)
@@ -701,7 +702,7 @@ class UnitTestTarget(Target):
       if self._m_tgtUnitTestBuild:
          # One of the dependencies is a unit test to execute.
          if cStaticComparands > 1:
-            raise MakefileError(
+            raise make.MakefileError(
                '{}: can’t compare the unit test output against more than one file'.format(self)
             )
 
@@ -733,7 +734,7 @@ class UnitTestTarget(Target):
          )
       else:
          if cStaticComparands != 2:
-            raise MakefileError('{}: need exactly two files/outputs to compare'.format(self))
+            raise make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
          # No unit test to execute; we’ll compare the two pre-built files in build_complete().
          return None
 
@@ -804,7 +805,7 @@ class UnitTestTarget(Target):
 
       mk = self._m_mk()
       if elt.nodeName == 'unittest':
-         raise MakefileSyntaxError('<unittest> not allowed in <unittest>')
+         raise make.MakefileSyntaxError('<unittest> not allowed in <unittest>')
       elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
          # Due to specifying a non-default tool, this <source> does not generate an object file or
          # an executable.
@@ -815,11 +816,11 @@ class UnitTestTarget(Target):
             if sTool == 'preproc':
                clsObjTarget = CxxPreprocessedTarget
             else:
-               raise MakefileError(
+               raise make.MakefileError(
                   '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
                )
          else:
-            raise MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
+            raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, None, sFilePath)
          mk.add_target(tgtObj)
@@ -834,7 +835,7 @@ class UnitTestTarget(Target):
          if sFilter:
             self._m_reFilter = re.compile(sFilter, re.DOTALL)
          else:
-            raise MakefileError('{}: unsupported output transformation'.format(self))
+            raise make.MakefileError('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
          dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
