@@ -716,9 +716,14 @@ class UnitTestTarget(Target):
 
          # This will store stdout and stderr of the program to file, and will buffer stdout in
          # memory so we can use it in build_complete() if we need to, without a disk access.
-         # TODO: use ExternalCmdCapturingJob or AbcUnitTestJob depending on some flag exposed by
-         # UnitTestBuildTarget (e.g. .use_abc_testing, set when linking to abc-testing).
-         return make.job.AbcUnitTestJob(
+
+         # If the build target uses abc::testing, run it with the special abc::testing end-point
+         # job, AbcUnitTestJob.
+         if self._m_tgtUnitTestBuild.uses_abc_testing:
+            clsJob = make.job.AbcUnitTestJob
+         else:
+            clsJob = make.job.ExternalCmdCapturingJob
+         return clsJob(
             ('TEST', self._m_sName), {
                'args': listArgs,
                'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
@@ -891,13 +896,14 @@ class UnitTestTarget(Target):
       """
 
       # Apply the only supported filter.
-      # TODO: use an interface/specialization to apply transformations.
+      # TODO: use an interface/specialization to apply different transformations.
       if self._m_reFilter:
          if not isinstance(oCmpOp, str):
             oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
          oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
 
       return oCmpOp
+
 
 
 ####################################################################################################
@@ -907,6 +913,10 @@ class UnitTestBuildTarget(ExecutableTarget):
    """Builds an executable unit test. The output file will be placed in a bin/unittest/ directory
    relative to the output base directory.
    """
+
+   # See UnitTestBuildTarget.uses_abc_testing.
+   _m_bUsesAbcTesting = None
+
 
    def __init__(self, mk, sName = None):
       """See ExecutableTarget.__init__()."""
@@ -918,6 +928,22 @@ class UnitTestBuildTarget(ExecutableTarget):
       self._m_sName = None
       # TODO: change '' + '' from hard-coded to computed by a Platform class.
       self._m_sFilePath = os.path.join(mk.output_dir, 'bin', 'unittest', '' + sName + '')
+
+
+   def add_dependency(self, dep):
+      """See Target.add_dependency(). Overridden to detect if the unit test is linked to
+      abc-testing, making it compatible with being run via AbcUnitTestJob.
+      """
+
+      # Check if this unit test uses the abc-testing framework.
+      if isinstance(dep, ForeignLibDependency):
+         if dep.name == 'abc-testing':
+            self._m_bUsesAbcTesting = True
+      elif isinstance(dep, DynLibTarget):
+         if dep.name == 'abc-testing':
+            self._m_bUsesAbcTesting = True
+
+      Target.add_dependency(self, dep)
 
 
    def get_exec_environ(self):
@@ -940,4 +966,18 @@ class UnitTestBuildTarget(ExecutableTarget):
          sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
          dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
+
+
+   def _get_uses_abc_testing(self):
+      return self._m_bUsesAbcTesting
+
+   uses_abc_testing = property(_get_uses_abc_testing, doc = """
+      True if the unit test executable uses abc::testing to execute test cases and report their
+      results, making it compatible with being run via AbcUnitTestJob, or False if it’s a monolithic
+      single test, executed via ExternalCmdCapturingJob.
+
+      TODO: make this a three-state, with True/False meaning explicit declaration, for example by
+      <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with
+      auto-detect that can change to True using the current logic in add_dependency().
+   """)
 
