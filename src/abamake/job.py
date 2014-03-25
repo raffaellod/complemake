@@ -613,6 +613,7 @@ class JobController(object):
          Count of jobs that completed in failure.
       """
 
+      log = self._m_mk().log
       mds = self._m_mk().metadata
       # This loop alternates poll loop and sleeping.
       cCompletedJobs = 0
@@ -647,6 +648,13 @@ class JobController(object):
                         # long as we have scheduled jobs that don’t depend on it.
                         self._unschedule_builds_blocked_by(tgt)
                      cFailedJobs += 1
+                     if job:
+                        log(
+                           None, 'make: {}: build failed (code: {}), command was: {}',
+                           tgt, iRet, job.get_verbose_command()
+                        )
+                     else:
+                        log(None, 'make: {}: build failed (code: {})', tgt, iRet)
 
                   # Since we modified self._m_dictRunningJobs, we have to stop iterating over it.
                   # Iteration will be restarted by the inner while loop.

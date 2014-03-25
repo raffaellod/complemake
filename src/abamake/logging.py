@@ -125,7 +125,7 @@ class Logger(object):
       """Generates and logs a summary of success/failures for the tests performed."""
 
       if self._m_cTotalTestAssertions:
-         self.__call__(None, 'Test summary:')
+         self.__call__(None, 'make: test summary:')
          self.__call__(None, '  Test cases: {}', self._test_summary_counts(
             self._m_cTotalTestCases, self._m_cFailedTestCases
          ))
