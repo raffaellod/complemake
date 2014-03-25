@@ -133,9 +133,9 @@ def main(iterArgs):
    # Build all selected targets: first schedule the jobs building them, then run them.
    for tgt in iterTargets:
       mk.job_controller.schedule_build(tgt)
-   iRet = mk.job_controller.build_scheduled_targets()
+   cFailedBuilds = mk.job_controller.build_scheduled_targets()
    mk.log.test_summary()
-   return iRet
+   return 0 if cFailedBuilds == 0 else 1
 
 
 if __name__ == '__main__':
