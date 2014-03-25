@@ -518,23 +518,23 @@ class JobController(object):
       before attempting to start a new job.
 
       int return
-         Count of jobs that completed in failure.
+         Count of builds that completed in failure.
       """
 
       log = self._m_mk().log
-      cFailedJobsTotal = 0
+      cFailedBuildsTotal = 0
       try:
          while self._m_setScheduledBuilds:
             # Make sure any completed jobs are collected.
-            cFailedJobs = self._collect_completed_jobs(0)
+            cFailedBuilds = self._collect_completed_jobs(0)
             # Make sure we have at least one free job slot.
             while len(self._m_dictRunningJobs) == self.running_jobs_max:
                # Wait for one or more jobs slots to free up.
-               cFailedJobs += self._collect_completed_jobs(1)
+               cFailedBuilds += self._collect_completed_jobs(1)
 
-            cFailedJobsTotal += cFailedJobs
+            cFailedBuildsTotal += cFailedBuilds
             # Quit starting jobs in case of failed errors – unless overridden by the user.
-            if cFailedJobs > 0 and not self._m_bKeepGoing:
+            if cFailedBuilds > 0 and not self._m_bKeepGoing:
                break
 
             # Find a target that is ready to be built.
@@ -581,7 +581,7 @@ class JobController(object):
                   break
 
          # There are no more scheduled builds, just wait for the running ones to complete.
-         cFailedJobsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
+         cFailedBuildsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
       finally:
          if not self._m_bDryRun:
             # Write any new metadata.
@@ -589,7 +589,7 @@ class JobController(object):
             if mds:
                mds.write()
 
-      return cFailedJobsTotal
+      return cFailedBuildsTotal
 
 
    def _collect_completed_jobs(self, cJobsToComplete):
@@ -601,7 +601,7 @@ class JobController(object):
       The call to Target.build_complete(), among other things, releases any dependent targets; any
       dependencies with no other blocks will be built by JobController.build_scheduled_targets().
 
-      When a job terminates in failure and JobController.keep_going is True, the corresponding
+      When a build terminates in failure and JobController.keep_going is True, the corresponding
       target and all its dependencies are removed from the scheduled targets with a (recursive) call
       to JobController._unschedule_builds_blocked_by(), to prevent
       JobController.build_scheduled_targets() from getting stuck waiting for targets that will never
@@ -610,14 +610,14 @@ class JobController(object):
       int cJobsToComplete
          Count of jobs to wait for.
       int return
-         Count of jobs that completed in failure.
+         Count of builds that completed in failure.
       """
 
       log = self._m_mk().log
       mds = self._m_mk().metadata
       # This loop alternates poll loop and sleeping.
-      cCompletedJobs = 0
-      cFailedJobs = 0
+      cCompletedBuilds = 0
+      cFailedBuilds = 0
       # The termination condition is in the middle.
       while True:
          # This loop restarts the for loop, since we modify self._m_dictRunningJobs. The termination
@@ -640,14 +640,14 @@ class JobController(object):
                   # Target.build_complete() can change a success into a failure.
                   iRet = tgt.build_complete(job, iRet)
 
-                  # Keep track of completed/failed jobs.
-                  cCompletedJobs += 1
+                  # Keep track of completed/failed builds.
+                  cCompletedBuilds += 1
                   if iRet != 0:
                      if self._m_bKeepGoing:
-                        # Unschedule any dependent jobs, so we can continue ignoring this failure as
-                        # long as we have scheduled jobs that don’t depend on it.
+                        # Unschedule any dependent builds, so we can continue ignoring this failure
+                        # as long as we have scheduled builds that don’t depend on it.
                         self._unschedule_builds_blocked_by(tgt)
-                     cFailedJobs += 1
+                     cFailedBuilds += 1
                      if job:
                         log(
                            None, 'make: {}: build failed (code: {}), command was: {}',
@@ -664,8 +664,8 @@ class JobController(object):
                # freed, so break out of the inner while loop into the outer one to wait.
                break
          # If we freed up the requested count of slots, there’s nothing left to do.
-         if cCompletedJobs >= cJobsToComplete:
-            return cFailedJobs
+         if cCompletedBuilds >= cJobsToComplete:
+            return cFailedBuilds
          if not self._m_bDryRun:
             # Wait a small amount of time.
             # TODO: proper event-based waiting.
