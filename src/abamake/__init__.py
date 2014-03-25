@@ -80,6 +80,43 @@ class MakefileError(Exception):
 
 
 ####################################################################################################
+# DependencyCycleError
+
+class DependencyCycleError(MakefileError):
+   """Raised when a makefile specifies dependencies among targets in a way that creates circular
+   dependencies, an unsolvable situation.
+   """
+
+   _m_iterTargets = None
+
+
+   def __init__(self, sMessage, iterTargets, *iterArgs):
+      """Constructor. See MakefileError.__init__().
+
+      str sMessage
+         Exception message.
+      iter(make.target.Target) iterTargets
+         Targets that create a cycle in the dependency graph.
+      iterable(object*) iterArgs
+         Other arguments.
+      """
+
+      # Don’t pass iterTargets to the superclass’ constructor, so its __str__() won’t display it.
+      MakefileError.__init__(self, sMessage, *iterArgs)
+
+      self._m_iterTargets = iterTargets
+
+
+   def __str__(self):
+      # Show the regular exception description line followed by the targets in the cycle, one per
+      # line.
+      s = MakefileError.__str__(self) + '\n' + \
+          '\n'.join('  ' + str(tgt) for tgt in self._m_iterTargets)
+      return s
+
+
+
+####################################################################################################
 # MakefileSyntaxError
 
 class MakefileSyntaxError(MakefileError):
@@ -270,8 +307,7 @@ class Make(object):
          self._parse_doc(doc)
 
       # Make sure the makefile doesn’t define circular dependencies.
-      if not self.validate_dependency_graph():
-         raise MakefileError('{}: invalid dependency graph'.format(sFilePath))
+      self.validate_dependency_graph()
       # Validate each target.
       for tgt in self._m_setTargets:
          tgt.validate()
@@ -386,9 +422,6 @@ class Make(object):
       speed-efficient because it only visits each subtree once.
 
       See also the recursion step Make._validate_dependency_subtree().
-
-      bool return
-         True if the dependency graph is valid, of False if any issues are detected and logged.
       """
 
       # No previous ancerstors considered for the targets enumerated by this function.
@@ -397,15 +430,13 @@ class Make(object):
       setValidatedSubtrees = set()
       for tgt in self._m_setTargets:
          if tgt not in setValidatedSubtrees:
-            if not self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees):
-               return False
-      return True
+            self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees)
 
 
    def _validate_dependency_subtree(self, tgtSubRoot, listDependents, setValidatedSubtrees):
       """Recursion step for Make.validate_dependency_graph(). Validates a dependency graph subtree
-      rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or
-      returning False in case of problems with the subtree.
+      rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or raising
+      an exception in case of problems with the subtree.
 
       make.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
@@ -414,8 +445,6 @@ class Make(object):
          performs a lot of lookups in it.
       set setValidatedSubtrees
          Subtrees already validated. Used to avoid visiting a subtree more than once.
-      bool return
-         True if the subtree is valid, of False otherwise.
       """
 
       # Add this target to the dependents. This allows to find back edges and will even reveal if a
@@ -424,24 +453,18 @@ class Make(object):
       for tgtDependency in tgtSubRoot.get_dependencies(bTargetsOnly = True):
          for i, tgtDependent in enumerate(listDependents):
             if tgtDependent is tgtDependency:
-               # Back edge found: this dependency creates a cycle, and i is the index in
-               # listDependents of the previous occurrence of tgtDependency as ancestor of
-               # tgtSubRoot.
-               log = self._m_log
-               log(None, 'Dependency graph validation failed, cycle detected:')
-               # Log all the nodes in the cycle, starting from the previous occurrence of
-               # tgtDependency. Note that listDependents does include tgtSubRoot.
-               for tgtDependent in listDependents[i:]:
-                  log(None, '  {}', tgtDependent)
-               return False
+               # Back edge found: this dependency creates a cycle. Since listDependents[i] is the
+               # previous occurrence of tgtDependency as ancestor of tgtSubRoot, listDependents[i:]
+               # will yield all the nodes (targets) in the cycle. Note that listDependents does
+               # include tgtSubRoot.
+               raise DependencyCycleError(
+                  'dependency graph validation failed, cycle detected:',
+                  listDependents[i:]
+               )
          if tgtDependency not in setValidatedSubtrees:
             # Recurse to verify that this dependency’s subtree doesn’t contain cycles.
-            if not self._validate_dependency_subtree(
-               tgtDependency, listDependents, setValidatedSubtrees
-            ):
-               return False
+            self._validate_dependency_subtree(tgtDependency, listDependents, setValidatedSubtrees)
       # Restore the dependents and mark this subtree as validated.
       del listDependents[len(listDependents) - 1]
       setValidatedSubtrees.add(tgtSubRoot)
-      return True
 
