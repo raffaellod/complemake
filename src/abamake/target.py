@@ -157,7 +157,7 @@ class Target(Dependency):
    _m_mk = None
    # Mapping between Target subclasses and XML element names. To add to this mapping, decorate a
    # derived class with @Target.xml_element('xml-element-name').
-   _smc_dictSubclassElementNames = {}
+   _sm_dictSubclassElementNames = {}
    # See Target.name.
    _m_sName = None
 
@@ -376,7 +376,7 @@ class Target(Dependency):
          Model class for eltTarget.
       """
 
-      return cls._smc_dictSubclassElementNames.get(eltTarget.nodeName)
+      return cls._sm_dictSubclassElementNames.get(eltTarget.nodeName)
 
 
    def validate(self):
@@ -399,7 +399,7 @@ class Target(Dependency):
          self._m_sNodeName = sNodeName
 
       def __call__(self, clsDerived):
-         Target._smc_dictSubclassElementNames[self._m_sNodeName] = clsDerived
+         Target._sm_dictSubclassElementNames[self._m_sNodeName] = clsDerived
          return clsDerived
 
 
