@@ -65,6 +65,7 @@ import xml.dom.minidom
 import make.job as job
 import make.logging as logging
 import make.metadata as metadata
+import make.platform as platform
 import make.target as target
 
 
@@ -164,6 +165,8 @@ class Make(object):
    _m_dictNamedTargets = None
    # See Make.output_dir.
    _m_sOutputDir = ''
+   # See Make.platform.
+   _m_platformTarget = None
    # All targets explicitly or implicitly defined in the makefile.
    _m_setTargets = None
 
@@ -393,6 +396,18 @@ class Make(object):
                   raise MakefileSyntaxError(
                      '{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName)
                   )
+
+
+   def _get_target_platform(self):
+      if not self._m_platformTarget:
+         self._m_platformTarget = Platform.get_host_subclass()
+         if not self._m_platformTarget:
+            raise Exception('unable to detect host platform')
+      return self._m_platformTarget
+
+   target_platform = property(_get_target_platform, doc = """
+      Platform under which the generated outputs will execute.
+   """)
 
 
    def print_target_graphs(self):
