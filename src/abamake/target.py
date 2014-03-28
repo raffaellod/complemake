@@ -529,8 +529,9 @@ class ExecutableTarget(Target):
 
       Target.__init__(self, mk, sName)
 
-      # TODO: change '' + '' from hard-coded to computed by a Platform class.
-      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', '' + sName + '')
+      self._m_sFilePath = os.path.join(
+         mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
+      )
 
 
    def build(self):
@@ -636,8 +637,9 @@ class DynLibTarget(ExecutableTarget):
 
       ExecutableTarget.__init__(self, mk, sName)
 
-      # TODO: change 'lib' + '.so' from hard-coded to computed by a Platform class.
-      self._m_sFilePath = os.path.join(mk.output_dir, 'lib', 'lib' + sName + '.so')
+      self._m_sFilePath = os.path.join(
+         mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(sName)
+      )
 
 
    def configure_compiler(self, tool):
@@ -945,8 +947,10 @@ class UnitTestBuildTarget(ExecutableTarget):
 
       # Clear the name.
       self._m_sName = None
-      # TODO: change '' + '' from hard-coded to computed by a Platform class.
-      self._m_sFilePath = os.path.join(mk.output_dir, 'bin', 'unittest', '' + sName + '')
+
+      self._m_sFilePath = os.path.join(
+         mk.output_dir, 'bin', 'unittest', mk.target_platform.exe_file_name(sName)
+      )
 
 
    def add_dependency(self, dep):
@@ -977,13 +981,9 @@ class UnitTestBuildTarget(ExecutableTarget):
       # output_dir/lib to the library path.
       dictEnv = None
       if any(isinstance(dep, DynLibTarget) for dep in self._m_listDependencies):
-         # TODO: move this env tweaking to a Platform class.
-         dictEnv = os.environ.copy()
-         sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
-         if sLibPath:
-            sLibPath = ':' + sLibPath
-         sLibPath += os.path.join(self._m_mk().output_dir, 'lib')
-         dictEnv['LD_LIBRARY_PATH'] = sLibPath
+         dictEnv = self._m_mk().target_platform.add_dir_to_dynlib_env_path(
+            os.environ.copy(), os.path.join(self._m_mk().output_dir, 'lib')
+         )
       return dictEnv
 
 
