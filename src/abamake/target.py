@@ -447,19 +447,21 @@ class ProcessedSourceTarget(FileTarget):
    _m_sSourceFilePath = None
 
 
-   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput = None):
       """Constructor. See FileTarget.__init__().
 
       make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
+      str sSuffix
+         Suffix that is added to sSourceFilePath to generate the target’s file path.
       make.target.Target tgtFinalOutput
          Target that this target’s output will be linked into. If omitted, no output-driven
          configuration will be applied to the Tool instance generating this output.
       """
 
-      FileTarget.__init__(self, mk, os.path.join(mk.output_dir, 'int', sSourceFilePath))
+      FileTarget.__init__(self, mk, os.path.join(mk.output_dir, 'int', sSourceFilePath + sSuffix))
 
       self._m_sSourceFilePath = sSourceFilePath
       self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput) if tgtFinalOutput else None
@@ -484,9 +486,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ProcessedSourceTarget.__init__()."""
 
-      ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, tgtFinalOutput)
-
-      self._m_sFilePath += '.i'
+      ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, '.i', tgtFinalOutput)
 
 
    def _get_tool(self):
@@ -517,9 +517,10 @@ class CxxObjectTarget(ObjectTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ObjectTarget.__init__()."""
 
-      ObjectTarget.__init__(self, mk, sSourceFilePath, tgtFinalOutput)
-
-      self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
+      ObjectTarget.__init__(
+         self, mk, sSourceFilePath, make.tool.CxxCompiler.get_default_impl().object_suffix,
+         tgtFinalOutput
+      )
 
 
    def _get_tool(self):
