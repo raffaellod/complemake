@@ -916,7 +916,7 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
    def validate(self):
       """See Target.validate()."""
 
-      super().validate()
+      Target.validate(self)
 
       # Count how many non-output (static) comparison operands have been specified for this target.
       cStaticCmpOperands = 0
