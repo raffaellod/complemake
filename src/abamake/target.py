@@ -335,12 +335,6 @@ class Target(Dependency):
       return self._m_mk().metadata.has_target_snapshot_changed(self)
 
 
-   def _get_name(self):
-      return None
-
-   name = property(_get_name, doc = """Name of the target.""")
-
-
    def parse_makefile_child(self, elt):
       """Validates and processes the specified child element of the target’s XML element.
 

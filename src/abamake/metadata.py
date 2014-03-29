@@ -25,6 +25,8 @@ import os
 import xml.dom
 import xml.dom.minidom
 
+import make.target
+
 
 
 ####################################################################################################
@@ -191,14 +193,15 @@ class TargetSnapshot(object):
          Resulting <target> element.
       """
 
+      tgt = self._m_tgt
       eltTarget = doc.createElement('target')
 
-      # Store the name of the target or, lacking that, its file path.
-      sTargetName = self._m_tgt.name
+      # Store the name of the target if named, or its file path otherwise.
+      sTargetName = tgt.name if isinstance(tgt, make.target.NamedDependencyMixIn) else None
       if sTargetName:
          eltTarget.setAttribute('name', sTargetName)
       else:
-         sTargetFilePath = self._m_tgt.file_path
+         sTargetFilePath = tgt.file_path
          if sTargetFilePath:
             eltTarget.setAttribute('path', sTargetFilePath)
 

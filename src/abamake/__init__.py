@@ -192,7 +192,7 @@ class Make(object):
          Target to add.
       """
 
-      sName = tgt.name
+      sName = tgt.name if isinstance(tgt, target.NamedDependencyMixIn) else None
       sFilePath = tgt.file_path
       if not sName and not sFilePath:
          raise MakefileError('a target must have either a name or a file path ({})'.format(tgt))
