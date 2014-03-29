@@ -976,10 +976,7 @@ class UnitTestBuildTarget(ExecutableTarget):
       """
 
       # Check if this unit test uses the abc-testing framework.
-      if isinstance(dep, ForeignLibDependency):
-         if dep.name == 'abc-testing':
-            self._m_bUsesAbcTesting = True
-      elif isinstance(dep, DynLibTarget):
+      if isinstance(dep, (ForeignLibDependency, DynLibTarget)):
          if dep.name == 'abc-testing':
             self._m_bUsesAbcTesting = True
 
