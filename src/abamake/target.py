@@ -63,6 +63,38 @@ class Dependency(object):
 
 
 ####################################################################################################
+# NamedDependencyMixIn
+
+class NamedDependencyMixIn(object):
+   """Mixin that provides a name for a Dependency subclass."""
+
+   # Dependency name.
+   _m_sName = None
+
+
+   def __init__(self, sName):
+      """Constructor.
+
+      str sName
+         Dependency name.
+      """
+
+      self._m_sName = sName
+
+
+   def __str__(self):
+      # TODO: avoid reference to non-member self._m_sFilePath.
+      return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
+
+
+   def _get_name(self):
+      return self._m_sName
+
+   name = property(_get_name, doc = """Name of the dependency.""")
+
+
+
+####################################################################################################
 # ForeignDependency
 
 class ForeignDependency(Dependency):
@@ -87,33 +119,22 @@ class ForeignSourceDependency(ForeignDependency):
 ####################################################################################################
 # ForeignLibDependency
 
-class ForeignLibDependency(ForeignDependency):
+class ForeignLibDependency(NamedDependencyMixIn, ForeignDependency):
    """Foreign library dependency. Supports libraries referenced only by name, as in their typical
    usage.
    """
 
-   # See ForeignLibDependency.name.
-   _m_sName = None
-
-
    def __init__(self, sFilePath, sName):
-      """Constructor. See ForeignDependency.__init__().
+      """Constructor. See NamedDependencyMixIn.__init__() and ForeignDependency.__init__().
 
       str sFilePath
          See ForeignLibDependency.file_path.
       str sName
-         See ForeignLibDependency.name.
+         See NamedDependencyMixIn.name.
       """
 
+      NamedDependencyMixIn.__init__(self, sName)
       ForeignDependency.__init__(self, sFilePath)
-
-      self._m_sName = sName
-
-
-   def _get_name(self):
-      return self._m_sName
-
-   name = property(_get_name, doc = """Name of the library.""")
 
 
 
@@ -158,18 +179,14 @@ class Target(Dependency):
    # Mapping between Target subclasses and XML element names. To add to this mapping, decorate a
    # derived class with @Target.xml_element('xml-element-name').
    _sm_dictSubclassElementNames = {}
-   # See Target.name.
-   _m_sName = None
 
 
-   def __init__(self, mk, sName = None):
+   def __init__(self, mk):
       """Constructor. It initializes Dependency.file_path to None, because it’s assumed that a
       derived class will know better.
 
       make.Make mk
          Make instance.
-      str sName
-         See Target.name.
       """
 
       Dependency.__init__(self, None)
@@ -178,11 +195,6 @@ class Target(Dependency):
       self._m_listDependencies = []
       self._m_listDependents = []
       self._m_mk = weakref.ref(mk)
-      self._m_sName = sName
-
-
-   def __str__(self):
-      return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
 
 
    def add_dependency(self, dep):
@@ -324,7 +336,7 @@ class Target(Dependency):
 
 
    def _get_name(self):
-      return self._m_sName
+      return None
 
    name = property(_get_name, doc = """Name of the target.""")
 
@@ -417,13 +429,11 @@ class ProcessedSourceTarget(Target):
    _m_sSourceFilePath = None
 
 
-   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See Target.__init__().
 
       make.Make mk
          Make instance.
-      str sName
-         See Target.name.
       str sSourceFilePath
          Source from which the target is built.
       make.target.Target tgtFinalOutput
@@ -431,7 +441,7 @@ class ProcessedSourceTarget(Target):
          configuration will be applied to the Tool instance generating this output.
       """
 
-      Target.__init__(self, mk, sName)
+      Target.__init__(self, mk)
 
       self._m_sSourceFilePath = sSourceFilePath
       self._m_sFilePath = os.path.join(mk.output_dir, 'int', sSourceFilePath)
@@ -457,10 +467,10 @@ class ProcessedSourceTarget(Target):
 class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
-   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ProcessedSourceTarget.__init__()."""
 
-      ProcessedSourceTarget.__init__(self, mk, sName, sSourceFilePath, tgtFinalOutput)
+      ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, tgtFinalOutput)
 
       self._m_sFilePath += '.i'
 
@@ -490,10 +500,10 @@ class ObjectTarget(ProcessedSourceTarget):
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
-   def __init__(self, mk, sName, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
       """Constructor. See ObjectTarget.__init__()."""
 
-      ObjectTarget.__init__(self, mk, sName, sSourceFilePath, tgtFinalOutput)
+      ObjectTarget.__init__(self, mk, sSourceFilePath, tgtFinalOutput)
 
       self._m_sFilePath += make.tool.CxxCompiler.get_default_impl().object_suffix
 
@@ -518,15 +528,16 @@ class CxxObjectTarget(ObjectTarget):
 # ExecutableTarget
 
 @Target.xml_element('exe')
-class ExecutableTarget(Target):
+class ExecutableTarget(NamedDependencyMixIn, Target):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
    """
 
    def __init__(self, mk, sName):
-      """Constructor. See Target.__init__()."""
+      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__()."""
 
-      Target.__init__(self, mk, sName)
+      NamedDependencyMixIn.__init__(self, sName)
+      Target.__init__(self, mk)
 
       self._m_sFilePath = os.path.join(
          mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
@@ -595,7 +606,7 @@ class ExecutableTarget(Target):
          else:
             raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, None, sFilePath, self)
+         tgtObj = clsObjTarget(mk, sFilePath, self)
          mk.add_target(tgtObj)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'dynlib':
@@ -667,7 +678,7 @@ class DynLibTarget(ExecutableTarget):
 # UnitTestTarget
 
 @Target.xml_element('unittest')
-class UnitTestTarget(Target):
+class UnitTestTarget(NamedDependencyMixIn, Target):
    """Target that executes a unit test."""
 
    # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
@@ -678,6 +689,13 @@ class UnitTestTarget(Target):
    # UnitTestBuildTarget instance that builds the unit test executable invoked as part of this
    # target.
    _m_tgtUnitTestBuild = None
+
+
+   def __init__(self, mk, sName):
+      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__()."""
+
+      NamedDependencyMixIn.__init__(self, sName)
+      Target.__init__(self, mk)
 
 
    def add_dependency(self, dep):
@@ -804,15 +822,15 @@ class UnitTestTarget(Target):
          # Pick the correct target class based on the file name extension and the tool to use.
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             if sTool == 'preproc':
-               clsObjTarget = CxxPreprocessedTarget
+               clsPreprocTarget = CxxPreprocessedTarget
             else:
                raise make.MakefileError(
                   '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
                )
          else:
             raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
-         # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, None, sFilePath)
+         # Create a preprocessed target with the file path as its source.
+         tgtObj = clsPreprocTarget(mk, sFilePath)
          mk.add_target(tgtObj)
          # Note that we don’t invoke our add_dependency() override.
          Target.add_dependency(self, tgtObj)
@@ -938,7 +956,7 @@ class UnitTestBuildTarget(ExecutableTarget):
    _m_bUsesAbcTesting = None
 
 
-   def __init__(self, mk, sName = None):
+   def __init__(self, mk, sName):
       """See ExecutableTarget.__init__()."""
 
       # sName is only used to generate _m_sFilePath; don’t pass it to ExecutableTarget.__init__().
