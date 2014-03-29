@@ -185,25 +185,41 @@ class Make(object):
       self._m_setTargets = set()
 
 
+   def add_file_target(self, tgt, sFilePath):
+      """Records a file target, making sure no duplicates are added.
+
+      make.target.FileTarget tgt
+         Target to add.
+      str sFilePath
+         Target file path.
+      """
+
+      if sFilePath in self._m_dictFileTargets:
+         raise KeyError('duplicate target file path: {}'.format(sFilePath))
+      self._m_dictFileTargets[sFilePath] = tgt
+
+
+   def add_named_target(self, tgt, sName):
+      """Records a named target, making sure no duplicates are added.
+
+      make.target.NamedTargetMixIn tgt
+         Target to add.
+      str sName
+         Target name.
+      """
+
+      if sName in self._m_dictNamedTargets:
+         raise KeyError('duplicate target name: {}'.format(sName))
+      self._m_dictNamedTargets[sName] = tgt
+
+
    def add_target(self, tgt):
-      """Adds a target to the applicable dictionaries, making sure no duplicates are added.
+      """Records a target.
 
       make.target.Target tgt
          Target to add.
       """
 
-      sName = tgt.name if isinstance(tgt, target.NamedDependencyMixIn) else None
-      sFilePath = tgt.file_path if isinstance(tgt, target.SingleFileDependencyMixIn) else None
-      if not sName and not sFilePath:
-         raise MakefileError('a target must have either a name or a file path ({})'.format(tgt))
-      if sFilePath:
-         if sFilePath in self._m_dictFileTargets:
-            raise KeyError('duplicate target file path: {}'.format(sFilePath))
-         self._m_dictFileTargets[sFilePath] = tgt
-      if sName:
-         if sName in self._m_dictNamedTargets:
-            raise KeyError('duplicate target name: {}'.format(sName))
-         self._m_dictNamedTargets[sName] = tgt
       self._m_setTargets.add(tgt)
 
 

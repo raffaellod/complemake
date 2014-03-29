@@ -197,7 +197,7 @@ class TargetSnapshot(object):
       eltTarget = doc.createElement('target')
 
       # Store the name of the target if named, or its file path otherwise.
-      sTargetName = tgt.name if isinstance(tgt, make.target.NamedDependencyMixIn) else None
+      sTargetName = tgt.name if isinstance(tgt, make.target.NamedTargetMixIn) else None
       if sTargetName:
          eltTarget.setAttribute('name', sTargetName)
       else:

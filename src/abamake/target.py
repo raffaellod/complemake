@@ -199,6 +199,7 @@ class Target(Dependency):
       self._m_listDependencies = []
       self._m_listDependents = []
       self._m_mk = weakref.ref(mk)
+      mk.add_target(self)
 
 
    def add_dependency(self, dep):
@@ -405,6 +406,26 @@ class Target(Dependency):
 
 
 ####################################################################################################
+# NamedTargetMixIn
+
+class NamedTargetMixIn(NamedDependencyMixIn):
+   """Mixin that provides a name for a Target subclass."""
+
+   def __init__(self, mk, sName):
+      """Constructor. See NamedDependencyMixIn.__init__().
+
+      make.Make mk
+         Make instance.
+      str sName
+         Dependency name.
+      """
+
+      NamedDependencyMixIn.__init__(self, sName)
+      mk.add_named_target(self, sName)
+
+
+
+####################################################################################################
 # FileTarget
 
 class FileTarget(SingleFileDependencyMixIn, Target):
@@ -421,6 +442,7 @@ class FileTarget(SingleFileDependencyMixIn, Target):
 
       SingleFileDependencyMixIn.__init__(self, sFilePath)
       Target.__init__(self, mk)
+      mk.add_file_target(self, sFilePath)
 
 
    def _get_build_log_path(self):
@@ -608,7 +630,6 @@ class ExecutableTargetBase(FileTarget):
             raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, sFilePath, self)
-         mk.add_target(tgtObj)
          self.add_dependency(tgtObj)
       elif elt.nodeName == 'dynlib':
          # Check if this makefile can build this dynamic library.
@@ -637,11 +658,11 @@ class ExecutableTargetBase(FileTarget):
 ####################################################################################################
 # NamedExecutableTarget
 
-class NamedExecutableTarget(NamedDependencyMixIn, ExecutableTargetBase):
+class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
    """Base for named executable program target classes."""
 
    def __init__(self, mk, sName, sFilePath):
-      """Constructor. See NamedDependencyMixIn.__init__() and ExecutableTargetBase.__init__().
+      """Constructor. See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
 
       make.Make mk
          Make instance.
@@ -651,7 +672,7 @@ class NamedExecutableTarget(NamedDependencyMixIn, ExecutableTargetBase):
          Target file path.
       """
 
-      NamedDependencyMixIn.__init__(self, sName)
+      NamedTargetMixIn.__init__(self, mk, sName)
       ExecutableTargetBase.__init__(self, mk, sFilePath)
 
 
@@ -729,7 +750,7 @@ class DynLibTarget(NamedExecutableTarget):
 # UnitTestTarget
 
 @Target.xml_element('unittest')
-class UnitTestTarget(NamedDependencyMixIn, Target):
+class UnitTestTarget(NamedTargetMixIn, Target):
    """Target that executes a unit test."""
 
    # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
@@ -743,7 +764,7 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
 
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__().
+      """Constructor. See NamedTargetMixIn.__init__() and Target.__init__().
 
       make.Make mk
          Make instance.
@@ -751,7 +772,7 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
          Target name.
       """
 
-      NamedDependencyMixIn.__init__(self, sName)
+      NamedTargetMixIn.__init__(self, mk, sName)
       Target.__init__(self, mk)
 
 
@@ -889,7 +910,6 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
             raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
          # Create a preprocessed target with the file path as its source.
          tgtObj = clsPreprocTarget(mk, sFilePath)
-         mk.add_target(tgtObj)
          # Note that we don’t invoke our add_dependency() override.
          Target.add_dependency(self, tgtObj)
       elif elt.nodeName == 'expected-output':
@@ -924,7 +944,6 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
          if not tgtUnitTestBuild:
             # Create the build target.
             tgtUnitTestBuild = UnitTestBuildTarget(mk, self._m_sName)
-            mk.add_target(tgtUnitTestBuild)
 
             # Transfer any dependencies we don’t handle.
             i = 0
