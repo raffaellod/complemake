@@ -35,30 +35,10 @@ import make.tool
 # Dependency
 
 class Dependency(object):
-   """Represents an abstract dependency of which only the file path is known."""
-
-   # See Dependency.file_path.
-   _m_sFilePath = None
-
-
-   def __init__(self, sFilePath):
-      """Constructor.
-
-      str sFilePath
-         See Dependency.file_path.
-      """
-
-      self._m_sFilePath = sFilePath
-
+   """Represents an abstract dependency with no additional information."""
 
    def __str__(self):
-      return '{} ({})'.format(self._m_sFilePath, type(self).__name__)
-
-
-   def _get_file_path(self):
-      return self._m_sFilePath
-
-   file_path = property(_get_file_path, doc = """Dependency file path.""")
+      return '({})'.format(type(self).__name__)
 
 
 
@@ -79,18 +59,52 @@ class NamedDependencyMixIn(object):
          Dependency name.
       """
 
+      if not sName:
+         raise make.MakefileError('missing target name')
       self._m_sName = sName
 
 
    def __str__(self):
-      # TODO: avoid reference to non-member self._m_sFilePath.
-      return '{} ({})'.format(self._m_sName or self._m_sFilePath, type(self).__name__)
+      return '{} ({})'.format(self._m_sName, type(self).__name__)
 
 
    def _get_name(self):
       return self._m_sName
 
    name = property(_get_name, doc = """Name of the dependency.""")
+
+
+
+####################################################################################################
+# SingleFileDependencyMixIn
+
+class SingleFileDependencyMixIn(object):
+   """Mixin that provides a single file path for a Dependency subclass."""
+
+   # Dependency file path.
+   _m_sFilePath = None
+
+
+   def __init__(self, sFilePath):
+      """Constructor.
+
+      str sFilePath
+         Dependency file path.
+      """
+
+      if not sFilePath:
+         raise make.MakefileError('missing target file path')
+      self._m_sFilePath = sFilePath
+
+
+   def __str__(self):
+      return '{} ({})'.format(self._m_sFilePath, type(self).__name__)
+
+
+   def _get_file_path(self):
+      return self._m_sFilePath
+
+   file_path = property(_get_file_path, doc = """Path to the dependency file.""")
 
 
 
@@ -109,7 +123,7 @@ class ForeignDependency(Dependency):
 ####################################################################################################
 # ForeignSourceDependency
 
-class ForeignSourceDependency(ForeignDependency):
+class ForeignSourceDependency(SingleFileDependencyMixIn, ForeignDependency):
    """Foreign source file dependency."""
 
    pass
@@ -124,24 +138,14 @@ class ForeignLibDependency(NamedDependencyMixIn, ForeignDependency):
    usage.
    """
 
-   def __init__(self, sFilePath, sName):
-      """Constructor. See NamedDependencyMixIn.__init__() and ForeignDependency.__init__().
-
-      str sFilePath
-         See ForeignLibDependency.file_path.
-      str sName
-         See NamedDependencyMixIn.name.
-      """
-
-      NamedDependencyMixIn.__init__(self, sName)
-      ForeignDependency.__init__(self, sFilePath)
+   pass
 
 
 
 ####################################################################################################
 # OutputRerefenceDependency
 
-class OutputRerefenceDependency(ForeignDependency):
+class OutputRerefenceDependency(SingleFileDependencyMixIn, ForeignDependency):
    """File used as a reference to validate expected outputs."""
 
    pass
@@ -151,7 +155,7 @@ class OutputRerefenceDependency(ForeignDependency):
 ####################################################################################################
 # UnitTestExecScriptDependency
 
-class UnitTestExecScriptDependency(ForeignDependency):
+class UnitTestExecScriptDependency(SingleFileDependencyMixIn, ForeignDependency):
    """Executable that runs a unit test according to a “script”. Used to mimic interation with a
    shell that ABC Make does not implement.
    """
@@ -189,7 +193,7 @@ class Target(Dependency):
          Make instance.
       """
 
-      Dependency.__init__(self, None)
+      Dependency.__init__(self)
 
       self._m_cBuildBlocks = 0
       self._m_listDependencies = []
@@ -246,15 +250,6 @@ class Target(Dependency):
          if job:
             self._m_mk().metadata.update_target_snapshot(self)
       return iRet
-
-
-   def _get_build_log_path(self):
-      return os.path.join(self._m_mk().output_dir, 'log', self._m_sFilePath + '.log')
-
-   build_log_path = property(_get_build_log_path, doc = """
-      Path to the file where the build log for this target (i.e. the captured stderr of the process
-      that builds it) is saved.
-   """)
 
 
    def get_dependencies(self, bTargetsOnly = False):
@@ -410,9 +405,38 @@ class Target(Dependency):
 
 
 ####################################################################################################
+# FileTarget
+
+class FileTarget(SingleFileDependencyMixIn, Target):
+   """Target that generates a file."""
+
+   def __init__(self, mk, sFilePath):
+      """Constructor. See SingleFileDependencyMixIn.__init__() and Target.__init__().
+
+      make.Make mk
+         Make instance.
+      str sFilePath
+         Dependency file path.
+      """
+
+      SingleFileDependencyMixIn.__init__(self, sFilePath)
+      Target.__init__(self, mk)
+
+
+   def _get_build_log_path(self):
+      return os.path.join(self._m_mk().output_dir, 'log', self._m_sFilePath + '.log')
+
+   build_log_path = property(_get_build_log_path, doc = """
+      Path to the file where the build log for this target (i.e. the captured stderr of the process
+      that builds it) is saved.
+   """)
+
+
+
+####################################################################################################
 # ProcessedSourceTarget
 
-class ProcessedSourceTarget(Target):
+class ProcessedSourceTarget(FileTarget):
    """Intermediate target generated by processing a source file. The output file will be placed in
    the “int” directory relative to the output base directory.
    """
@@ -424,7 +448,7 @@ class ProcessedSourceTarget(Target):
 
 
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
-      """Constructor. See Target.__init__().
+      """Constructor. See FileTarget.__init__().
 
       make.Make mk
          Make instance.
@@ -435,17 +459,16 @@ class ProcessedSourceTarget(Target):
          configuration will be applied to the Tool instance generating this output.
       """
 
-      Target.__init__(self, mk)
+      FileTarget.__init__(self, mk, os.path.join(mk.output_dir, 'int', sSourceFilePath))
 
       self._m_sSourceFilePath = sSourceFilePath
-      self._m_sFilePath = os.path.join(mk.output_dir, 'int', sSourceFilePath)
       self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput) if tgtFinalOutput else None
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
 
    def build(self):
-      """See Target.build()."""
+      """See FileTarget.build()."""
 
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
       return self._get_tool().create_job(self._m_mk(), self)
@@ -516,27 +539,13 @@ class CxxObjectTarget(ObjectTarget):
 
 
 ####################################################################################################
-# ExecutableTarget
+# ExecutableTargetBase
 
-@Target.xml_element('exe')
-class ExecutableTarget(NamedDependencyMixIn, Target):
-   """Executable program target. The output file will be placed in the “bin” directory relative to
-   the output base directory.
-   """
-
-   def __init__(self, mk, sName):
-      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__()."""
-
-      NamedDependencyMixIn.__init__(self, sName)
-      Target.__init__(self, mk)
-
-      self._m_sFilePath = os.path.join(
-         mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
-      )
-
+class ExecutableTargetBase(FileTarget):
+   """Base class for executable program target classes."""
 
    def build(self):
-      """See Target.build()."""
+      """See FileTarget.build()."""
 
       mk = self._m_mk()
       lnk = self._get_tool()
@@ -566,18 +575,18 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
 
    def configure_compiler(self, tool):
       """Configures the specified Tool instance to generate code suitable for linking in this
-      Target.
+      target.
 
       make.tool.Tool tool
          Tool (compiler) to configure.
       """
 
-      # TODO: e.g. configure Link Time Code Generation to match this Target.
+      # TODO: e.g. configure Link Time Code Generation to match this target.
       pass
 
 
    def _get_tool(self):
-      """See Target._get_tool()."""
+      """See FileTarget._get_tool()."""
 
       lnk = make.tool.Linker.get_default_impl()()
       lnk.output_file_path = self._m_sFilePath
@@ -586,7 +595,7 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
 
 
    def parse_makefile_child(self, elt):
-      """See Target.parse_makefile_child()."""
+      """See FileTarget.parse_makefile_child()."""
 
       mk = self._m_mk()
       if elt.nodeName == 'source':
@@ -607,7 +616,7 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
          # dependency of self; else just add the library name.
          dep = mk.get_target_by_name(sName, None)
          if not dep:
-            dep = ForeignLibDependency(None, sName)
+            dep = ForeignLibDependency(sName)
          self.add_dependency(dep)
       elif elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
@@ -619,8 +628,54 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
             )
          tgtUnitTest.add_dependency(self)
       else:
-         return Target.parse_makefile_child(self, elt)
+         return FileTarget.parse_makefile_child(self, elt)
       return True
+
+
+
+####################################################################################################
+# NamedExecutableTarget
+
+class NamedExecutableTarget(NamedDependencyMixIn, ExecutableTargetBase):
+   """Base for named executable program target classes."""
+
+   def __init__(self, mk, sName, sFilePath):
+      """Constructor. See NamedDependencyMixIn.__init__() and ExecutableTargetBase.__init__().
+
+      make.Make mk
+         Make instance.
+      str sName
+         Target name.
+      str sFilePath
+         Target file path.
+      """
+
+      NamedDependencyMixIn.__init__(self, sName)
+      ExecutableTargetBase.__init__(self, mk, sFilePath)
+
+
+
+####################################################################################################
+# ExecutableTarget
+
+@Target.xml_element('exe')
+class ExecutableTarget(NamedExecutableTarget):
+   """Executable program target. The output file will be placed in the “bin” directory relative to
+   the output base directory.
+   """
+
+   def __init__(self, mk, sName):
+      """Constructor. See NamedExecutableTarget.__init__().
+
+      make.Make mk
+         Make instance.
+      str sName
+         Target name.
+      """
+
+      NamedExecutableTarget.__init__(self, mk, sName, os.path.join(
+         mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
+      ))
 
 
 
@@ -628,23 +683,27 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
 # DynLibTarget
 
 @Target.xml_element('dynlib')
-class DynLibTarget(ExecutableTarget):
+class DynLibTarget(NamedExecutableTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
    """
 
    def __init__(self, mk, sName):
-      """Constructor. See ExecutableTarget.__init__()."""
+      """Constructor. See NamedExecutableTarget.__init__().
 
-      ExecutableTarget.__init__(self, mk, sName)
+      make.Make mk
+         Make instance.
+      str sName
+         Target name.
+      """
 
-      self._m_sFilePath = os.path.join(
+      NamedExecutableTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(sName)
-      )
+      ))
 
 
    def configure_compiler(self, tool):
-      """See ExecutableTarget.configure_compiler()."""
+      """See NamedExecutableTarget.configure_compiler()."""
 
       if isinstance(tool, make.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
@@ -655,11 +714,11 @@ class DynLibTarget(ExecutableTarget):
 
 
    def _get_tool(self):
-      """See ExecutableTarget._get_tool(). Overridden to tell the linker to generate a dynamic
+      """See NamedExecutableTarget._get_tool(). Overridden to tell the linker to generate a dynamic
       library.
       """
 
-      lnk = ExecutableTarget._get_tool(self)
+      lnk = NamedExecutableTarget._get_tool(self)
       lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
@@ -683,7 +742,13 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
 
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__()."""
+      """Constructor. See NamedDependencyMixIn.__init__() and Target.__init__().
+
+      make.Make mk
+         Make instance.
+      str sName
+         Target name.
+      """
 
       NamedDependencyMixIn.__init__(self, sName)
       Target.__init__(self, mk)
@@ -940,7 +1005,7 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
 ####################################################################################################
 # UnitTestBuildTarget
 
-class UnitTestBuildTarget(ExecutableTarget):
+class UnitTestBuildTarget(ExecutableTargetBase):
    """Builds an executable unit test. The output file will be placed in the “bin/unittest” directory
    relative to the output base directory.
    """
@@ -950,17 +1015,17 @@ class UnitTestBuildTarget(ExecutableTarget):
 
 
    def __init__(self, mk, sName):
-      """See ExecutableTarget.__init__()."""
+      """Constructor. See ExecutableTargetBase.__init__().
 
-      # sName is only used to generate _m_sFilePath; don’t pass it to ExecutableTarget.__init__().
-      ExecutableTarget.__init__(self, mk, '')
+      make.Make mk
+         Make instance.
+      str sName
+         Target name.
+      """
 
-      # Clear the name.
-      self._m_sName = None
-
-      self._m_sFilePath = os.path.join(
+      ExecutableTargetBase.__init__(self, mk, os.path.join(
          mk.output_dir, 'bin', 'unittest', mk.target_platform.exe_file_name(sName)
-      )
+      ))
 
 
    def add_dependency(self, dep):

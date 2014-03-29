@@ -193,7 +193,7 @@ class Make(object):
       """
 
       sName = tgt.name if isinstance(tgt, target.NamedDependencyMixIn) else None
-      sFilePath = tgt.file_path
+      sFilePath = tgt.file_path if isinstance(tgt, target.SingleFileDependencyMixIn) else None
       if not sName and not sFilePath:
          raise MakefileError('a target must have either a name or a file path ({})'.format(tgt))
       if sFilePath:
