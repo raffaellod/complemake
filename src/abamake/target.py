@@ -177,7 +177,7 @@ class Target(Dependency):
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDependencies = None
    # Targets (make.target.Target instances) dependent on this target.
-   _m_listDependents = None
+   _m_setDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
    # Mapping between Target subclasses and XML element names. To add to this mapping, decorate a
@@ -197,7 +197,7 @@ class Target(Dependency):
 
       self._m_cBuildBlocks = 0
       self._m_listDependencies = []
-      self._m_listDependents = []
+      self._m_setDependents = set()
       self._m_mk = weakref.ref(mk)
       mk.add_target(self)
 
@@ -215,7 +215,7 @@ class Target(Dependency):
          # (dependent) and increment the block count for this target.
          if isinstance(dep, Target):
             # Use weak references to avoid creating reference loops.
-            dep._m_listDependents.append(weakref.ref(self))
+            dep._m_setDependents.add(weakref.ref(self))
             self._m_cBuildBlocks += 1
 
 
@@ -244,7 +244,7 @@ class Target(Dependency):
 
       if iRet == 0:
          # Release all dependent targets.
-         for tgt in self._m_listDependents:
+         for tgt in self._m_setDependents:
             # These are weak references.
             tgt()._m_cBuildBlocks -= 1
          # If a job was really run (not None), update the target snapshot.
@@ -280,7 +280,7 @@ class Target(Dependency):
    def dump_dependents(self, sIndent = ''):
       """TODO: comment."""
 
-      for wdep in self._m_listDependents:
+      for wdep in self._m_setDependents:
          dep = wdep()
          print(sIndent + str(dep))
          if isinstance(dep, Target):
@@ -294,9 +294,9 @@ class Target(Dependency):
          Dependent on this target.
       """
 
-      for tgt in self._m_listDependents:
-         # These are weak references.
-         yield tgt()
+      for wtgt in self._m_setDependents:
+         # Resolve this weak references.
+         yield wtgt()
 
 
    def _get_tool(self):
@@ -355,11 +355,12 @@ class Target(Dependency):
       # If the dependency is a target built by the same makefile, remove the reverse dependency link
       # (dependent) and decrement the block count for this target.
       if isinstance(dep, Target):
-         # Can’t just use dep._m_listDependents.remove(self) because the list contains weak
+         # Can’t just use dep._m_setDependents.remove(self) because the set contains weak
          # references, so self would not be found.
-         for i, depRev in enumerate(dep._m_listDependents):
+         for depRev in dep._m_setDependents:
             if depRev() is self:
-               del dep._m_listDependents[i]
+               dep._m_setDependents.remove(depRev)
+               break
          self._m_cBuildBlocks -= 1
 
 
