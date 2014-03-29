@@ -151,7 +151,7 @@ class TargetSnapshot(object):
       # Check that all signatures in the current snapshot (self) match those in the stored snapshot.
       for sFilePath, fsCurr in self._m_dictDepsSignatures.items():
          fsStored = tssStored._m_dictDepsSignatures.get(sFilePath)
-         if fsStored is None:
+         if not fsStored:
             log(
                log.HIGH,
                'metadata: {}: file {} not part of stored snapshot, rebuild needed',

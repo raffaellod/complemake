@@ -160,13 +160,13 @@ class Tool(object):
          Default implementation of this class.
       """
 
-      if cls._sm_clsDefaultDerived is None:
+      if not cls._sm_clsDefaultDerived:
          # Attempt to detect the presence of a derived class’s executable.
          # TODO: accept paths provided via command line.
          # TODO: apply a cross-compiler prefix.
 
          # Make sure we have a US English environment dictionary.
-         if Tool._sm_dictUSEngEnv is None:
+         if not Tool._sm_dictUSEngEnv:
             # Copy the current environment and add to it a locale override for US English.
             Tool._sm_dictUSEngEnv = os.environ.copy()
             Tool._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'

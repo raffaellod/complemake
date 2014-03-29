@@ -609,14 +609,14 @@ class ExecutableTarget(NamedDependencyMixIn, Target):
          # If the library is a known target (i.e. it’s built by this makefile), assign it as a
          # dependency of self; else just add the library name.
          dep = mk.get_target_by_name(sName, None)
-         if dep is None:
+         if not dep:
             dep = ForeignLibDependency(None, sName)
          self.add_dependency(dep)
       elif elt.nodeName == 'unittest':
          # A unit test must be built after the target it’s supposed to test.
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_target_by_name(sName, None)
-         if tgtUnitTest is None:
+         if not tgtUnitTest:
             raise make.TargetReferenceError(
                '{}: could not find definition of referenced unit test: {}'.format(self, sName)
             )
