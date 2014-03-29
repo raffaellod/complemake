@@ -439,10 +439,7 @@ class ProcessedSourceTarget(Target):
 
       self._m_sSourceFilePath = sSourceFilePath
       self._m_sFilePath = os.path.join(mk.output_dir, 'int', sSourceFilePath)
-      if tgtFinalOutput:
-         self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput)
-      else:
-         self._m_tgtFinalOutput = None
+      self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput) if tgtFinalOutput else None
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
