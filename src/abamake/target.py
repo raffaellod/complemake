@@ -253,21 +253,6 @@ class Target(Dependency):
       return iRet
 
 
-   def get_dependencies(self, bTargetsOnly = False):
-      """Iterates over the dependencies (make.target.Dependency instances) for this target.
-
-      bool bTargetsOnly
-         If True, only make.target.Target instances will be returned; if False, no filtering will
-         occur.
-      make.target.Dependency yield
-         Dependency of this target.
-      """
-
-      for dep in self._m_listDependencies:
-         if not bTargetsOnly or isinstance(dep, Target):
-            yield dep
-
-
    def dump_dependencies(self, sIndent = ''):
       """TODO: comment."""
 
@@ -285,6 +270,21 @@ class Target(Dependency):
          print(sIndent + str(dep))
          if isinstance(dep, Target):
             dep.dump_dependents(sIndent + '  ')
+
+
+   def get_dependencies(self, bTargetsOnly = False):
+      """Iterates over the dependencies (make.target.Dependency instances) for this target.
+
+      bool bTargetsOnly
+         If True, only make.target.Target instances will be returned; if False, no filtering will
+         occur.
+      make.target.Dependency yield
+         Dependency of this target.
+      """
+
+      for dep in self._m_listDependencies:
+         if not bTargetsOnly or isinstance(dep, Target):
+            yield dep
 
 
    def get_dependents(self):
