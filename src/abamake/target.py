@@ -745,9 +745,10 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
 
 
    def build_complete(self, job, iRet):
-      """See Target.build_complete()."""
+      """See Target.build_complete(). Performs any comparisons defined as part of the unit test."""
 
       iRet = Target.build_complete(self, job, iRet)
+
       # Only go ahead in case of success of the job, or if no job was run because there’s no build
       # target to execute.
       if iRet == 0 and (job or not self._m_tgtUnitTestBuild):
@@ -904,6 +905,7 @@ class UnitTestTarget(NamedDependencyMixIn, Target):
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply different transformations.
       if self._m_reFilter:
+         # This transformation requires that the operand is a string, so convert oCmpOp into one.
          if not isinstance(oCmpOp, str):
             oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
          oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
