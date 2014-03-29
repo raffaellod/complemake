@@ -148,7 +148,7 @@ class Make(object):
 
       mk = make.Make()
       mk.parse('project.abcmk')
-      mk.job_controller.schedule_build(mk.get_target_by_name('projectbin'))
+      mk.job_controller.schedule_build(mk.get_named_target('projectbin'))
       mk.job_controller.build_scheduled_targets()
    """
 
@@ -223,12 +223,12 @@ class Make(object):
       self._m_setTargets.add(tgt)
 
 
-   def get_target_by_file_path(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
-      """Returns a target given its file path, raising an exception if no such target exists and no
-      fallback value was provided.
+   def get_file_target(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
+      """Returns a file target given its file path, raising an exception if no such target exists
+      and no fallback value was provided.
 
       str sFilePath
-         Path to the file to find a target for.
+         Path to the target’s file.
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
@@ -242,7 +242,7 @@ class Make(object):
       return tgt
 
 
-   def get_target_by_name(self, sName, oFallback = _RAISE_IF_NOT_FOUND):
+   def get_named_target(self, sName, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a target given its name as specified in the makefile, raising an exception if no
       such target exists and no fallback value was provided.
 

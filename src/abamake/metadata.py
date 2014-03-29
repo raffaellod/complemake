@@ -275,8 +275,8 @@ class MetadataStore(object):
                         continue
                      # Allow for None because it’s possible that no such target exists – maybe it
                      # used to, but not anymore.
-                     tgt = mk.get_target_by_name(eltTarget.getAttribute('name'), None) or \
-                           mk.get_target_by_file_path(eltTarget.getAttribute('path'), None)
+                     tgt = mk.get_named_target(eltTarget.getAttribute('name'), None) or \
+                           mk.get_file_target(eltTarget.getAttribute('path'), None)
                      if tgt:
                         self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
                            tgt, eltTarget = eltTarget

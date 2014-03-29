@@ -125,7 +125,7 @@ def main(iterArgs):
       iterTargets = []
       while iArg < iArgEnd:
          sArg = iterArgs[iArg]
-         iterTargets.append(mk.get_target_by_name(sArg, None) or mk.get_target_by_file_path(sArg))
+         iterTargets.append(mk.get_named_target(sArg, None) or mk.get_file_target(sArg))
          iArg += 1
    else:
       iterTargets = mk.named_targets
