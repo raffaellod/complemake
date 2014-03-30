@@ -293,22 +293,22 @@ class MetadataStore(object):
 
       tssCurr = self._m_dictCurrTargetSnapshots.get(tgt)
       if not tssCurr:
-         # Generate signatures for all the target’s dependencies.
+         # Generate signatures for all the target’s dependencies’ generated files.
          dictDepsSignatures = {}
          for dep in tgt.get_dependencies():
-            sFilePath = dep.file_path
-            # See if we already have a signature for this file in the cache.
-            # The cache is supposed to always be current, because when we’re asked to check for the
-            # signature of a file, it means that the target for which we’re doing it is ready to be
-            # built, which means that the file has already been built and won’t be again, so when we
-            # cache a file signature, it won’t need to be refreshed.
-            fs = self._m_dictSignatures.get(sFilePath)
-            if not fs:
-               # If we still haven’t read this file’s current signature, generate it now.
-               fs = FileSignature.generate(sFilePath)
-               # Store this signature, in case other targets also need it.
-               self._m_dictSignatures[sFilePath] = fs
-            dictDepsSignatures[sFilePath] = fs
+            for sFilePath in dep.get_generated_files():
+               # See if we already have a signature for this file in the cache.
+               # The cache is supposed to always be current, because when we’re asked to check for
+               # the signature of a file, it means that the target for which we’re doing it is ready
+               # to be built, which means that the dependency file has already been built and won’t
+               # be again, so when we cache a file signature, it won’t need to be refreshed.
+               fs = self._m_dictSignatures.get(sFilePath)
+               if not fs:
+                  # If we still haven’t read this file’s current signature, generate it now.
+                  fs = FileSignature.generate(sFilePath)
+                  # Store this signature, in case other targets also need it.
+                  self._m_dictSignatures[sFilePath] = fs
+               dictDepsSignatures[sFilePath] = fs
          # Instantiate the current snapshot.
          tssCurr = TargetSnapshot(tgt, dictDepsSignatures = dictDepsSignatures)
          self._m_dictCurrTargetSnapshots[tgt] = tssCurr
