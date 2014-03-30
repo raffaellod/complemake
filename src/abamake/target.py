@@ -76,10 +76,10 @@ class NamedDependencyMixIn(object):
 
 
 ####################################################################################################
-# SingleFileDependencyMixIn
+# FileDependencyMixIn
 
-class SingleFileDependencyMixIn(object):
-   """Mixin that provides a single file path for a Dependency subclass."""
+class FileDependencyMixIn(object):
+   """Mixin that provides a file path for a Dependency subclass."""
 
    # Dependency file path.
    _m_sFilePath = None
@@ -123,7 +123,7 @@ class ForeignDependency(Dependency):
 ####################################################################################################
 # ForeignSourceDependency
 
-class ForeignSourceDependency(SingleFileDependencyMixIn, ForeignDependency):
+class ForeignSourceDependency(FileDependencyMixIn, ForeignDependency):
    """Foreign source file dependency."""
 
    pass
@@ -145,7 +145,7 @@ class ForeignLibDependency(NamedDependencyMixIn, ForeignDependency):
 ####################################################################################################
 # OutputRerefenceDependency
 
-class OutputRerefenceDependency(SingleFileDependencyMixIn, ForeignDependency):
+class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
    """File used as a reference to validate expected outputs."""
 
    pass
@@ -155,7 +155,7 @@ class OutputRerefenceDependency(SingleFileDependencyMixIn, ForeignDependency):
 ####################################################################################################
 # UnitTestExecScriptDependency
 
-class UnitTestExecScriptDependency(SingleFileDependencyMixIn, ForeignDependency):
+class UnitTestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
    """Executable that runs a unit test according to a “script”. Used to mimic interation with a
    shell that ABC Make does not implement.
    """
@@ -429,11 +429,11 @@ class NamedTargetMixIn(NamedDependencyMixIn):
 ####################################################################################################
 # FileTarget
 
-class FileTarget(SingleFileDependencyMixIn, Target):
+class FileTarget(FileDependencyMixIn, Target):
    """Target that generates a file."""
 
    def __init__(self, mk, sFilePath):
-      """Constructor. See SingleFileDependencyMixIn.__init__() and Target.__init__().
+      """Constructor. See FileDependencyMixIn.__init__() and Target.__init__().
 
       make.Make mk
          Make instance.
@@ -441,7 +441,7 @@ class FileTarget(SingleFileDependencyMixIn, Target):
          Dependency file path.
       """
 
-      SingleFileDependencyMixIn.__init__(self, sFilePath)
+      FileDependencyMixIn.__init__(self, sFilePath)
       Target.__init__(self, mk)
       mk.add_file_target(self, sFilePath)
 
