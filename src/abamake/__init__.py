@@ -92,7 +92,7 @@ class DependencyCycleError(MakefileError):
 
 
    def __init__(self, sMessage, iterTargets, *iterArgs):
-      """Constructor. See MakefileError.__init__().
+      """See MakefileError.__init__().
 
       str sMessage
          Exception message.

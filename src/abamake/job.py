@@ -183,7 +183,7 @@ class ExternalCmdJob(Job):
 
 
    def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
-      """Constructor. See Job.__init__().
+      """See Job.__init__().
 
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
@@ -333,7 +333,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
 
    def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath, sStdOutFilePath):
-      """Constructor. See ExternalCmdJob.__init__().
+      """See ExternalCmdJob.__init__().
 
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().

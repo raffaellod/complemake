@@ -268,7 +268,7 @@ class CxxCompiler(Tool):
 
 
    def __init__(self):
-      """Constructor. See Tool.__init__()."""
+      """See Tool.__init__()."""
 
       Tool.__init__(self)
 
@@ -470,7 +470,7 @@ class Linker(Tool):
 
 
    def __init__(self):
-      """Constructor. See Tool.__init__()."""
+      """See Tool.__init__()."""
 
       Tool.__init__(self)
 

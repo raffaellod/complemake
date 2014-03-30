@@ -197,8 +197,7 @@ class Target(Dependency):
 
 
    def __init__(self, mk):
-      """Constructor. It initializes Dependency.file_path to None, because it’s assumed that a
-      derived class will know better.
+      """Constructor. Automatically registers the target with the specified Make instance.
 
       make.Make mk
          Make instance.
@@ -424,7 +423,8 @@ class NamedTargetMixIn(NamedDependencyMixIn):
    """Mixin that provides a name for a Target subclass."""
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedDependencyMixIn.__init__().
+      """See NamedDependencyMixIn.__init__(). Automatically registers the name => target association
+      with the specified Make instance.
 
       make.Make mk
          Make instance.
@@ -444,7 +444,8 @@ class FileTarget(FileDependencyMixIn, Target):
    """Target that generates a file."""
 
    def __init__(self, mk, sFilePath):
-      """Constructor. See FileDependencyMixIn.__init__() and Target.__init__().
+      """See FileDependencyMixIn.__init__() and Target.__init__(). Automatically registers the path
+      => target association with the specified Make instance.
 
       make.Make mk
          Make instance.
@@ -482,7 +483,7 @@ class ProcessedSourceTarget(FileTarget):
 
 
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput = None):
-      """Constructor. See FileTarget.__init__().
+      """See FileTarget.__init__().
 
       make.Make mk
          Make instance.
@@ -518,7 +519,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
-      """Constructor. See ProcessedSourceTarget.__init__()."""
+      """See ProcessedSourceTarget.__init__()."""
 
       ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, '.i', tgtFinalOutput)
 
@@ -549,7 +550,7 @@ class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
-      """Constructor. See ObjectTarget.__init__()."""
+      """See ObjectTarget.__init__()."""
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath, make.tool.CxxCompiler.get_default_impl().object_suffix,
@@ -681,7 +682,7 @@ class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
    """Base for named executable program target classes."""
 
    def __init__(self, mk, sName, sFilePath):
-      """Constructor. See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
+      """See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
 
       make.Make mk
          Make instance.
@@ -706,7 +707,7 @@ class ExecutableTarget(NamedExecutableTarget):
    """
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedExecutableTarget.__init__().
+      """See NamedExecutableTarget.__init__().
 
       make.Make mk
          Make instance.
@@ -730,7 +731,7 @@ class DynLibTarget(NamedExecutableTarget):
    """
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedExecutableTarget.__init__().
+      """See NamedExecutableTarget.__init__().
 
       make.Make mk
          Make instance.
@@ -783,7 +784,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
 
 
    def __init__(self, mk, sName):
-      """Constructor. See NamedTargetMixIn.__init__() and Target.__init__().
+      """See NamedTargetMixIn.__init__() and Target.__init__().
 
       make.Make mk
          Make instance.
@@ -1054,7 +1055,7 @@ class UnitTestBuildTarget(ExecutableTargetBase):
 
 
    def __init__(self, mk, sName):
-      """Constructor. See ExecutableTargetBase.__init__().
+      """See ExecutableTargetBase.__init__().
 
       make.Make mk
          Make instance.
