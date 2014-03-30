@@ -58,6 +58,13 @@ class Tool(object):
    FLAG_OUTPUT_PATH_FORMAT = 1000
 
 
+   def __init__(self):
+      """Constructor."""
+
+      self._m_setAbstractFlags = set()
+      self._m_listInputFilePaths = []
+
+
    def add_flags(self, *args):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
       will take care of translating each flag into a command-line argument understood by a specific
@@ -67,8 +74,6 @@ class Tool(object):
          Flags to turn on.
       """
 
-      if self._m_setAbstractFlags is None:
-         self._m_setAbstractFlags = set()
       for iFlag in args:
          self._m_setAbstractFlags.add(iFlag)
 
@@ -80,8 +85,6 @@ class Tool(object):
          Path to the input file.
       """
 
-      if self._m_listInputFilePaths is None:
-         self._m_listInputFilePaths = []
       self._m_listInputFilePaths.append(sInputFilePath)
 
 
@@ -264,6 +267,15 @@ class CxxCompiler(Tool):
    CFLAG_ADD_INCLUDE_DIR_FORMAT = 2003
 
 
+   def __init__(self):
+      """Constructor. See Tool.__init__()."""
+
+      Tool.__init__(self)
+
+      self._m_listIncludeDirs = []
+      self._m_dictMacros = {}
+
+
    def add_include_dir(self, sIncludeDirPath):
       """Adds an include directory to the compiler’s command line.
 
@@ -271,8 +283,6 @@ class CxxCompiler(Tool):
          Path to the include directory to add.
       """
 
-      if self._m_listIncludeDirs is None:
-         self._m_listIncludeDirs = []
       self._m_listIncludeDirs.append(sIncludeDirPath)
 
 
@@ -285,8 +295,6 @@ class CxxCompiler(Tool):
          Expansion (value) of the macro.
       """
 
-      if self._m_dictMacros is None:
-         self._m_dictMacros = {}
       self._m_dictMacros[sName] = sExpansion
 
 
@@ -461,6 +469,15 @@ class Linker(Tool):
    LDFLAG_ADD_LIB_FORMAT = 5002
 
 
+   def __init__(self):
+      """Constructor. See Tool.__init__()."""
+
+      Tool.__init__(self)
+
+      self._m_listInputLibs = []
+      self._m_listLibPaths = []
+
+
    def add_input_lib(self, sInputLibFilePath):
       """Appends a library to the linker’s command line.
 
@@ -468,8 +485,6 @@ class Linker(Tool):
          Path to the input library file.
       """
 
-      if self._m_listInputLibs is None:
-         self._m_listInputLibs = []
       self._m_listInputLibs.append(sInputLibFilePath)
 
 
@@ -480,8 +495,6 @@ class Linker(Tool):
          Path to the library directory to add.
       """
 
-      if self._m_listLibPaths is None:
-         self._m_listLibPaths = []
       self._m_listLibPaths.append(sLibPath)
 
 
