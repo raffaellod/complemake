@@ -33,6 +33,16 @@ import make.job
 ####################################################################################################
 # Tool
 
+class AbstractFlag(object):
+   """Declares a unique abstract tool flag."""
+
+   pass
+
+
+
+####################################################################################################
+# Tool
+
 class Tool(object):
    """Abstract tool."""
 
@@ -55,7 +65,7 @@ class Tool(object):
 
    # Specifies an output file path. Must be in str.format() syntax and include a replacement “path”
    # with the intuitive meaning.
-   FLAG_OUTPUT_PATH_FORMAT = 1000
+   FLAG_OUTPUT_PATH_FORMAT = AbstractFlag()
 
 
    def __init__(self):
@@ -65,17 +75,17 @@ class Tool(object):
       self._m_listInputFilePaths = []
 
 
-   def add_flags(self, *args):
+   def add_flags(self, *iterArgs):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
       will take care of translating each flag into a command-line argument understood by a specific
       tool implementation (e.g. GCC).
 
-      iterable(int*) *args
+      iterable(make.tool.AbstractFlag*) *iterArgs
          Flags to turn on.
       """
 
-      for iFlag in args:
-         self._m_setAbstractFlags.add(iFlag)
+      for flag in iterArgs:
+         self._m_setAbstractFlags.add(flag)
 
 
    def add_input(self, sInputFilePath):
@@ -135,8 +145,8 @@ class Tool(object):
 
       # Add any additional abstract flags, translating them to arguments understood by GCC.
       if self._m_setAbstractFlags:
-         for iFlag in self._m_setAbstractFlags:
-            listArgs.append(self._translate_abstract_flag(iFlag))
+         for flag in self._m_setAbstractFlags:
+            listArgs.append(self._translate_abstract_flag(flag))
 
 
    def _create_job_add_inputs(self, listArgs):
@@ -225,19 +235,19 @@ class Tool(object):
    """)
 
 
-   def _translate_abstract_flag(self, iFlag):
+   def _translate_abstract_flag(self, flag):
       """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
       implementation using a class-specific _smc_dictAbstactToImplFlags dictionary.
 
-      int iFlag
+      make.tool.AbstractFlag flag
          Abstract flag.
       str return
          Corresponding command-line argument.
       """
 
-      sFlag = type(self)._smc_dictAbstactToImplFlags.get(iFlag)
+      sFlag = type(self)._smc_dictAbstactToImplFlags.get(flag)
       if sFlag is None:
-         raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), iFlag))
+         raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), flag))
       return sFlag
 
 
@@ -256,15 +266,15 @@ class CxxCompiler(Tool):
    _smc_sQuietName = 'C++'
 
    # Forces the compiler to only run the source file through the preprocessor.
-   CFLAG_PREPROCESS_ONLY = 2000
+   CFLAG_PREPROCESS_ONLY = AbstractFlag()
    # Causes the compiler to generate code suitable for a dynamic library.
-   CFLAG_DYNLIB = 2001
+   CFLAG_DYNLIB = AbstractFlag()
    # Defines a preprocessor macro. Must be in str.format() syntax and include replacements “name”
    # and “expansion”, each with its respective intuitive meaning.
-   CFLAG_DEFINE_FORMAT = 2002
+   CFLAG_DEFINE_FORMAT = AbstractFlag()
    # Adds a directory to the include search path. Must be in str.format() syntax and include a
    # replacement “dir” with the intuitive meaning.
-   CFLAG_ADD_INCLUDE_DIR_FORMAT = 2003
+   CFLAG_ADD_INCLUDE_DIR_FORMAT = AbstractFlag()
 
 
    def __init__(self):
@@ -460,13 +470,13 @@ class Linker(Tool):
 
 
    # Tells the linker to generate a dynamic library instead of a stand-alone executable.
-   LDFLAG_DYNLIB = 5000
+   LDFLAG_DYNLIB = AbstractFlag()
    # Adds a directory to the library search path. Must be in str.format() syntax and include a
    # replacement “dir” with the intuitive meaning.
-   LDFLAG_ADD_LIB_DIR_FORMAT = 5001
+   LDFLAG_ADD_LIB_DIR_FORMAT = AbstractFlag()
    # Adds a library to link to. Must be in str.format() syntax and include a replacement “lib” with
    # the intuitive meaning.
-   LDFLAG_ADD_LIB_FORMAT = 5002
+   LDFLAG_ADD_LIB_FORMAT = AbstractFlag()
 
 
    def __init__(self):
