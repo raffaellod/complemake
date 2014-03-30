@@ -36,7 +36,40 @@ import make.job
 class AbstractFlag(object):
    """Declares a unique abstract tool flag."""
 
-   pass
+   def __str__(self):
+      """Returns the member name, in the containing class, of the abstract flag.
+
+      Implemented by searching for self in every make.tool.Tool-derived class, and returning the
+      corresponding member name when found.
+
+      str return
+         Flag name.
+      """
+
+      sAttr = self._get_self_in_class(Tool)
+      if sAttr:
+         return sAttr
+      for cls in Tool.__subclasses__():
+         sAttr = self._get_self_in_class(cls)
+         if sAttr:
+            return sAttr
+      return '(UNKNOWN)'
+
+
+   def _get_self_in_class(self, cls):
+      """Searches for self among the members of the specified class, returning the corresponding
+      attribute name if found.
+
+      type cls
+         Class to search.
+      str return
+         Fully-qualified attribute name if self is a member of cls, or None otherwise.
+      """
+
+      for sAttr in cls.__dict__:
+         if getattr(cls, sAttr) is self:
+            return '{}.{}'.format(cls.__name__, sAttr)
+      return None
 
 
 
@@ -247,7 +280,9 @@ class Tool(object):
 
       sFlag = type(self)._smc_dictAbstactToImplFlags.get(flag)
       if sFlag is None:
-         raise NotImplementedError('{} must implement abstract flag {}'.format(type(self), flag))
+         raise NotImplementedError(
+            'class {} must define a mapping for abstract flag {}'.format(type(self).__name__, flag)
+         )
       return sFlag
 
 
