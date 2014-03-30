@@ -550,7 +550,7 @@ class MsLinker(Linker):
    _smc_dictAbstactToImplFlags = {
       Tool.FLAG_OUTPUT_PATH_FORMAT    : '/OUT:{path}',
       Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '/LIBPATH:{dir}',
-      Linker.LDFLAG_ADD_LIB_FORMAT    : '{lib}',
+      Linker.LDFLAG_ADD_LIB_FORMAT    : '{lib}.lib',
       Linker.LDFLAG_DYNLIB            : '/DLL',
    }
    # Arguments to invoke this tool with in order to detect its presence.
