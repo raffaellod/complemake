@@ -197,13 +197,10 @@ class TargetSnapshot(object):
       eltTarget = doc.createElement('target')
 
       # Store the name of the target if named, or its file path otherwise.
-      sTargetName = tgt.name if isinstance(tgt, make.target.NamedTargetMixIn) else None
-      if sTargetName:
-         eltTarget.setAttribute('name', sTargetName)
+      if isinstance(tgt, make.target.NamedTargetMixIn):
+         eltTarget.setAttribute('name', tgt.name)
       else:
-         sTargetFilePath = tgt.file_path
-         if sTargetFilePath:
-            eltTarget.setAttribute('path', sTargetFilePath)
+         eltTarget.setAttribute('path', tgt.file_path)
 
       # Serialize the signature of each dependency.
       for sFilePath, fs in self._m_dictDepsSignatures.items():
