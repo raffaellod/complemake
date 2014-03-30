@@ -568,6 +568,9 @@ class CxxObjectTarget(ObjectTarget):
          # Let the final output configure the compiler.
          self._m_tgtFinalOutput().configure_compiler(cxx)
 
+      # Let the platform configure the compiler.
+      self._m_mk().target_platform.configure_tool(cxx)
+
       # TODO: add file-specific flags.
       return cxx
 
@@ -626,6 +629,10 @@ class ExecutableTargetBase(FileTarget):
       lnk = make.tool.Linker.get_default_impl()()
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
+
+      # Let the platform configure the linker.
+      self._m_mk().target_platform.configure_tool(lnk)
+
       return lnk
 
 

@@ -25,6 +25,8 @@ ABC Make.
 import os
 import sys
 
+import make.tool
+
 
 
 ####################################################################################################
@@ -53,6 +55,16 @@ class Platform(object):
       raise NotImplementedError(
          'Platform.add_dir_to_dynlib_env_path() must be overridden in ' + type(self).__name__
       )
+
+
+   def configure_tool(self, tool):
+      """Configures the specified tool for this platform.
+
+      make.tool.Tool tool
+         Tool to configure.
+      """
+
+      pass
 
 
    @classmethod
@@ -159,6 +171,14 @@ class GnuPlatform(PosixPlatform):
       return dictEnv
 
 
+   def configure_tool(self, tool):
+      """See Platform.configure_tool()."""
+
+      if isinstance(tool, make.tool.Linker):
+         tool.add_input_lib('dl')
+         tool.add_input_lib('pthread')
+
+
 
 ####################################################################################################
 # WinPlatform
@@ -176,6 +196,13 @@ class WinPlatform(Platform):
       sLibPath += os.path.abspath(sDir)
       dictEnv['PATH'] = sLibPath
       return dictEnv
+
+
+   def configure_tool(self, tool):
+      """See Platform.configure_tool()."""
+
+      if isinstance(tool, make.tool.Linker):
+         tool.add_input_lib('kernel32')
 
 
    def dynlib_file_name(self, sName):

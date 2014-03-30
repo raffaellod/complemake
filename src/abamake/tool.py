@@ -539,17 +539,6 @@ class GnuLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
 
-   def _create_job_add_inputs(self, listArgs):
-      """See Linker._create_job_add_inputs()."""
-
-      # TODO: should not assume that GNU LD will only be used to build for POSIX; the default
-      # libraries list should come from a Platform class.
-      self.add_input_lib('dl')
-      self.add_input_lib('pthread')
-
-      Linker._create_job_add_inputs(self, listArgs)
-
-
 
 ####################################################################################################
 # MsLinker
