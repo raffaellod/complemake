@@ -68,9 +68,9 @@ class Platform(object):
 
 
    @classmethod
-   def get_host_subclass(cls):
-      """Attempts to detect the underlying (host) platform, returning the Platform subclass best
-      modeling it.
+   def detect_host(cls):
+      """Attempts to detect the underlying (host) platform, returning the Platform subclass that
+      models it best.
 
       type return
          Model for the underlying (host) platform.

@@ -416,7 +416,7 @@ class Make(object):
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
-         self._m_platformTarget = platform.Platform.get_host_subclass()()
+         self._m_platformTarget = platform.Platform.detect_host()()
          if not self._m_platformTarget:
             raise Exception('unable to detect host platform')
       return self._m_platformTarget
