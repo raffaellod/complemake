@@ -127,17 +127,16 @@ class Platform(object):
 
 
    def get_tool(self, clsTool):
-      """Returns the default implementation for this base class. For example, if GCC is detected,
-      CxxCompiler.get_default_impl() will return GxxCompiler as CxxCompiler’s default implementation
-      class.
-      Returns a tool of the specified type for the platform.
+      """Returns a subclass of the specified Tool subclass modeling the implementation of the
+      specified tool for the platform.
+
+      For example, my_platform.get_tool(make.tool.CxxCompiler) will return make.tool.GxxCompiler if
+      G++ is the C++ compiler for my_platorm.
 
       type clsTool
          Subclass of make.tool.Tool.
       type return
          Subclass of clsTool.
-      type return
-         Default implementation of this class.
       """
 
       clsToolImpl = self._m_dictTools.get(clsTool)
