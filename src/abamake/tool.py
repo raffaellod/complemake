@@ -81,9 +81,6 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
-   # Default derived class to instantiate when a specific one is not required. Detected and set by
-   # calling Tool._detect() on a subclass and passing a list of its own subclasses as argument.
-   _sm_clsDefaultDerived = None
    # Path to this tool’s executable. Detected and set by Tool._detect().
    _sm_sFilePath = None
    # Files to be processed by the tool.
@@ -206,46 +203,43 @@ class Tool(object):
          Default implementation of this class.
       """
 
-      if not cls._sm_clsDefaultDerived:
-         # Attempt to detect the presence of a derived class’s executable.
-         # TODO: accept paths provided via command line.
-         # TODO: apply a cross-compiler prefix.
+      # Attempt to detect the presence of a derived class’s executable.
+      # TODO: accept paths provided via command line.
+      # TODO: apply a cross-compiler prefix.
 
-         # Make sure we have a US English environment dictionary.
-         if not Tool._sm_dictUSEngEnv:
-            # Copy the current environment and add to it a locale override for US English.
-            Tool._sm_dictUSEngEnv = os.environ.copy()
-            Tool._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
+      # Make sure we have a US English environment dictionary.
+      if not Tool._sm_dictUSEngEnv:
+         # Copy the current environment and add to it a locale override for US English.
+         Tool._sm_dictUSEngEnv = os.environ.copy()
+         Tool._sm_dictUSEngEnv['LC_ALL'] = 'en_US.UTF-8'
 
-         for clsDeriv in cls.__subclasses__():
-            iterArgs  = clsDeriv._smc_iterDetectArgs
-            sOutMatch = clsDeriv._smc_sDetectPattern
-            try:
-               with subprocess.Popen(
-                  iterArgs, env = Tool._sm_dictUSEngEnv,
-                  stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
-               ) as procTool:
-                  sOut = procTool.communicate()[0]
-            except FileNotFoundError:
-               # This just means that the program is not installed; move on to the next candidate.
-               continue
+      for clsDeriv in cls.__subclasses__():
+         iterArgs  = clsDeriv._smc_iterDetectArgs
+         sOutMatch = clsDeriv._smc_sDetectPattern
+         try:
+            with subprocess.Popen(
+               iterArgs, env = Tool._sm_dictUSEngEnv,
+               stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
+            ) as procTool:
+               sOut = procTool.communicate()[0]
+         except FileNotFoundError:
+            # This just means that the program is not installed; move on to the next candidate.
+            pass
+         else:
             if re.search(sOutMatch, sOut, re.MULTILINE):
                # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
                clsDeriv._sm_sFilePath = iterArgs[0]
-               cls._sm_clsDefaultDerived = clsDeriv
-               break
-         else:
-            # No supported executable found: raise an exception with a list of possibilities.
-            raise Exception(
-               'unable to detect default implementation for {}; expected one of:\n'.format(
-                  cls.__name__
-               ) +
-               '\n'.join(['  {:7}  {}'.format(
-                  clsDeriv._smc_iterDetectArgs[0], clsDeriv.__doc__.rstrip('.')
-               ) for clsDeriv in cls.__subclasses__()])
-            )
-
-      return cls._sm_clsDefaultDerived
+               return clsDeriv
+      else:
+         # No supported executable found: raise an exception with a list of possibilities.
+         raise Exception(
+            'unable to detect default implementation for {}; expected one of:\n'.format(
+               cls.__name__
+            ) +
+            '\n'.join(['  {:7}  {}'.format(
+               clsDeriv._smc_iterDetectArgs[0], clsDeriv.__doc__.rstrip('.')
+            ) for clsDeriv in cls.__subclasses__()])
+         )
 
 
    def _get_quiet_cmd(self):

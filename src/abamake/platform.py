@@ -35,9 +35,18 @@ import make.tool
 class Platform(object):
    """Generic software platform (OS/runtime environment)."""
 
+   # Tools to be used for this platform (make.tool.Tool => make.tool.Tool). Associates a Tool
+   # subclass to a more derived Tool subclass, representing the implementation to use of the tool.
+   _m_dictTools = None
    # Mapping between Platform subclasses and Python sys.platform name prefixes. To add to this
    # mapping, decorate a derived class with @Platform.match_name('platform').
    _sm_dictSubclassPlatformNames = {}
+
+
+   def __init__(self):
+      """Constructor."""
+
+      self._m_dictTools = {}
 
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
@@ -115,6 +124,27 @@ class Platform(object):
       raise NotImplementedError(
          'Platform.exe_file_name() must be overridden in ' + type(self).__name__
       )
+
+
+   def get_tool(self, clsTool):
+      """Returns the default implementation for this base class. For example, if GCC is detected,
+      CxxCompiler.get_default_impl() will return GxxCompiler as CxxCompiler’s default implementation
+      class.
+      Returns a tool of the specified type for the platform.
+
+      type clsTool
+         Subclass of make.tool.Tool.
+      type return
+         Subclass of clsTool.
+      type return
+         Default implementation of this class.
+      """
+
+      clsToolImpl = self._m_dictTools.get(clsTool)
+      if not clsToolImpl:
+         clsToolImpl = clsTool.get_default_impl()
+         self._m_dictTools[clsTool] = clsToolImpl
+      return clsToolImpl
 
 
    class match_name(object):

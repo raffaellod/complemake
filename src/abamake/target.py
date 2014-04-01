@@ -553,15 +553,17 @@ class CxxObjectTarget(ObjectTarget):
       """See ObjectTarget.__init__()."""
 
       ObjectTarget.__init__(
-         self, mk, sSourceFilePath, make.tool.CxxCompiler.get_default_impl().object_suffix,
-         tgtFinalOutput
+         self, mk, sSourceFilePath,
+         mk.target_platform.get_tool(make.tool.CxxCompiler).object_suffix, tgtFinalOutput
       )
 
 
    def _get_tool(self):
       """See ObjectTarget._get_tool()."""
 
-      cxx = make.tool.CxxCompiler.get_default_impl()()
+      mk = self._m_mk()
+
+      cxx = mk.target_platform.get_tool(make.tool.CxxCompiler)()
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -570,7 +572,7 @@ class CxxObjectTarget(ObjectTarget):
          self._m_tgtFinalOutput().configure_compiler(cxx)
 
       # Let the platform configure the compiler.
-      self._m_mk().target_platform.configure_tool(cxx)
+      mk.target_platform.configure_tool(cxx)
 
       # TODO: add file-specific flags.
       return cxx
@@ -627,12 +629,14 @@ class ExecutableTargetBase(FileTarget):
    def _get_tool(self):
       """See FileTarget._get_tool()."""
 
-      lnk = make.tool.Linker.get_default_impl()()
+      mk = self._m_mk()
+
+      lnk = mk.target_platform.get_tool(make.tool.Linker)()
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 
       # Let the platform configure the linker.
-      self._m_mk().target_platform.configure_tool(lnk)
+      mk.target_platform.configure_tool(lnk)
 
       return lnk
 
