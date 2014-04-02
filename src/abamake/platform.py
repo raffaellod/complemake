@@ -30,6 +30,72 @@ import make.tool
 
 
 ####################################################################################################
+# SystemType
+
+class SystemType(object):
+   """System types tuple."""
+
+   def __init__(self, sTuple = None, sCpu = None, sKernel = None, sManuf = None, sOS = None):
+      """Constructor.
+
+      str sTuple
+         String that will be parsed to extract the necessary information.
+      str sCpu
+         See SystemType.cpu.
+      str sKernel
+         See SystemType.kernel.
+      str sManuf
+         See SystemType.manuf.
+      str sOS
+         See SystemType.os.
+      """
+
+      if sTuple:
+         listTuple = sTuple.split('-')
+         cTupleParts = len(listTuple)
+         if cTupleParts == 4:
+            self.cpu, self.manuf, self.kernel, self.os = listTuple
+         elif cTupleParts == 3:
+            self.cpu, self.manuf, self.os = listTuple
+         elif cTupleParts == 2:
+            self.cpu, self.manuf = listTuple
+         elif cTupleParts == 1:
+            self.cpu, = listTuple
+      if sCpu:
+         self.cpu = sCpu
+      if sKernel:
+         self.kernel = sKernel
+      if sManuf:
+         self.manuf = sManuf
+      if sOS:
+         self.os = sOS
+
+
+   def __str__(self):
+      if self.kernel:
+         return '{}-{}-{}-{}'.format(self.cpu, self.manuf, self.kernel, self.os)
+      if self.self.os:
+         return '{}-{}-{}'.format(self.cpu, self.manuf, self.os)
+      if self.manuf:
+         return '{}-{}'.format(self.cpu, self.manuf)
+      if self.cpu:
+         return '{}'.format(self.cpu)
+      return 'unknown'
+
+
+   # Processor type. Examples: 'i386', 'sparc'.
+   cpu = None
+   # Kernel on which the OS runs. Mostly used for the GNU operating system.
+   kernel = None
+   # Manufacturer. Examples: 'unknown'. 'pc', 'sun'.
+   manuf = None
+   # Operating system running on the system, or type of object file format for embedded systems.
+   # Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
+   os = None
+
+
+
+####################################################################################################
 # Platform
 
 class Platform(object):
@@ -89,6 +155,23 @@ class Platform(object):
       for sName, clsDerived in cls._sm_dictSubclassPlatformNames.items():
          if sPlatform.startswith(sName):
             return clsDerived
+      return None
+
+
+   @classmethod
+   def from_system_type(cls, systype):
+      """Returns a Platform subclass that most closely matches the specified system type. For
+      example, it will return make.platform.GnuPlatform for SystemType('i686-pc-linux-gnu').
+
+      make.platform.SystemType systype
+         System type.
+      make.platform.Platform return
+         Corresponding platform.
+      """
+
+      for clsDeriv in cls.__subclasses__():
+         if clsDeriv._match_system_type(systype):
+            return clsDeriv
       return None
 
 
@@ -160,6 +243,20 @@ class Platform(object):
       def __call__(self, clsDerived):
          Platform._sm_dictSubclassPlatformNames[self._m_sPlatformName] = clsDerived
          return clsDerived
+
+
+   def _match_system_type(self, systype):
+      """Returns True if the platform models the specified system type.
+
+      The default implementation always returns False.
+
+      make.platform.SystemType systype
+         System type.
+      bool return
+         True if the platform models the specified system type, or False otherwise.
+      """
+
+      return False
 
 
 
