@@ -261,33 +261,14 @@ class Platform(object):
 
 
 ####################################################################################################
-# PosixPlatform
-
-class PosixPlatform(Platform):
-   """POSIX-(mostly-)compliant platform."""
-
-   def dynlib_file_name(self, sName):
-      """See Platform.dynlib_file_name()."""
-
-      return 'lib{}.so'.format(sName)
-
-
-   def exe_file_name(self, sName):
-      """See Platform.exe_file_name()."""
-
-      return '{}'.format(sName)
-
-
-
-####################################################################################################
 # GnuPlatform
 
 @Platform.match_name('linux')
-class GnuPlatform(PosixPlatform):
+class GnuPlatform(Platform):
    """GNU Operating System platform."""
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
-      """See PosixPlatform.add_dir_to_dynlib_env_path()."""
+      """See Platform.add_dir_to_dynlib_env_path()."""
 
       sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
       if sLibPath:
@@ -303,6 +284,18 @@ class GnuPlatform(PosixPlatform):
       if isinstance(tool, make.tool.Linker):
          tool.add_input_lib('dl')
          tool.add_input_lib('pthread')
+
+
+   def dynlib_file_name(self, sName):
+      """See Platform.dynlib_file_name()."""
+
+      return 'lib{}.so'.format(sName)
+
+
+   def exe_file_name(self, sName):
+      """See Platform.exe_file_name()."""
+
+      return '{}'.format(sName)
 
 
 
