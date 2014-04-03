@@ -85,10 +85,38 @@ class SystemType(object):
 
    # Processor type. Examples: 'i386', 'sparc'.
    cpu = None
+
+
+   @staticmethod
+   def detect_host():
+      """Returns a SystemType instance describing the host on which ABC Make is being run.
+
+      make.platform.SystemType return
+         Host system type.
+      """
+
+      import platform
+
+      sSystem, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
+      if sSystem == 'Windows':
+         if sProcessor == 'x86':
+            return SystemType('i386-pc-win32')
+         elif sProcessor == 'AMD64':
+            return SystemType('x86_64-pc-win64')
+      elif sSystem == 'Linux':
+         # TODO: FIXME: this is obviously broken and biased.
+         if sMachine == 'x86_64':
+            return SystemType('x86_64-pc-linux-gnu')
+
+      raise make.MakeException('unsupported system type')
+
+
    # Kernel on which the OS runs. Mostly used for the GNU operating system.
    kernel = None
+
    # Manufacturer. Examples: 'unknown'. 'pc', 'sun'.
    manuf = None
+
    # Operating system running on the system, or type of object file format for embedded systems.
    # Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
    os = None
@@ -310,7 +338,7 @@ class GnuPlatform(Platform):
 
 @Platform.match_name('win32')
 class WinPlatform(Platform):
-   """Generic Microsoft Windows platform."""
+   """Generic Windows platform."""
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
       """See Platform.add_dir_to_dynlib_env_path()."""
@@ -350,4 +378,31 @@ class WinPlatform(Platform):
       """See Platform._match_system_type()."""
 
       return systype.os.startswith('mingw')
+
+
+
+####################################################################################################
+# Win32Platform
+
+class Win32Platform(WinPlatform):
+   """Win32 platform."""
+
+   def _match_system_type(self, systype):
+      """See WinPlatform._match_system_type()."""
+
+      return systype.cpu in ('i386', 'i486', 'i586', 'i686') and \
+             systype.os in ('win32', 'mingw', 'mingw32')
+
+
+
+####################################################################################################
+# Win64Platform
+
+class Win64Platform(WinPlatform):
+   """Win64 platform."""
+
+   def _match_system_type(self, systype):
+      """See WinPlatform._match_system_type()."""
+
+      return systype.cpu == 'x86_64' and systype.os in ('win64', 'mingw64')
 
