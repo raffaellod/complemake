@@ -41,16 +41,17 @@ class SystemType(object):
       str sTuple
          String that will be parsed to extract the necessary information.
       str sCpu
-         See SystemType.cpu.
+         See SystemType.cpu. Specifying this overrides the corresponding component of sTuple.
       str sKernel
-         See SystemType.kernel.
+         See SystemType.kernel. Specifying this overrides the corresponding component of sTuple.
       str sManuf
-         See SystemType.manuf.
+         See SystemType.manuf. Specifying this overrides the corresponding component of sTuple.
       str sOS
-         See SystemType.os.
+         See SystemType.os. Specifying this overrides the corresponding component of sTuple.
       """
 
       if sTuple:
+         # Break down the system name tuple.
          listTuple = sTuple.split('-')
          cTupleParts = len(listTuple)
          if cTupleParts == 4:
@@ -61,6 +62,10 @@ class SystemType(object):
             self.cpu, self.manuf = listTuple
          elif cTupleParts == 1:
             self.cpu, = listTuple
+         # Map unknown to None.
+         if self.manuf == 'unknown':
+            self.manuf = None
+      # Perform additional adjustments, if specified.
       if sCpu:
          self.cpu = sCpu
       if sKernel:
@@ -104,9 +109,9 @@ class SystemType(object):
          elif sProcessor == 'AMD64':
             return SystemType('x86_64-pc-win64')
       elif sSystem == 'Linux':
-         # TODO: FIXME: this is obviously broken and biased.
-         if sMachine == 'x86_64':
-            return SystemType('x86_64-pc-linux-gnu')
+         if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
+            # TODO: FIXME: this is obviously broken and biased.
+            return SystemType(sCpu = sMachine, sKernel = 'linux', sOS = 'gnu')
 
       raise make.MakeException('unsupported system type')
 
