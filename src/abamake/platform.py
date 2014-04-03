@@ -298,6 +298,12 @@ class GnuPlatform(Platform):
       return '{}'.format(sName)
 
 
+   def _match_system_type(self, systype):
+      """See Platform._match_system_type()."""
+
+      return systype.os == 'gnu'
+
+
 
 ####################################################################################################
 # WinPlatform
@@ -338,4 +344,10 @@ class WinPlatform(Platform):
       """See Platform.exe_file_name()."""
 
       return '{}.exe'.format(sName)
+
+
+   def _match_system_type(self, systype):
+      """See Platform._match_system_type()."""
+
+      return systype.os.startswith('mingw')
 
