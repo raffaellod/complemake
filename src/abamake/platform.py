@@ -35,13 +35,13 @@ import make.tool
 class SystemType(object):
    """System types tuple."""
 
-   def __init__(self, sTuple = None, sCpu = None, sKernel = None, sManuf = None, sOS = None):
+   def __init__(self, sTuple = None, sProcessor = None, sKernel = None, sManuf = None, sOS = None):
       """Constructor.
 
       str sTuple
          String that will be parsed to extract the necessary information.
-      str sCpu
-         See SystemType.cpu. Specifying this overrides the corresponding component of sTuple.
+      str sProcessor
+         See SystemType.processor. Specifying this overrides the corresponding component of sTuple.
       str sKernel
          See SystemType.kernel. Specifying this overrides the corresponding component of sTuple.
       str sManuf
@@ -55,19 +55,19 @@ class SystemType(object):
          listTuple = sTuple.split('-')
          cTupleParts = len(listTuple)
          if cTupleParts == 4:
-            self.cpu, self.manuf, self.kernel, self.os = listTuple
+            self.processor, self.manuf, self.kernel, self.os = listTuple
          elif cTupleParts == 3:
-            self.cpu, self.manuf, self.os = listTuple
+            self.processor, self.manuf, self.os = listTuple
          elif cTupleParts == 2:
-            self.cpu, self.manuf = listTuple
+            self.processor, self.manuf = listTuple
          elif cTupleParts == 1:
-            self.cpu, = listTuple
+            self.processor, = listTuple
          # Map unknown to None.
          if self.manuf == 'unknown':
             self.manuf = None
       # Perform additional adjustments, if specified.
-      if sCpu:
-         self.cpu = sCpu
+      if sProcessor:
+         self.processor = sProcessor
       if sKernel:
          self.kernel = sKernel
       if sManuf:
@@ -78,18 +78,18 @@ class SystemType(object):
 
    def __str__(self):
       if self.kernel:
-         return '{}-{}-{}-{}'.format(self.cpu, self.manuf, self.kernel, self.os)
+         return '{}-{}-{}-{}'.format(self.processor, self.manuf, self.kernel, self.os)
       if self.self.os:
-         return '{}-{}-{}'.format(self.cpu, self.manuf, self.os)
+         return '{}-{}-{}'.format(self.processor, self.manuf, self.os)
       if self.manuf:
-         return '{}-{}'.format(self.cpu, self.manuf)
-      if self.cpu:
-         return '{}'.format(self.cpu)
+         return '{}-{}'.format(self.processor, self.manuf)
+      if self.processor:
+         return '{}'.format(self.processor)
       return 'unknown'
 
 
    # Processor type. Examples: 'i386', 'sparc'.
-   cpu = None
+   processor = None
 
 
    @staticmethod
@@ -111,12 +111,12 @@ class SystemType(object):
       elif sSystem == 'Linux':
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
             # TODO: don’t assume OS == GNU.
-            return SystemType(sCpu = sMachine, sKernel = 'linux', sOS = 'gnu')
+            return SystemType(sProcessor = sMachine, sKernel = 'linux', sOS = 'gnu')
       elif sSystem == 'FreeBSD':
          if sMachine in ('i386', 'i486', 'i586', 'i686'):
-            return SystemType(sCpu = sMachine, sOS = 'freebsd')
+            return SystemType(sProcessor = sMachine, sOS = 'freebsd')
          elif sMachine == 'amd64':
-            return SystemType(sCpu = 'x86_64', sOS = 'freebsd')
+            return SystemType(sProcessor = 'x86_64', sOS = 'freebsd')
 
       raise make.MakeException('unsupported system type')
 
@@ -400,7 +400,7 @@ class Win32Platform(WinPlatform):
    def _match_system_type(self, systype):
       """See WinPlatform._match_system_type()."""
 
-      return systype.cpu in ('i386', 'i486', 'i586', 'i686') and \
+      return systype.processor in ('i386', 'i486', 'i586', 'i686') and \
              systype.os in ('win32', 'mingw', 'mingw32')
 
 
@@ -414,5 +414,5 @@ class Win64Platform(WinPlatform):
    def _match_system_type(self, systype):
       """See WinPlatform._match_system_type()."""
 
-      return systype.cpu == 'x86_64' and systype.os in ('win64', 'mingw64')
+      return systype.processor == 'x86_64' and systype.os in ('win64', 'mingw64')
 
