@@ -104,9 +104,9 @@ class SystemType(object):
 
       sSystem, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
       if sSystem == 'Windows':
-         if sProcessor == 'x86':
+         if sMachine == 'x86':
             return SystemType('i386-pc-win32')
-         elif sProcessor == 'AMD64':
+         elif sMachine == 'AMD64':
             return SystemType('x86_64-pc-win64')
       elif sSystem == 'Linux':
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
