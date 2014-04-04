@@ -110,8 +110,13 @@ class SystemType(object):
             return SystemType('x86_64-pc-win64')
       elif sSystem == 'Linux':
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            # TODO: FIXME: this is obviously broken and biased.
+            # TODO: don’t assume OS == GNU.
             return SystemType(sCpu = sMachine, sKernel = 'linux', sOS = 'gnu')
+      elif sSystem == 'FreeBSD':
+         if sMachine in ('i386', 'i486', 'i586', 'i686'):
+            return SystemType(sCpu = sMachine, sOS = 'freebsd')
+         elif sMachine == 'amd64':
+            return SystemType(sCpu = 'x86_64', sOS = 'freebsd')
 
       raise make.MakeException('unsupported system type')
 
