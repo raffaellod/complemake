@@ -77,10 +77,11 @@ class SystemType(object):
 
 
    def __str__(self):
+      sManuf = self.manuf or 'unknown'
       if self.kernel:
-         return '{}-{}-{}-{}'.format(self.processor, self.manuf, self.kernel, self.os)
+         return '{}-{}-{}-{}'.format(self.processor, sManuf, self.kernel, self.os)
       if self.self.os:
-         return '{}-{}-{}'.format(self.processor, self.manuf, self.os)
+         return '{}-{}-{}'.format(self.processor, sManuf, self.os)
       if self.manuf:
          return '{}-{}'.format(self.processor, self.manuf)
       if self.processor:
