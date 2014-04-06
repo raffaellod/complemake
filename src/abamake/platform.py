@@ -286,7 +286,8 @@ class Platform(object):
          return clsDerived
 
 
-   def _match_system_type(self, systype):
+   @classmethod
+   def _match_system_type(cls, systype):
       """Returns True if the platform models the specified system type.
 
       The default implementation always returns False.
@@ -339,7 +340,8 @@ class GnuPlatform(Platform):
       return '{}'.format(sName)
 
 
-   def _match_system_type(self, systype):
+   @classmethod
+   def _match_system_type(cls, systype):
       """See Platform._match_system_type()."""
 
       return systype.os == 'gnu'
@@ -387,7 +389,8 @@ class WinPlatform(Platform):
       return '{}.exe'.format(sName)
 
 
-   def _match_system_type(self, systype):
+   @classmethod
+   def _match_system_type(cls, systype):
       """See Platform._match_system_type()."""
 
       return systype.os.startswith('mingw')
@@ -400,7 +403,8 @@ class WinPlatform(Platform):
 class Win32Platform(WinPlatform):
    """Win32 platform."""
 
-   def _match_system_type(self, systype):
+   @classmethod
+   def _match_system_type(cls, systype):
       """See WinPlatform._match_system_type()."""
 
       return systype.processor in ('i386', 'i486', 'i586', 'i686') and \
@@ -414,7 +418,8 @@ class Win32Platform(WinPlatform):
 class Win64Platform(WinPlatform):
    """Win64 platform."""
 
-   def _match_system_type(self, systype):
+   @classmethod
+   def _match_system_type(cls, systype):
       """See WinPlatform._match_system_type()."""
 
       return systype.processor == 'x86_64' and systype.os in ('win64', 'mingw64')
