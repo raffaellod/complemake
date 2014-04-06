@@ -105,24 +105,21 @@ class SystemType(object):
 
       sSystem, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
 
-      # Remap some machine types to more commonly-used terms.
-      if sMachine == 'x86':
-         sMachine = 'i386'
-      elif sMachine in ('AMD64', 'amd64'):
-         sMachine = 'x86_64'
-
       if sSystem == 'Windows':
-         if sMachine == 'i386':
-            return SystemType(sProcessor = sMachine, sOS = 'win32')
-         elif sMachine == 'x86_64':
-            return SystemType(sProcessor = sMachine, sOS = 'win64')
-      elif sSystem == 'Linux':
-         if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
+         if sMachine == 'x86':
+            return SystemType(sProcessor = 'i386', sOS = 'win32')
+         elif sMachine == 'AMD64':
+            return SystemType(sProcessor = 'x86_64', sOS = 'win64')
+      elif sSystem in ('FreeBSD', 'Linux'):
+         if sSystem == 'Linux':
             # TODO: don’t assume OS == GNU.
-            return SystemType(sProcessor = sMachine, sKernel = 'linux', sOS = 'gnu')
-      elif sSystem == 'FreeBSD':
+            sOS = 'gnu'
+         else:
+            sOS = None
+            if sMachine == 'amd64':
+               sMachine = 'x86_64'
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            return SystemType(sProcessor = sMachine, sOS = 'freebsd')
+            return SystemType(sProcessor = sMachine, sKernel = sSystem.lower(), sOS = sOS)
 
       raise make.MakeException('unsupported system type')
 
