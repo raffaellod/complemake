@@ -238,20 +238,23 @@ class Platform(object):
 
 
    @classmethod
-   def from_system_type(cls, systype):
+   def from_system_type(cls, st):
       """Returns a Platform subclass that most closely matches the specified system type. For
-      example, it will return make.platform.GnuPlatform for SystemType('i686-pc-linux-gnu').
+      example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will return
+      make.platform.GnuPlatform.
 
-      make.platform.SystemType systype
+      make.platform.SystemType st
          System type.
       make.platform.Platform return
          Corresponding platform.
       """
 
+      iBestMatch, clsBestMatch = 0, None
       for clsDeriv in cls.__subclasses__():
-         if clsDeriv._match_system_type(systype):
-            return clsDeriv
-      return None
+         iMatch = clsDeriv._match_system_type(st)
+         if iMatch > iBestMatch:
+            iBestMatch, clsBestMatch = iMatch, clsDeriv
+      return clsBestMatch
 
 
    def dynlib_file_name(self, sName):
@@ -309,18 +312,18 @@ class Platform(object):
 
 
    @classmethod
-   def _match_system_type(cls, systype):
-      """Returns True if the platform models the specified system type.
+   def _match_system_type(cls, st):
+      """Returns a confidence index of how much the platform models the specified system type.
 
-      The default implementation always returns False.
+      The default implementation always returns 0.
 
-      make.platform.SystemType systype
+      make.platform.SystemType st
          System type.
-      bool return
-         True if the platform models the specified system type, or False otherwise.
+      int return
+         A value in range 0-4, representing how many elements of st match the platform.
       """
 
-      return False
+      return 0
 
 
 
@@ -362,10 +365,13 @@ class GnuPlatform(Platform):
 
 
    @classmethod
-   def _match_system_type(cls, systype):
+   def _match_system_type(cls, st):
       """See Platform._match_system_type()."""
 
-      return systype.os == 'gnu'
+      if st.os == 'gnu':
+         return 1
+      else:
+         return 0
 
 
 
@@ -417,11 +423,13 @@ class Win32Platform(WinPlatform):
    """Win32 platform."""
 
    @classmethod
-   def _match_system_type(cls, systype):
+   def _match_system_type(cls, st):
       """See WinPlatform._match_system_type()."""
 
-      return systype.machine in ('i386', 'i486', 'i586', 'i686') and \
-             systype.os in ('win32', 'mingw', 'mingw32')
+      if st.machine in ('i386', 'i486', 'i586', 'i686') and st.os in ('win32', 'mingw', 'mingw32'):
+         return 2
+      else:
+         return 0
 
 
 
@@ -432,8 +440,11 @@ class Win64Platform(WinPlatform):
    """Win64 platform."""
 
    @classmethod
-   def _match_system_type(cls, systype):
+   def _match_system_type(cls, st):
       """See WinPlatform._match_system_type()."""
 
-      return systype.machine == 'x86_64' and systype.os in ('win64', 'mingw64')
+      if st.machine == 'x86_64' and st.os in ('win64', 'mingw64'):
+         return 2
+      else:
+         return 0
 
