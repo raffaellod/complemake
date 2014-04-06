@@ -62,8 +62,8 @@ class SystemType(object):
             self.processor, self.manuf = listTuple
          elif cTupleParts == 1:
             self.processor, = listTuple
-         # Map unknown to None.
-         if self.manuf == 'unknown':
+         # Suppress placeholder strings.
+         if self.manuf in ('none', 'unknown'):
             self.manuf = None
       # Perform additional adjustments, if specified.
       if sProcessor:
