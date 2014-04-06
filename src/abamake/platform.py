@@ -33,15 +33,18 @@ import make.tool
 # SystemType
 
 class SystemType(object):
-   """System types tuple."""
+   """System types tuple.
 
-   def __init__(self, sTuple = None, sProcessor = None, sKernel = None, sVendor = None, sOS = None):
+   See <http://wiki.osdev.org/Target_Triplet> for a clear and concise explanation.
+   """
+
+   def __init__(self, sTuple = None, sMachine = None, sKernel = None, sVendor = None, sOS = None):
       """Constructor.
 
       str sTuple
          String that will be parsed to extract the necessary information.
-      str sProcessor
-         See SystemType.processor. Specifying this overrides the corresponding component of sTuple.
+      str sMachine
+         See SystemType.machine. Specifying this overrides the corresponding component of sTuple.
       str sKernel
          See SystemType.kernel. Specifying this overrides the corresponding component of sTuple.
       str sVendor
@@ -55,19 +58,19 @@ class SystemType(object):
          listTuple = sTuple.split('-')
          cTupleParts = len(listTuple)
          if cTupleParts == 4:
-            self.processor, self.vendor, self.kernel, self.os = listTuple
+            self.machine, self.vendor, self.kernel, self.os = listTuple
          elif cTupleParts == 3:
-            self.processor, self.vendor, self.os = listTuple
+            self.machine, self.vendor, self.os = listTuple
          elif cTupleParts == 2:
-            self.processor, self.vendor = listTuple
+            self.machine, self.vendor = listTuple
          elif cTupleParts == 1:
-            self.processor, = listTuple
+            self.machine, = listTuple
          # Suppress placeholder strings.
          if self.vendor in ('none', 'unknown'):
             self.vendor = None
       # Perform additional adjustments, if specified.
-      if sProcessor:
-         self.processor = sProcessor
+      if sMachine:
+         self.machine = sMachine
       if sKernel:
          self.kernel = sKernel
       if sVendor:
@@ -79,18 +82,18 @@ class SystemType(object):
    def __str__(self):
       sVendor = self.vendor or 'unknown'
       if self.kernel:
-         return '{}-{}-{}-{}'.format(self.processor, sVendor, self.kernel, self.os)
+         return '{}-{}-{}-{}'.format(self.machine, sVendor, self.kernel, self.os)
       if self.self.os:
-         return '{}-{}-{}'.format(self.processor, sVendor, self.os)
+         return '{}-{}-{}'.format(self.machine, sVendor, self.os)
       if self.vendor:
-         return '{}-{}'.format(self.processor, self.vendor)
-      if self.processor:
-         return '{}'.format(self.processor)
+         return '{}-{}'.format(self.machine, self.vendor)
+      if self.machine:
+         return '{}'.format(self.machine)
       return 'unknown'
 
 
-   # Processor type. Examples: 'i386', 'sparc'.
-   processor = None
+   # Machine type; often this is the processor’s architecture. Examples: 'i386', 'sparc'.
+   machine = None
 
 
    @staticmethod
@@ -107,9 +110,9 @@ class SystemType(object):
 
       if sSystem == 'Windows':
          if sMachine == 'x86':
-            return SystemType(sProcessor = 'i386', sOS = 'win32')
+            return SystemType(sMachine = 'i386', sOS = 'win32')
          elif sMachine == 'AMD64':
-            return SystemType(sProcessor = 'x86_64', sOS = 'win64')
+            return SystemType(sMachine = 'x86_64', sOS = 'win64')
       elif sSystem in ('FreeBSD', 'Linux'):
          if sSystem == 'Linux':
             # TODO: don’t assume OS == GNU.
@@ -119,7 +122,7 @@ class SystemType(object):
             if sMachine == 'amd64':
                sMachine = 'x86_64'
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            return SystemType(sProcessor = sMachine, sKernel = sSystem.lower(), sOS = sOS)
+            return SystemType(sMachine = sMachine, sKernel = sSystem.lower(), sOS = sOS)
 
       raise make.MakeException('unsupported system type')
 
@@ -400,7 +403,7 @@ class Win32Platform(WinPlatform):
    def _match_system_type(cls, systype):
       """See WinPlatform._match_system_type()."""
 
-      return systype.processor in ('i386', 'i486', 'i586', 'i686') and \
+      return systype.machine in ('i386', 'i486', 'i586', 'i686') and \
              systype.os in ('win32', 'mingw', 'mingw32')
 
 
@@ -415,5 +418,5 @@ class Win64Platform(WinPlatform):
    def _match_system_type(cls, systype):
       """See WinPlatform._match_system_type()."""
 
-      return systype.processor == 'x86_64' and systype.os in ('win64', 'mingw64')
+      return systype.machine == 'x86_64' and systype.os in ('win64', 'mingw64')
 
