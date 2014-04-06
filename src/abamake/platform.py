@@ -33,50 +33,28 @@ import make.tool
 # SystemType
 
 class SystemType(object):
-   """System types tuple.
+   """System type tuple.
 
    See <http://wiki.osdev.org/Target_Triplet> for a clear and concise explanation.
    """
 
-   def __init__(self, sTuple = None, sMachine = None, sKernel = None, sVendor = None, sOS = None):
+   def __init__(self, sMachine = None, sVendor = None, sKernel = None, sOS = None):
       """Constructor.
 
-      str sTuple
-         String that will be parsed to extract the necessary information.
       str sMachine
-         See SystemType.machine. Specifying this overrides the corresponding component of sTuple.
+         See SystemType.machine.
       str sKernel
-         See SystemType.kernel. Specifying this overrides the corresponding component of sTuple.
+         See SystemType.kernel.
       str sVendor
-         See SystemType.vendor. Specifying this overrides the corresponding component of sTuple.
+         See SystemType.vendor.
       str sOS
-         See SystemType.os. Specifying this overrides the corresponding component of sTuple.
+         See SystemType.os.
       """
 
-      if sTuple:
-         # Break down the system name tuple.
-         listTuple = sTuple.split('-')
-         cTupleParts = len(listTuple)
-         if cTupleParts == 4:
-            self.machine, self.vendor, self.kernel, self.os = listTuple
-         elif cTupleParts == 3:
-            self.machine, self.vendor, self.os = listTuple
-         elif cTupleParts == 2:
-            self.machine, self.vendor = listTuple
-         elif cTupleParts == 1:
-            self.machine, = listTuple
-         # Suppress placeholder strings.
-         if self.vendor in ('none', 'unknown'):
-            self.vendor = None
-      # Perform additional adjustments, if specified.
-      if sMachine:
-         self.machine = sMachine
-      if sKernel:
-         self.kernel = sKernel
-      if sVendor:
-         self.vendor = sVendor
-      if sOS:
-         self.os = sOS
+      self.machine = sMachine
+      self.vendor = sVendor
+      self.kernel = sKernel
+      self.os = sOS
 
 
    def __str__(self):
@@ -110,9 +88,9 @@ class SystemType(object):
 
       if sSystem == 'Windows':
          if sMachine == 'x86':
-            return SystemType(sMachine = 'i386', sOS = 'win32')
+            return SystemType('i386', None, None, 'win32')
          elif sMachine == 'AMD64':
-            return SystemType(sMachine = 'x86_64', sOS = 'win64')
+            return SystemType('x86_64', None, None, 'win64')
       elif sSystem in ('FreeBSD', 'Linux'):
          if sSystem == 'Linux':
             # TODO: don’t assume OS == GNU.
@@ -122,13 +100,52 @@ class SystemType(object):
             if sMachine == 'amd64':
                sMachine = 'x86_64'
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            return SystemType(sMachine = sMachine, sKernel = sSystem.lower(), sOS = sOS)
+            return SystemType(sMachine, None, sSystem.lower(), sOS)
 
       raise make.MakeException('unsupported system type')
 
 
    # Kernel on which the OS runs. Mostly used for the GNU operating system.
    kernel = None
+
+
+   @staticmethod
+   def parse_tuple(sTuple):
+      """Parses a system type tuple into a SystemType instance. The format of the tuple must be one
+      of:
+      •  machine (1 item)
+      •  machine-os (2 items)
+      •  machine-vendor-os (3 items)
+      •  machine-vendor-kernel-os (4 items)
+
+      str sTuple
+         String that will be parsed to extract the necessary information.
+      make.platform.SystemType return
+         Parsed system type.
+      """
+
+      # Break the tuple down.
+      listTuple = sTuple.split('-')
+      cTupleParts = len(listTuple)
+      if cTupleParts == 1:
+         # The tuple contains “machine” only.
+         return SystemType(listTuple[0])
+      if cTupleParts == 2:
+         # The tuple contains “machine” and “os”.
+         return SystemType(listTuple[0], None, None, listTuple[1])
+      else:
+         # The tuple contains “machine”, “vendor”, possibly “kernel”, and “os”.
+         # Suppress placeholders in the “vendor” field.
+         if listTuple[1] in ('none', 'unknown'):
+            listTuple[1] = None
+         if cTupleParts == 3:
+            # The tuple contains “machine”, “vendor” and “os”.
+            return SystemType(listTuple[0], listTuple[1], None, listTuple[2])
+         if cTupleParts == 4:
+            # The tuple contains “machine”, “vendor”, “kernel” and “os”.
+            return SystemType(*listTuple)
+      raise make.MakeException('invalid system type tuple')
+
 
    # Vendor. Examples: 'unknown'. 'pc', 'sun'.
    vendor = None
