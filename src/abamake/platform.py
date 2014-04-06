@@ -35,7 +35,7 @@ import make.tool
 class SystemType(object):
    """System types tuple."""
 
-   def __init__(self, sTuple = None, sProcessor = None, sKernel = None, sManuf = None, sOS = None):
+   def __init__(self, sTuple = None, sProcessor = None, sKernel = None, sVendor = None, sOS = None):
       """Constructor.
 
       str sTuple
@@ -44,8 +44,8 @@ class SystemType(object):
          See SystemType.processor. Specifying this overrides the corresponding component of sTuple.
       str sKernel
          See SystemType.kernel. Specifying this overrides the corresponding component of sTuple.
-      str sManuf
-         See SystemType.manuf. Specifying this overrides the corresponding component of sTuple.
+      str sVendor
+         See SystemType.vendor. Specifying this overrides the corresponding component of sTuple.
       str sOS
          See SystemType.os. Specifying this overrides the corresponding component of sTuple.
       """
@@ -55,35 +55,35 @@ class SystemType(object):
          listTuple = sTuple.split('-')
          cTupleParts = len(listTuple)
          if cTupleParts == 4:
-            self.processor, self.manuf, self.kernel, self.os = listTuple
+            self.processor, self.vendor, self.kernel, self.os = listTuple
          elif cTupleParts == 3:
-            self.processor, self.manuf, self.os = listTuple
+            self.processor, self.vendor, self.os = listTuple
          elif cTupleParts == 2:
-            self.processor, self.manuf = listTuple
+            self.processor, self.vendor = listTuple
          elif cTupleParts == 1:
             self.processor, = listTuple
          # Suppress placeholder strings.
-         if self.manuf in ('none', 'unknown'):
-            self.manuf = None
+         if self.vendor in ('none', 'unknown'):
+            self.vendor = None
       # Perform additional adjustments, if specified.
       if sProcessor:
          self.processor = sProcessor
       if sKernel:
          self.kernel = sKernel
-      if sManuf:
-         self.manuf = sManuf
+      if sVendor:
+         self.vendor = sVendor
       if sOS:
          self.os = sOS
 
 
    def __str__(self):
-      sManuf = self.manuf or 'unknown'
+      sVendor = self.vendor or 'unknown'
       if self.kernel:
-         return '{}-{}-{}-{}'.format(self.processor, sManuf, self.kernel, self.os)
+         return '{}-{}-{}-{}'.format(self.processor, sVendor, self.kernel, self.os)
       if self.self.os:
-         return '{}-{}-{}'.format(self.processor, sManuf, self.os)
-      if self.manuf:
-         return '{}-{}'.format(self.processor, self.manuf)
+         return '{}-{}-{}'.format(self.processor, sVendor, self.os)
+      if self.vendor:
+         return '{}-{}'.format(self.processor, self.vendor)
       if self.processor:
          return '{}'.format(self.processor)
       return 'unknown'
@@ -127,8 +127,8 @@ class SystemType(object):
    # Kernel on which the OS runs. Mostly used for the GNU operating system.
    kernel = None
 
-   # Manufacturer. Examples: 'unknown'. 'pc', 'sun'.
-   manuf = None
+   # Vendor. Examples: 'unknown'. 'pc', 'sun'.
+   vendor = None
 
    # Operating system running on the system, or type of object file format for embedded systems.
    # Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
