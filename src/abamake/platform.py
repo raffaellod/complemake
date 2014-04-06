@@ -389,13 +389,6 @@ class WinPlatform(Platform):
       return '{}.exe'.format(sName)
 
 
-   @classmethod
-   def _match_system_type(cls, systype):
-      """See Platform._match_system_type()."""
-
-      return systype.os.startswith('mingw')
-
-
 
 ####################################################################################################
 # Win32Platform
