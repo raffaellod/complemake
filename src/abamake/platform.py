@@ -61,10 +61,10 @@ class SystemType(object):
          See SystemType.os.
       """
 
-      self._m_sMachine = sMachine
-      self._m_sVendor = sVendor
       self._m_sKernel = sKernel
+      self._m_sMachine = sMachine
       self._m_sOS = sOS
+      self._m_sVendor = sVendor
 
 
    def __str__(self):
@@ -190,9 +190,6 @@ class Platform(object):
    # Tools to be used for this platform (make.tool.Tool => make.tool.Tool). Associates a Tool
    # subclass to a more derived Tool subclass, representing the implementation to use of the tool.
    _m_dictTools = None
-   # Mapping between Platform subclasses and Python sys.platform name prefixes. To add to this
-   # mapping, decorate a derived class with @Platform.match_name('platform').
-   _sm_dictSubclassPlatformNames = {}
 
 
    def __init__(self):
@@ -237,11 +234,7 @@ class Platform(object):
          Model for the underlying (host) platform.
       """
 
-      sPlatform = sys.platform
-      for sName, clsDerived in cls._sm_dictSubclassPlatformNames.items():
-         if sPlatform.startswith(sName):
-            return clsDerived
-      return None
+      return cls.from_system_type(SystemType.detect_host())
 
 
    @classmethod
@@ -315,22 +308,6 @@ class Platform(object):
       return clsToolImpl
 
 
-   class match_name(object):
-      """Decorator to teach Platform.detect() the association of the decorated class with a Python
-      sys.platform name prefix.
-
-      str sPlatformName
-         Python platform name prefix to associate with the decorated class.
-      """
-
-      def __init__(self, sPlatformName):
-         self._m_sPlatformName = sPlatformName
-
-      def __call__(self, clsDerived):
-         Platform._sm_dictSubclassPlatformNames[self._m_sPlatformName] = clsDerived
-         return clsDerived
-
-
    @classmethod
    def _match_system_type(cls, systype):
       """Returns True if the platform models the specified system type.
@@ -350,7 +327,6 @@ class Platform(object):
 ####################################################################################################
 # GnuPlatform
 
-@Platform.match_name('linux')
 class GnuPlatform(Platform):
    """GNU Operating System platform."""
 
@@ -396,7 +372,6 @@ class GnuPlatform(Platform):
 ####################################################################################################
 # WinPlatform
 
-@Platform.match_name('win32')
 class WinPlatform(Platform):
    """Generic Windows platform."""
 
