@@ -38,6 +38,16 @@ class SystemType(object):
    See <http://wiki.osdev.org/Target_Triplet> for a clear and concise explanation.
    """
 
+   # See SystemType.kernel.
+   _m_sKernel = None
+   # See SystemType.machine.
+   _m_sMachine = None
+   # See SystemType.os.
+   _m_sOS = None
+   # See SystemType.vendor.
+   _m_sVendor = None
+
+
    def __init__(self, sMachine = None, sVendor = None, sKernel = None, sOS = None):
       """Constructor.
 
@@ -51,27 +61,23 @@ class SystemType(object):
          See SystemType.os.
       """
 
-      self.machine = sMachine
-      self.vendor = sVendor
-      self.kernel = sKernel
-      self.os = sOS
+      self._m_sMachine = sMachine
+      self._m_sVendor = sVendor
+      self._m_sKernel = sKernel
+      self._m_sOS = sOS
 
 
    def __str__(self):
-      sVendor = self.vendor or 'unknown'
-      if self.kernel:
-         return '{}-{}-{}-{}'.format(self.machine, sVendor, self.kernel, self.os)
-      if self.self.os:
-         return '{}-{}-{}'.format(self.machine, sVendor, self.os)
-      if self.vendor:
-         return '{}-{}'.format(self.machine, self.vendor)
-      if self.machine:
-         return '{}'.format(self.machine)
+      sVendor = self._m_sVendor or 'unknown'
+      if self._m_sKernel:
+         return '{}-{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sKernel, self._m_sOS)
+      if self.self._m_sOS:
+         return '{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sOS)
+      if self._m_sVendor:
+         return '{}-{}'.format(self._m_sMachine, self._m_sVendor)
+      if self._m_sMachine:
+         return '{}'.format(self._m_sMachine)
       return 'unknown'
-
-
-   # Machine type; often this is the processor’s architecture. Examples: 'i386', 'sparc'.
-   machine = None
 
 
    @staticmethod
@@ -105,8 +111,29 @@ class SystemType(object):
       raise make.MakeException('unsupported system type')
 
 
-   # Kernel on which the OS runs. Mostly used for the GNU operating system.
-   kernel = None
+   def _get_kernel(self):
+      return self._m_sKernel
+
+   kernel = property(_get_kernel, doc = """
+      Kernel on which the OS runs. Mostly used for the GNU operating system.
+   """)
+
+
+   def _get_machine(self):
+      return self._m_sMachine
+
+   machine = property(_get_machine, doc = """
+      Machine type; often this is the processor’s architecture. Examples: 'i386', 'sparc'.
+   """)
+
+
+   def _get_os(self):
+      return self._m_sOS
+
+   os = property(_get_os, doc = """
+      Operating system running on the system, or type of object file format for embedded systems.
+      Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
+   """)
 
 
    @staticmethod
@@ -147,12 +174,10 @@ class SystemType(object):
       raise make.MakeException('invalid system type tuple')
 
 
-   # Vendor. Examples: 'unknown'. 'pc', 'sun'.
-   vendor = None
+   def _get_vendor(self):
+      return self._m_sVendor
 
-   # Operating system running on the system, or type of object file format for embedded systems.
-   # Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
-   os = None
+   vendor = property(_get_vendor, doc = """Vendor. Examples: 'unknown'. 'pc', 'sun'.""")
 
 
 
