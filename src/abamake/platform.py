@@ -190,12 +190,19 @@ class Platform(object):
    # Tools to be used for this platform (make.tool.Tool => make.tool.Tool). Associates a Tool
    # subclass to a more derived Tool subclass, representing the implementation to use of the tool.
    _m_dictTools = None
+   # System type (more specific than the platform type).
+   _m_st = None
 
 
-   def __init__(self):
-      """Constructor."""
+   def __init__(self, st):
+      """Constructor.
+
+      make.platform.SystemType st
+         System type of this platform.
+      """
 
       self._m_dictTools = {}
+      self._m_st = st
 
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
@@ -256,7 +263,7 @@ class Platform(object):
             iBestMatch, clsBestMatch = iMatch, clsDeriv
       if not clsBestMatch:
          raise Exception('unable to detect platform for system type {}'.format(st))
-      return clsBestMatch()
+      return clsBestMatch(st)
 
 
    def dynlib_file_name(self, sName):
