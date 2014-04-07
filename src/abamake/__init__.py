@@ -416,9 +416,7 @@ class Make(object):
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
-         self._m_platformTarget = platform.Platform.detect_host()()
-         if not self._m_platformTarget:
-            raise Exception('unable to detect host platform')
+         self._m_platformTarget = platform.Platform.detect_host()
       return self._m_platformTarget
 
    target_platform = property(_get_target_platform, doc = """

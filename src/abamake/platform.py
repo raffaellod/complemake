@@ -227,10 +227,10 @@ class Platform(object):
 
    @classmethod
    def detect_host(cls):
-      """Attempts to detect the underlying (host) platform, returning the Platform subclass that
-      models it best.
+      """Attempts to detect the underlying (host) platform, returning an instance of the Platform
+      subclass that models it best.
 
-      type return
+      make.platform.Platform return
          Model for the underlying (host) platform.
       """
 
@@ -239,9 +239,9 @@ class Platform(object):
 
    @classmethod
    def from_system_type(cls, st):
-      """Returns a Platform subclass that most closely matches the specified system type. For
-      example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will return
-      make.platform.GnuPlatform.
+      """Returns an instance of the Platform subclass that most closely matches the specified system
+      type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
+      return a make.platform.GnuPlatform instance.
 
       make.platform.SystemType st
          System type.
@@ -254,7 +254,9 @@ class Platform(object):
          iMatch = clsDeriv._match_system_type(st)
          if iMatch > iBestMatch:
             iBestMatch, clsBestMatch = iMatch, clsDeriv
-      return clsBestMatch
+      if not clsBestMatch:
+         raise Exception('unable to detect platform for system type {}'.format(st))
+      return clsBestMatch()
 
 
    def dynlib_file_name(self, sName):
