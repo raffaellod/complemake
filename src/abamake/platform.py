@@ -48,7 +48,7 @@ class SystemType(object):
    _m_sVendor = None
 
 
-   def __init__(self, sMachine = None, sVendor = None, sKernel = None, sOS = None):
+   def __init__(self, sMachine, sVendor, sKernel, sOS):
       """Constructor.
 
       str sMachine
