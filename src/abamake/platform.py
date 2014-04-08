@@ -195,13 +195,18 @@ class SystemType(object):
          # The tuple contains “machine” and “os”.
          return SystemType(listTuple[0], None, None, listTuple[1])
       else:
-         # The tuple contains “machine”, “vendor”, possibly “kernel”, and “os”.
+         # The tuple contains “machine”, “vendor” and/or “kernel”, and “os”.
          # Suppress placeholders in the “vendor” field.
          if listTuple[1] in ('none', 'unknown'):
             listTuple[1] = None
          if cTupleParts == 3:
-            # The tuple contains “machine”, “vendor” and “os”.
-            return SystemType(listTuple[0], listTuple[1], None, listTuple[2])
+            # Assume that GNU always requires a kernel to be part of the tuple.
+            if listTuple[2] == 'gnu':
+               # The tuple contains “machine”, “kernel” and “os”.
+               return SystemType(listTuple[0], None, listTuple[1], listTuple[2])
+            else:
+               # The tuple contains “machine”, “vendor” and “os”.
+               return SystemType(listTuple[0], listTuple[1], None, listTuple[2])
          if cTupleParts == 4:
             # The tuple contains “machine”, “vendor”, “kernel” and “os”.
             return SystemType(*listTuple)
