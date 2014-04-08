@@ -107,23 +107,25 @@ class SystemType(object):
 
       import platform
 
-      sSystem, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
+      sOS, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
 
-      if sSystem == 'Windows':
+      if sOS == 'Windows':
          if sMachine == 'x86':
             return SystemType('i386', None, None, 'win32')
          elif sMachine == 'AMD64':
             return SystemType('x86_64', None, None, 'win64')
-      elif sSystem in ('FreeBSD', 'Linux'):
-         if sSystem == 'Linux':
+      elif sOS in ('FreeBSD', 'Linux'):
+         if sOS == 'Linux':
+            sKernel = 'linux'
             # TODO: don’t assume OS == GNU.
             sOS = 'gnu'
          else:
-            sOS = None
+            sKernel = None
+            sOS = sOS.lower()
             if sMachine == 'amd64':
                sMachine = 'x86_64'
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            return SystemType(sMachine, None, sSystem.lower(), sOS)
+            return SystemType(sMachine, None, sKernel, sOS)
 
       raise make.MakeException('unsupported system type')
 
