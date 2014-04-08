@@ -315,6 +315,7 @@ class Platform(object):
 
       clsToolImpl = self._m_dictTools.get(clsTool)
       if not clsToolImpl:
+         # TODO: support tools specified via command line: --tool-CxxCompiler i686-pc-linux-gnu-g++
          clsToolImpl = clsTool.get_impl_for_system_type(self._m_st)
          self._m_dictTools[clsTool] = clsToolImpl
       return clsToolImpl
