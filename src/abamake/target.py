@@ -563,7 +563,9 @@ class CxxObjectTarget(ObjectTarget):
 
       mk = self._m_mk()
 
-      cxx = mk.target_platform.get_tool(make.tool.CxxCompiler)()
+      # TODO: Platform should instantiate the Tool and pass it _m_st.
+
+      cxx = mk.target_platform.get_tool(make.tool.CxxCompiler)(mk.target_platform._m_st)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -631,7 +633,9 @@ class ExecutableTargetBase(FileTarget):
 
       mk = self._m_mk()
 
-      lnk = mk.target_platform.get_tool(make.tool.Linker)()
+      # TODO: Platform should instantiate the Tool and pass it _m_st.
+
+      lnk = mk.target_platform.get_tool(make.tool.Linker)(mk.target_platform._m_st)
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 

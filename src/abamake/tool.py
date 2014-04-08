@@ -81,8 +81,8 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
-   # Path to this tool’s executable. Detected and set by Tool._detect().
-   _sm_sFilePath = None
+   # Associates SystemTypes to paths to this a tool’s executable.
+   _sm_dictFilePaths = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
    # See Tool.output_file_path.
@@ -90,6 +90,8 @@ class Tool(object):
    # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
    # displayed.
    _smc_sQuietName = None
+   # Target system type.
+   _m_st = None
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
 
@@ -98,11 +100,16 @@ class Tool(object):
    FLAG_OUTPUT_PATH_FORMAT = AbstractFlag()
 
 
-   def __init__(self):
-      """Constructor."""
+   def __init__(self, st):
+      """Constructor.
+
+      make.platform.SystemType st
+         Target system type.
+      """
 
       self._m_setAbstractFlags = set()
       self._m_listInputFilePaths = []
+      self._m_st = st
 
 
    def add_flags(self, *iterArgs):
@@ -128,6 +135,23 @@ class Tool(object):
       self._m_listInputFilePaths.append(sInputFilePath)
 
 
+   @classmethod
+   def add_exe_to_system_type_cache(cls, st, sFilePath):
+      """Saves the path to the version of the tool that targets st.
+
+      make.platform.SystemType st
+         Target system type.
+      str sFilePath
+         Path to the executable file.
+      """
+
+      dictFilePaths = cls._sm_dictFilePaths
+      if not dictFilePaths:
+         dictFilePaths = {}
+         cls._sm_dictFilePaths = dictFilePaths
+      dictFilePaths[st] = sFilePath
+
+
    def create_job(self, mk, tgt):
       """Returns a job that, when run, results in the execution of the tool.
 
@@ -143,7 +167,7 @@ class Tool(object):
       """
 
       # Build the arguments list.
-      listArgs = [self._sm_sFilePath]
+      listArgs = [type(self).get_exe_from_system_type_cache(self._m_st)]
 
       self._create_job_add_flags(listArgs)
 
@@ -223,6 +247,20 @@ class Tool(object):
 
 
    @classmethod
+   def get_exe_from_system_type_cache(cls, st):
+      """Returns the path to the version of the tool that targets st, if any was ever cached.
+
+      make.platform.SystemType st
+         Target system type.
+      str return
+         Path to the executable file.
+      """
+
+      dictFilePaths = cls._sm_dictFilePaths
+      return dictFilePaths and dictFilePaths.get(st)
+
+
+   @classmethod
    def get_impl_for_system_type(cls, st):
       """Detects if a tool of the type of this class (e.g. a C++ compiler for make.tool.CxxCompiler)
       exists for the specified system type, returning the corresponding implementation class (e.g.
@@ -250,8 +288,7 @@ class Tool(object):
          Iterable containing the quiet command name and the output file path(s).
       """
 
-      return (self._smc_sQuietName or os.path.basename(self._sm_sFilePath).upper()), \
-             (self._m_sOutputFilePath or '')
+      return self._smc_sQuietName, (self._m_sOutputFilePath or '')
 
 
    def _set_output_file_path(self, sOutputFilePath):
@@ -321,10 +358,10 @@ class CxxCompiler(Tool):
    CFLAG_ADD_INCLUDE_DIR_FORMAT = AbstractFlag()
 
 
-   def __init__(self):
+   def __init__(self, st):
       """See Tool.__init__()."""
 
-      Tool.__init__(self)
+      Tool.__init__(self, st)
 
       self._m_listIncludeDirs = []
       self._m_dictMacros = {}
@@ -450,6 +487,9 @@ class GxxCompiler(CxxCompiler):
    def _supports_system_type(cls, st):
       """See CxxCompiler._supports_system_type()."""
 
+      if cls.get_exe_from_system_type_cache(st):
+         return True
+
       # TODO: use st to compose the name of the executable.
 
       iterArgs = ['g++', '--version']
@@ -461,8 +501,7 @@ class GxxCompiler(CxxCompiler):
 
       # TODO: verify that the output of -dumpmachine matches st.
 
-      # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
-      cls._sm_sFilePath = iterArgs[0]
+      cls.add_exe_to_system_type_cache(st, iterArgs[0])
       return True
 
 
@@ -513,6 +552,9 @@ class MscCompiler(CxxCompiler):
    def _supports_system_type(cls, st):
       """See CxxCompiler._supports_system_type()."""
 
+      if cls.get_exe_from_system_type_cache(st):
+         return True
+
       # TODO: use st to compose the name of the executable.
 
       iterArgs = ['cl', '/?']
@@ -527,8 +569,7 @@ class MscCompiler(CxxCompiler):
 
       # TODO: verify that match('target') matches st.
 
-      # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
-      cls._sm_sFilePath = iterArgs[0]
+      cls.add_exe_to_system_type_cache(st, iterArgs[0])
       return True
 
 
@@ -557,10 +598,10 @@ class Linker(Tool):
    LDFLAG_ADD_LIB_FORMAT = AbstractFlag()
 
 
-   def __init__(self):
+   def __init__(self, st):
       """See Tool.__init__()."""
 
-      Tool.__init__(self)
+      Tool.__init__(self, st)
 
       self._m_listInputLibs = []
       self._m_listLibPaths = []
@@ -640,6 +681,9 @@ class GnuLinker(Linker):
    def _supports_system_type(cls, st):
       """See CxxCompiler._supports_system_type()."""
 
+      if cls.get_exe_from_system_type_cache(st):
+         return True
+
       # TODO: use st to compose the name of the executable.
 
       iterArgs = ['g++', '-Wl,--version']
@@ -651,8 +695,7 @@ class GnuLinker(Linker):
 
       # TODO: verify that the output of -dumpmachine matches st.
 
-      # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
-      cls._sm_sFilePath = iterArgs[0]
+      cls.add_exe_to_system_type_cache(st, iterArgs[0])
       return True
 
 
@@ -692,6 +735,9 @@ class MsLinker(Linker):
    def _supports_system_type(cls, st):
       """See CxxCompiler._supports_system_type()."""
 
+      if cls.get_exe_from_system_type_cache(st):
+         return True
+
       # TODO: use st to compose the name of the executable.
 
       iterArgs = ['link', '/?']
@@ -705,7 +751,6 @@ class MsLinker(Linker):
 
       # TODO: see if the linker can be 32- or 64-bit specific, and if to ensure that it matches st.
 
-      # Store the file path in clsDeriv and clsDeriv as cls’s default implementation.
-      cls._sm_sFilePath = iterArgs[0]
+      cls.add_exe_to_system_type_cache(st, iterArgs[0])
       return True
 
