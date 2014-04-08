@@ -315,7 +315,7 @@ class Platform(object):
 
       clsToolImpl = self._m_dictTools.get(clsTool)
       if not clsToolImpl:
-         clsToolImpl = clsTool.get_default_impl()
+         clsToolImpl = clsTool.get_impl_for_system_type(self._m_st)
          self._m_dictTools[clsTool] = clsToolImpl
       return clsToolImpl
 
