@@ -67,11 +67,28 @@ class SystemType(object):
       self._m_sVendor = sVendor
 
 
+   def __eq__(self, other):
+      return \
+         self._none_or_equal(self._m_sKernel,  other._m_sKernel ) and \
+         self._none_or_equal(self._m_sMachine, other._m_sMachine) and \
+         self._none_or_equal(self._m_sOS,      other._m_sOS     ) and \
+         self._none_or_equal(self._m_sVendor,  other._m_sVendor )
+
+
+   def __hash__(self):
+      # Hashes like a tuple.
+      return hash((self._m_sMachine, self._m_sVendor, self._m_sKernel, self._m_sOS))
+
+
+   def __ne__(self, other):
+      return not self.__eq__(self, other)
+
+
    def __str__(self):
       sVendor = self._m_sVendor or 'unknown'
       if self._m_sKernel:
          return '{}-{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sKernel, self._m_sOS)
-      if self.self._m_sOS:
+      if self._m_sOS:
          return '{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sOS)
       if self._m_sVendor:
          return '{}-{}'.format(self._m_sMachine, self._m_sVendor)
@@ -125,6 +142,21 @@ class SystemType(object):
    machine = property(_get_machine, doc = """
       Machine type; often this is the processor’s architecture. Examples: 'i386', 'sparc'.
    """)
+
+
+   @staticmethod
+   def _none_or_equal(o1, o2):
+      """Returns True if the two values are equal or if either is None.
+
+      object o1
+         First value to compare.
+      object o2
+         Second value to compare.
+      bool return
+         True if o1 == o2 or either is None, or False otherwise.
+      """
+
+      return not o1 or not o2 or o1 == o2
 
 
    def _get_os(self):
