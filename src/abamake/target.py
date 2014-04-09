@@ -861,9 +861,10 @@ class UnitTestTarget(NamedTargetMixIn, Target):
 
       iRet = Target.build_complete(self, job, iRet)
 
+      mk = self._m_mk()
       # Only go ahead in case of success of the job, or if no job was run because there’s no build
-      # target to execute.
-      if iRet == 0 and (job or not self._m_tgtUnitTestBuild):
+      # target to execute, and we did build the files to compare (not in “dry run” mode).
+      if iRet == 0 and (job or not self._m_tgtUnitTestBuild) and not mk.job_controller.dry_run:
          # Extract and transform the contents of the two dependencies to compare, and generate a
          # display name for them.
          listCmpNames = []
@@ -885,7 +886,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
                listCmpNames.append(job.stdout_file_path)
                listCmpOperands.append(self._transform_comparison_operand(job.stdout))
 
-            log = self._m_mk().log
+            log = mk.log
             if isinstance(listCmpOperands[0], str):
                sCmpV = 'internal:text-compare'
                sCmpQ = 'CMPTXT'
