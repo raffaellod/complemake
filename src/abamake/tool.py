@@ -512,12 +512,18 @@ class GxxCompiler(CxxCompiler):
       if cls.get_exe_from_system_type_cache(st):
          return True
 
-      # TODO: use st to compose the name of the executable.
-      sFilePath = 'g++'
-
-      if cls._exe_matches_tool_and_system_type(st, sFilePath):
-         cls.add_exe_to_system_type_cache(st, sFilePath)
-         return True
+      for stAlias in st.increasingly_inaccurate_aliases():
+         if stAlias:
+            # Use the system type tuple as prefix.
+            sFileName = str(stAlias) + '-'
+         else:
+            # No prefix.
+            sFileName = ''
+         sFileName += 'g++'
+         # Try executing the program, and verify that it matches the system type.
+         if cls._exe_matches_tool_and_system_type(st, sFileName):
+            cls.add_exe_to_system_type_cache(st, sFileName)
+            return True
 
       return False
 

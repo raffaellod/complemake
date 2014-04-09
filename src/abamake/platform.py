@@ -136,6 +136,30 @@ class SystemType(object):
       raise make.MakeException('unsupported system type')
 
 
+   def increasingly_inaccurate_aliases(self):
+      """Generates increasingly inaccurate aliases for the system type.
+
+      Examples:
+      •  SystemType.parse_tuple('i686-pc-linux-gnu') will yield 'i686-pc-linux-gnu',
+         'i686-linux-gnu', '';
+      •  SystemType.parse_tuple('i386-unknown-mingw32') will yield 'i386-unknown-mingw32',
+         'i386-mingw32', '';
+
+      make.platform.SystemType yield
+         System type.
+      """
+
+      if self._m_sOS:
+         if self._m_sVendor:
+            yield SystemType(self._m_sMachine, self._m_sVendor, self._m_sKernel, self._m_sOS)
+         yield SystemType(self._m_sMachine, None, self._m_sKernel, self._m_sOS)
+      elif self._m_sMachine:
+         if self._m_sVendor:
+            yield SystemType(self._m_sMachine, self._m_sVendor, None, None)
+         yield SystemType(self._m_sMachine, None, None, None)
+      yield SystemType(None, None, None, None)
+
+
    def _get_kernel(self):
       return self._m_sKernel
 
