@@ -114,18 +114,16 @@ class TargetSnapshot(object):
    )
 
 
-   def __init__(self, tgt, eltTarget = None, dictInputSigs = None, dictOutputSigs = None):
+   def __init__(self, mds, tgt, eltTarget = None):
       """Constructor.
 
+      make.metadata.MetadataStore mds
+         MetadataStore instance.
       make.target.Target tgt
          Target.
       xml.dom.Element eltTarget
-         XML Element to parse to load the target dependencies’ signatures.
-      dict(str: make.metadata.FileSignature) dictInputSigs
-         File paths associated to their signature; one for each input (dependency) of the target.
-      dict(str: make.metadata.FileSignature) dictOutputSigs
-         File paths associated to their signature; one for each output (generated file) of the
-         target.
+         XML Element to parse to load the target inputs’ and outputs’ signatures. If omitted, the
+         signatures will be collected from the file system.
       """
 
       self._m_tgt = tgt
@@ -145,9 +143,15 @@ class TargetSnapshot(object):
                continue
             # Parse this element into a FileSignature and store that as a dependency signature.
             dictSigs[eltFile.getAttribute('path')] = FileSignature.parse(eltFile)
-      elif dictInputSigs:
-         self._m_dictInputSigs = dictInputSigs
-         self._m_dictOutputSigs = dictOutputSigs
+      else:
+         # Collect signatures for all the target’s dependencies’ generated files (inputs).
+         self._m_dictInputSigs = {}
+         for dep in tgt.get_dependencies():
+            mds.get_signatures(dep.get_generated_files(), self._m_dictInputSigs)
+         # Collect signatures for all the target’s generated files (outputs).
+         self._m_dictOutputSigs = {}
+         if isinstance(tgt, make.target.FileTarget):
+            mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs)
 
 
    def equals_stored(self, tssStored, log):
@@ -328,21 +332,21 @@ class MetadataStore(object):
                            mk.get_file_target(eltTarget.getAttribute('path'), None)
                      if tgt:
                         self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
-                           tgt, eltTarget = eltTarget
+                           self, tgt, eltTarget
                         )
          log(log.HIGH, 'metadata: store loaded: {}', sFilePath)
 
 
-   def _collect_signatures(self, iterFilePaths, dictOut, bForceCacheUpdate = False):
+   def get_signatures(self, iterFilePaths, dictOut, bForceCacheUpdate = False):
       """Retrieves the signatures for the specified file paths and stores them in the provided
       dictionary.
 
-      If iterFilePaths enumerates output files that may not exist yet, signatures are cached because
-      we know that the target will call MetadataStore.update_target_snapshot() before its
+      If iterFilePaths enumerates output files that may not exist yet, signatures will be cached
+      because we know that the target will call MetadataStore.update_target_snapshot() before its
       dependencies will attempt to generate a snapshot for themselves, so the signatures for this
       target’s outputs (i.e. its dependents’ inputs) will be updated before being used again.
 
-      If iterFilePaths enumerates inputs files (dependencies of a target), signatures are cached
+      If iterFilePaths enumerates inputs files (dependencies of a target), signatures will be cached
       because the files must’ve already been built, or we wouldn’t be trying to generate a snapshot
       for a target dependent on them yet. The only case in which files may not exist is if we’re
       running in “dry run” mode, which causes no files to be created or modified.
@@ -388,18 +392,8 @@ class MetadataStore(object):
 
       tssCurr = self._m_dictCurrTargetSnapshots.get(tgt)
       if not tssCurr:
-         # Collect signatures for all the target’s dependencies’ generated files (inputs).
-         dictInputSigs = {}
-         for dep in tgt.get_dependencies():
-            self._collect_signatures(dep.get_generated_files(), dictInputSigs)
-         # Collect signatures for all the target’s generated files (outputs).
-         dictOutputSigs = {}
-         if isinstance(tgt, make.target.FileTarget):
-            self._collect_signatures(tgt.get_generated_files(), dictOutputSigs)
          # Instantiate the current snapshot.
-         tssCurr = TargetSnapshot(
-            tgt, dictInputSigs = dictInputSigs, dictOutputSigs = dictOutputSigs
-         )
+         tssCurr = TargetSnapshot(self, tgt)
          self._m_dictCurrTargetSnapshots[tgt] = tssCurr
 
       return tssCurr
@@ -446,7 +440,7 @@ class MetadataStore(object):
       tssCurr = self._get_curr_target_snapshot(tgt)
       if isinstance(tgt, make.target.FileTarget):
          # Recreate signatures for all the target’s generated files (outputs).
-         self._collect_signatures(
+         self.get_signatures(
             tgt.get_generated_files(), tssCurr._m_dictOutputSigs, bForceCacheUpdate = True
          )
       self._m_dictStoredTargetSnapshots[tgt] = tssCurr
