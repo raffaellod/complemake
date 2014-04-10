@@ -166,72 +166,53 @@ class TargetSnapshot(object):
          True if the two snapshots are equal, of False in case of any differences.
       """
 
-      assert self._m_tgt == tssStored._m_tgt, 'comparing snapshots of different targets'
+      tgt = self._m_tgt
+      assert tgt == tssStored._m_tgt, 'comparing snapshots of different targets'
 
-      # Check that all signatures in the current snapshot (self) match those in the stored snapshot.
-      for sFilePath, fsCurr in self._m_dictInputSigs.items():
-         if not fsCurr:
-            log(log.HIGH, 'metadata: {}: missing input {}, build will fail', self._m_tgt, sFilePath)
-            return False
-         fsStored = tssStored._m_dictInputSigs.get(sFilePath)
-         if not fsStored:
-            log(
-               log.HIGH,
-               'metadata: {}: file {} not part of stored snapshot, rebuild needed',
-               self._m_tgt, sFilePath
-            )
-            return False
-         if fsCurr._m_dtMTime != fsStored._m_dtMTime:
-            log(
-               log.HIGH,
-               'metadata: {}: changes detected in file {} (timestamp was: {}, now: {}), rebuild ' +
-                  'needed',
-               self._m_tgt, sFilePath, fsStored._m_dtMTime, fsCurr._m_dtMTime
-            )
-            return False
-      for sFilePath, fsCurr in self._m_dictOutputSigs.items():
-         if not fsCurr:
-            log(log.HIGH, 'metadata: {}: missing output {}, rebuild needed', self._m_tgt, sFilePath)
-            return False
-         fsStored = tssStored._m_dictOutputSigs.get(sFilePath)
-         if not fsStored:
-            log(
-               log.HIGH,
-               'metadata: {}: file {} not part of stored snapshot, rebuild needed',
-               self._m_tgt, sFilePath
-            )
-            return False
-         if fsCurr._m_dtMTime != fsStored._m_dtMTime:
-            log(
-               log.HIGH,
-               'metadata: {}: changes detected in file {} (timestamp was: {}, now: {}), rebuild ' +
-                  'needed',
-               self._m_tgt, sFilePath, fsStored._m_dtMTime, fsCurr._m_dtMTime
-            )
-            return False
+      for bInputs, dictStored, dictCurr in \
+         (True,  tssStored._m_dictInputSigs,  self._m_dictInputSigs ), \
+         (False, tssStored._m_dictOutputSigs, self._m_dictOutputSigs) \
+      :
+         # Check that all signatures in the current snapshot (self) match those in the stored
+         # snapshot.
+         for sFilePath, fsCurr in dictCurr.items():
+            if not fsCurr:
+               if bInputs:
+                  log(log.HIGH, 'metadata: {}: missing input {}, build will fail', tgt, sFilePath)
+               else:
+                  log(log.HIGH, 'metadata: {}: missing output {}, rebuild needed', tgt, sFilePath)
+               return False
+            fsStored = dictStored.get(sFilePath)
+            if not fsStored:
+               log(
+                  log.HIGH,
+                  'metadata: {}: file {} not part of stored snapshot, rebuild needed',
+                  tgt, sFilePath
+               )
+               return False
+            if fsCurr._m_dtMTime != fsStored._m_dtMTime:
+               log(
+                  log.HIGH,
+                  'metadata: {}: changes detected in file {} (mtime was: {}, now: {}), rebuild ' + \
+                     'needed',
+                  tgt, sFilePath, fsStored._m_dtMTime, fsCurr._m_dtMTime
+               )
+               return False
 
-      # A change in the number of signatures should cause a rebuild because it’s a dependencies
-      # change, so verify that all signatures in the stored snapshot are still in the current one
-      # (self).
-      for sFilePath in tssStored._m_dictInputSigs.keys():
-         if sFilePath not in self._m_dictInputSigs:
-            log(
-               log.HIGH,
-               'metadata: {}: file {} not part of current snapshot, rebuild needed',
-               self._m_tgt, sFilePath
-            )
-            return False
-      for sFilePath in tssStored._m_dictOutputSigs.keys():
-         if sFilePath not in self._m_dictOutputSigs:
-            log(
-               log.HIGH,
-               'metadata: {}: file {} not part of current snapshot, rebuild needed',
-               self._m_tgt, sFilePath
-            )
-            return False
+         # A change in the number of signatures should cause a rebuild because it’s a change in
+         # inputs (dependencies) or outputs, so verify that all signatures in the stored snapshot
+         # are also in the current one (self).
+         for sFilePath in dictStored.keys():
+            if sFilePath not in dictCurr:
+               log(
+                  log.HIGH,
+                  'metadata: {}: file {} not part of current snapshot, rebuild needed',
+                  tgt, sFilePath
+               )
+               return False
 
       # No changes detected.
-      log(log.HIGH, 'metadata: {}: up-to-date', self._m_tgt)
+      log(log.HIGH, 'metadata: {}: up-to-date', tgt)
       return True
 
 
