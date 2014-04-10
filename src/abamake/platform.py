@@ -30,6 +30,26 @@ import make.tool
 
 
 ####################################################################################################
+# SystemTypeError
+
+class SystemTypeError(Exception):
+   """Indicates an error related to system types."""
+
+   pass
+
+
+
+####################################################################################################
+# SystemTypeTupleError
+
+class SystemTypeTupleError(ValueError, SystemTypeError):
+   """Raised when an invalid system type tuple is encountered."""
+
+   pass
+
+
+
+####################################################################################################
 # SystemType
 
 class SystemType(object):
@@ -133,7 +153,7 @@ class SystemType(object):
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
             return SystemType(sMachine, None, sKernel, sOS)
 
-      raise make.MakeException('unsupported system type')
+      raise SystemTypeError('unsupported system type')
 
 
    def increasingly_inaccurate_aliases(self):
@@ -240,7 +260,7 @@ class SystemType(object):
          if cTupleParts == 4:
             # The tuple contains “machine”, “vendor”, “kernel” and “os”.
             return SystemType(*listTuple)
-      raise make.MakeException('invalid system type tuple')
+      raise SystemTypeTupleError('invalid system type tuple: “{}”'.format(sTuple))
 
 
    def _get_vendor(self):
