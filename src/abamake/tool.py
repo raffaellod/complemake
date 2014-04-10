@@ -273,7 +273,7 @@ class Tool(object):
             iterArgs, env = dictUSEngEnv,
             stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
          ) as procTool:
-            return procTool.communicate()[0]
+            return procTool.communicate()[0].rstrip('\r\n')
       except FileNotFoundError:
          # Could not execute the program.
          return None
@@ -536,11 +536,22 @@ class GxxCompiler(CxxCompiler):
       if not sOut:
          return False
 
-      reVersion = re.compile(r'^g\+\+.*(?P<ver>[.0-9]+)$', re.MULTILINE)
+      # Verify that it’s indeed G++.
+      match = re.search(r'^g\+\+.*(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return False
 
-      # TODO: verify that the output of -dumpmachine matches st.
-
-      return True
+      # Verify that this compiler supports the specified system type.
+      sOut = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
+      if not sOut:
+         return False
+      try:
+         stSupported = make.platform.SystemType.parse_tuple(sOut)
+      except make.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return False
+      # This is not a strict equality test.
+      return st == stSupported
 
 
    object_suffix = '.o'
