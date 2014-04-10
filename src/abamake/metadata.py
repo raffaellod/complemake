@@ -234,15 +234,13 @@ class TargetSnapshot(object):
       else:
          eltTarget.setAttribute('path', tgt.file_path)
 
-      # Serialize the signature of each input (dependency).
-      for sFilePath, fs in self._m_dictInputSigs.items():
-         eltFile = eltTarget.appendChild(fs.to_xml(doc, 'input'))
-         eltFile.setAttribute('path', sFilePath)
-
-      # Serialize the signature of each output (generated file).
-      for sFilePath, fs in self._m_dictOutputSigs.items():
-         eltFile = eltTarget.appendChild(fs.to_xml(doc, 'output'))
-         eltFile.setAttribute('path', sFilePath)
+      # Serialize the signature of each input and output (dependencies and generated files).
+      for sEltName, dictSigs in \
+         ('input', self._m_dictInputSigs), ('output', self._m_dictOutputSigs) \
+      :
+         for sFilePath, fs in dictSigs.items():
+            eltFile = eltTarget.appendChild(fs.to_xml(doc, sEltName))
+            eltFile.setAttribute('path', sFilePath)
 
       return eltTarget
 
