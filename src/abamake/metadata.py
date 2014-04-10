@@ -266,6 +266,19 @@ class TargetSnapshot(object):
       return eltTarget
 
 
+   def update(self, mds):
+      """Updates the snapshot.
+
+      make.metadata.MetadataStore mds
+         MetadataStore instance.
+      """
+
+      if isinstance(self._m_tgt, make.target.FileTarget):
+         # Recreate signatures for all the target’s generated files (outputs).
+         mds.get_signatures(
+            self._m_tgt.get_generated_files(), self._m_dictOutputSigs, bForceCacheUpdate = True
+         )
+
 
 ####################################################################################################
 # MetadataStore
@@ -341,7 +354,7 @@ class MetadataStore(object):
       """Retrieves the signatures for the specified file paths and stores them in the provided
       dictionary.
 
-      If iterFilePaths enumerates output files that may not exist yet, signatures will be cached
+      If iterFilePaths enumerates output files (which may not exist yet), signatures will be cached
       because we know that the target will call MetadataStore.update_target_snapshot() before its
       dependencies will attempt to generate a snapshot for themselves, so the signatures for this
       target’s outputs (i.e. its dependents’ inputs) will be updated before being used again.
@@ -438,11 +451,7 @@ class MetadataStore(object):
       log(log.HIGH, 'metadata: {}: updating target snapshot', tgt)
 
       tssCurr = self._get_curr_target_snapshot(tgt)
-      if isinstance(tgt, make.target.FileTarget):
-         # Recreate signatures for all the target’s generated files (outputs).
-         self.get_signatures(
-            tgt.get_generated_files(), tssCurr._m_dictOutputSigs, bForceCacheUpdate = True
-         )
+      tssCurr.update(self)
       self._m_dictStoredTargetSnapshots[tgt] = tssCurr
       self._m_bDirty = True
 
