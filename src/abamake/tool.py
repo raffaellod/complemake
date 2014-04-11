@@ -537,7 +537,7 @@ class GxxCompiler(CxxCompiler):
          return False
 
       # Verify that it’s indeed G++.
-      match = re.search(r'^g\+\+.*(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
       if not match:
          return False
 
@@ -622,7 +622,7 @@ class MscCompiler(CxxCompiler):
          return False
 
       reVersion = re.compile(
-         r'^Microsoft \(R\).* Optimizing Compiler Version (?P<ver>[.0-9]+) for (?P<target>\S+)$',
+         r'^Microsoft \(R\).*? Optimizing Compiler Version (?P<ver>[.0-9]+) for (?P<target>\S+)$',
          re.MULTILINE
       )
 
