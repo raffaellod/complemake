@@ -713,7 +713,7 @@ class Linker(Tool):
 # GnuLinker
 
 class GnuLinker(Linker):
-   """GCC-driven GNU object code linker (LD)."""
+   """G++-driven GNU object code linker (LD)."""
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
@@ -741,34 +741,52 @@ class GnuLinker(Linker):
 
    @classmethod
    def _detect_exe_matching_tool_and_system_type(cls, st):
-      """See CxxCompiler._detect_exe_matching_tool_and_system_type()."""
+      """See Linker._detect_exe_matching_tool_and_system_type()."""
 
       if cls.get_exe_from_system_type_cache(st):
          return True
 
-      # TODO: use st to compose the name of the executable.
-      sFilePath = 'g++'
-
-      if cls._exe_matches_tool_and_system_type(st, sFilePath):
-         cls.add_exe_to_system_type_cache(st, sFilePath)
-         return True
+      for stAlias in st.increasingly_inaccurate_aliases():
+         if stAlias:
+            # Use the system type tuple as prefix.
+            sFileName = str(stAlias) + '-'
+         else:
+            # No prefix.
+            sFileName = ''
+         # Use G++ as driver for GNU ld.
+         sFileName += 'g++'
+         # Try executing the program, and verify that it matches the system type.
+         if cls._exe_matches_tool_and_system_type(st, sFileName):
+            cls.add_exe_to_system_type_cache(st, sFileName)
+            return True
 
       return False
 
 
    @classmethod
    def _exe_matches_tool_and_system_type(cls, st, sFilePath):
-      """See CxxCompiler._exe_matches_tool_and_system_type()."""
+      """See Linker._exe_matches_tool_and_system_type()."""
 
       sOut = Tool._get_cmd_output((sFilePath, '-Wl,--version'))
       if not sOut:
          return False
 
-      reVersion = re.compile(r'^GNU ld .*?(?P<ver>[.0-9]+)$', re.MULTILINE)
+      # Verify that it’s indeed G++.
+      match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return False
 
-      # TODO: verify that the output of -dumpmachine matches st.
-
-      return True
+      # Verify that this compiler supports the specified system type.
+      sOut = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
+      if not sOut:
+         return False
+      try:
+         stSupported = make.platform.SystemType.parse_tuple(sOut)
+      except make.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return False
+      # This is not a strict equality test.
+      return st == stSupported
 
 
 
