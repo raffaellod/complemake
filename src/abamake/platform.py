@@ -497,6 +497,7 @@ class WinPlatform(Platform):
 
       if isinstance(tool, make.tool.Linker):
          tool.add_input_lib('kernel32')
+         tool.add_input_lib('user32')
 
 
    def dynlib_file_name(self, sName):
