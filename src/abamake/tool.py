@@ -180,7 +180,7 @@ class Tool(object):
       if self._m_sOutputFilePath:
          if not mk.job_controller.dry_run:
             # Make sure that the output directory exists.
-            os.makedirs(os.path.dirname(self._m_sOutputFilePath), 0o755, True)
+            os.makedirs(os.path.dirname(self._m_sOutputFilePath), exist_ok = True)
          # Get the compiler-specific command-line argument to specify an output file path.
          sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
          # Add the output file path.

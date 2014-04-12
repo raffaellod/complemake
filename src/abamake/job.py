@@ -278,7 +278,7 @@ class ExternalCmdJob(Job):
       # Always read stderr as text.
       fileStdErrTextPipe = io.TextIOWrapper(self._m_popen.stderr)
       # Make sure that the directory in which we’ll write stdout exists.
-      os.makedirs(os.path.dirname(self._m_sStdErrFilePath), 0o755, True)
+      os.makedirs(os.path.dirname(self._m_sStdErrFilePath), exist_ok = True)
       with open(self._m_sStdErrFilePath, 'w') as fileStdErr:
          for sLine in fileStdErrTextPipe:
             self._stderr_line_read(sLine.rstrip('\r\n'))
@@ -372,7 +372,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       """See ExternalCmdCapturingJob.start()."""
 
       # Make sure that the directory in which we’ll write stdout exists.
-      os.makedirs(os.path.dirname(self._m_sStdOutFilePath), 0o755, True)
+      os.makedirs(os.path.dirname(self._m_sStdOutFilePath), exist_ok = True)
       # Initialize buffering stdout in memory and on disk.
       self._m_byStdOut = b''
       self._m_fileStdOut = open(self._m_sStdOutFilePath, 'wb')
