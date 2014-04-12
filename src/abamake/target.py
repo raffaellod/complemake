@@ -167,7 +167,7 @@ class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
 # UnitTestExecScriptDependency
 
 class UnitTestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
-   """Executable that runs a unit test according to a “script”. Used to mimic interation with a
+   """Executable that runs a unit test according to a “script”. Used to mimic interaction with a
    shell that ABC Make does not implement.
    """
 
