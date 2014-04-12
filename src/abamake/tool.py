@@ -618,10 +618,12 @@ class MscCompiler(CxxCompiler):
 
       CxxCompiler._create_job_add_flags(self, listArgs)
 
+      sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
       listArgs.extend([
-         '/Zi',       # Generate debug info for PDB.
-         '/Od',       # Disable code optimization.
-         '/DDEBUG=1', # Enable debug code.
+         '/DDEBUG=1',          # Enable debug code.
+         '/Fp' + sPdbFilePath, # Create a program database file (PDB).
+         '/Od',                # Disable code optimization.
+         '/Zi',                # Generate debug info for PDB.
       ])
       listArgs.extend([
          '/Wall',     # Enable all warnings.
