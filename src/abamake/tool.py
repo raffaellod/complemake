@@ -26,6 +26,7 @@ import os
 import re
 import subprocess
 
+import make
 import make.job
 
 
@@ -49,7 +50,7 @@ class AbstractFlag(object):
       sAttr = self._get_self_in_class(Tool)
       if sAttr:
          return sAttr
-      for cls in Tool.__subclasses__():
+      for cls in make.derived_classes(Tool):
          sAttr = self._get_self_in_class(cls)
          if sAttr:
             return sAttr
@@ -354,7 +355,7 @@ class Tool(object):
          Matching make.tool.Tool subclass for the tool found or specified.
       """
 
-      for clsDeriv in cls.__subclasses__():
+      for clsDeriv in make.derived_classes(cls):
          if sFilePath:
             # Explicit file path: only a match if it’s the correct tool and it supports st.
             if clsDeriv._exe_matches_tool_and_system_type(st, sFilePath):
@@ -762,7 +763,7 @@ class GnuLinker(Linker):
       if not sOut:
          return False
 
-      # Verify that it’s indeed G++.
+      # Verify that G++ is really wrapping GNU ld.
       match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
       if not match:
          return False

@@ -25,6 +25,7 @@ ABC Make.
 import os
 import sys
 
+import make
 import make.tool
 
 
@@ -346,7 +347,7 @@ class Platform(object):
       """
 
       iBestMatch, clsBestMatch = 0, None
-      for clsDeriv in cls.__subclasses__():
+      for clsDeriv in make.derived_classes(cls):
          iMatch = clsDeriv._match_system_type(st)
          if iMatch > iBestMatch:
             iBestMatch, clsBestMatch = iMatch, clsDeriv

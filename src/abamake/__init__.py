@@ -71,6 +71,33 @@ import make.target as target
 
 
 ####################################################################################################
+# Non-member functions
+
+def derived_classes(clsBase):
+   """Iterates over all the classes that derive directly or indirectly from the specified one.
+
+   This is probably rather slow, so it should not be abused.
+
+   type clsBase
+      Base class.
+   type yield
+      Class derived from clsBase.
+   """
+
+   setYielded = set()
+   listClassesToScan = [clsBase]
+   while listClassesToScan:
+      # Iterate over the direct subclasses of the first class to scan.
+      for clsDeriv in listClassesToScan.pop().__subclasses__():
+         if clsDeriv not in setYielded:
+            # We haven’t met or yielded this class before.
+            yield clsDeriv
+            setYielded.add(clsDeriv)
+            listClassesToScan.append(clsDeriv)
+
+
+
+####################################################################################################
 # MakefileError
 
 class MakefileError(Exception):
