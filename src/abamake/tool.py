@@ -91,6 +91,8 @@ class Tool(object):
    _sm_dictFilePaths = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
+   # If True, the tool’s executable outputs its log on stdout instead of stderr.
+   _smc_bLogStdOut = False
    # See Tool.output_file_path.
    _m_sOutputFilePath = None
    # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
@@ -188,8 +190,13 @@ class Tool(object):
 
       self._create_job_add_inputs(listArgs)
 
+      dictPopenArgs = {
+         'args': listArgs,
+      }
+      if self._smc_bLogStdOut:
+         dictPopenArgs['stderr'] = subprocess.STDOUT
       return make.job.ExternalCmdJob(
-         self._get_quiet_cmd(), {'args': listArgs}, tgt._m_mk().log, tgt.build_log_path
+         self._get_quiet_cmd(), dictPopenArgs, tgt._m_mk().log, tgt.build_log_path
       )
 
 
@@ -382,6 +389,16 @@ class Tool(object):
       """
 
       return self._smc_sQuietName, (self._m_sOutputFilePath or '')
+
+
+   @staticmethod
+   def log_on_stdout(cls):
+      """Decorator used to indicate that the executable modeled by a Tool subclass outputs its log
+      on stdout instead of stderr as expected.
+      """
+
+      cls._smc_bLogStdOut = True
+      return cls
 
 
    def _set_output_file_path(self, sOutputFilePath):
@@ -593,6 +610,7 @@ class GxxCompiler(CxxCompiler):
 # MscCompiler
 
 @Tool.default_file_name('cl')
+@Tool.log_on_stdout
 class MscCompiler(CxxCompiler):
    """Microsoft C/C++ compiler (MSC)."""
 
@@ -792,6 +810,7 @@ class GnuLinker(Linker):
 # MsLinker
 
 @Tool.default_file_name('link')
+@Tool.log_on_stdout
 class MsLinker(Linker):
    """Microsoft linker (Link)."""
 
