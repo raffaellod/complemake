@@ -618,6 +618,10 @@ class MscCompiler(CxxCompiler):
 
       CxxCompiler._create_job_add_flags(self, listArgs)
 
+      if CxxCompiler.CFLAG_PREPROCESS_ONLY in self._m_setAbstractFlags:
+         # cl.exe requires a separate argument to specify the preprocessed output file path.
+         listArgs.append('/Fi' + self._m_sOutputFilePath)
+
       sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
       listArgs.extend([
          '/DDEBUG=1',          # Enable debug code.
