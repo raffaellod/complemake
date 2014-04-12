@@ -188,7 +188,12 @@ class ExternalCmdJob(Job):
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
-         Arguments to be passed to Popen’s constructor to execute this job.
+         Arguments to be passed to Popen’s constructor to execute this job. Both 'stdout' and
+         'stderr' default to subprocess.PIPE. If the program to run incorrectly uses stdout instead
+         of stderr, specify 'stderr' = subprocess.STDOUT; this will cause no stdout to be read
+         (ExternalCmdJob._stdout_chunk_read() will never be called), but logging will work as
+         expected. 'universal_newlines' should always be omitted, since this class handles stderr as
+         text and stdout as binary.
       make.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
@@ -208,9 +213,13 @@ class ExternalCmdJob(Job):
       # Make sure the client’s not trying to access stdout/stderr as TextIOBase.
       assert 'universal_newlines' not in dictPopenArgs
 
-      # Make sure that the process’ output is piped.
-      dictPopenArgs['stderr'] = subprocess.PIPE
-      dictPopenArgs['stdout'] = subprocess.PIPE
+      # Make sure that the process’ output is piped in a way supported by this class.
+      stderr = dictPopenArgs.setdefault('stderr', subprocess.PIPE)
+      stdout = dictPopenArgs.setdefault('stdout', subprocess.PIPE)
+      if stderr not in (subprocess.PIPE, subprocess.STDOUT):
+         raise ValueError('invalid value for dictPopenArgs[\'stderr\']')
+      if stdout != subprocess.PIPE:
+         raise ValueError('invalid value for dictPopenArgs[\'stdout\']')
 
 
    def get_quiet_command(self):
@@ -233,7 +242,8 @@ class ExternalCmdJob(Job):
          if iRet is not None:
             # The process terminated, so wait for the I/O threads to do the same.
             self._m_thrStdErrReader.join()
-            self._m_thrStdOutReader.join()
+            if self._m_thrStdOutReader:
+               self._m_thrStdOutReader.join()
       else:
          iRet = 0
       return iRet
@@ -247,8 +257,9 @@ class ExternalCmdJob(Job):
       # Start the I/O threads.
       self._m_thrStdErrReader = threading.Thread(target = self._stderr_reader_thread)
       self._m_thrStdErrReader.start()
-      self._m_thrStdOutReader = threading.Thread(target = self._stdout_reader_thread)
-      self._m_thrStdOutReader.start()
+      if self._m_dictPopenArgs['stderr'] != subprocess.STDOUT:
+         self._m_thrStdOutReader = threading.Thread(target = self._stdout_reader_thread)
+         self._m_thrStdOutReader.start()
 
 
    def _get_stderr_file_path(self):
@@ -275,8 +286,14 @@ class ExternalCmdJob(Job):
    def _stderr_reader_thread(self):
       """Reads from the job process’ stderr."""
 
-      # Always read stderr as text.
-      fileStdErrTextPipe = io.TextIOWrapper(self._m_popen.stderr)
+      # Pick stdout if stderr is merged with it.
+      if self._m_dictPopenArgs['stderr'] == subprocess.STDOUT:
+         fileErrOut = self._m_popen.stdout
+      else:
+         fileErrOut = self._m_popen.stderr
+      # Always read the file as text.
+      fileStdErrTextPipe = io.TextIOWrapper(fileErrOut)
+      del fileErrOut
       # Make sure that the directory in which we’ll write stdout exists.
       os.makedirs(os.path.dirname(self._m_sStdErrFilePath), exist_ok = True)
       with open(self._m_sStdErrFilePath, 'w') as fileStdErr:
