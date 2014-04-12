@@ -125,7 +125,10 @@ def main(iterArgs):
       iterTargets = []
       while iArg < iArgEnd:
          sArg = iterArgs[iArg]
-         iterTargets.append(mk.get_named_target(sArg, None) or mk.get_file_target(sArg))
+         # mk.get_file_target() will raise an exception if no such file target is defined.
+         iterTargets.append(
+            mk.get_named_target(sArg, None) or mk.get_file_target(os.path.normpath(sArg))
+         )
          iArg += 1
    else:
       iterTargets = mk.named_targets

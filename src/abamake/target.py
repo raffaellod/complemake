@@ -94,7 +94,7 @@ class FileDependencyMixIn(object):
 
       if not sFilePath:
          raise make.MakefileError('missing target file path')
-      self._m_sFilePath = sFilePath
+      self._m_sFilePath = os.path.normpath(sFilePath)
 
 
    def __str__(self):
@@ -455,7 +455,7 @@ class FileTarget(FileDependencyMixIn, Target):
 
       FileDependencyMixIn.__init__(self, sFilePath)
       Target.__init__(self, mk)
-      mk.add_file_target(self, sFilePath)
+      mk.add_file_target(self, self._m_sFilePath)
 
 
    def _get_build_log_path(self):
