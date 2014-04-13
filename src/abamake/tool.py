@@ -632,10 +632,10 @@ class MscCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
-         '/nologo',   # Suppress brand banner display.
-         '/c',        # Compile without linking.
-         '/TP',       # Force all sources to be compiled as C++.
-         '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
+         '/nologo',            # Suppress brand banner display.
+         '/c',                 # Compile without linking.
+         '/TP',                # Force all sources to be compiled as C++.
+         '/EHa',               # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
       ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
@@ -652,7 +652,7 @@ class MscCompiler(CxxCompiler):
          '/Zi',                # Generate debug info for PDB.
       ])
       listArgs.extend([
-         '/Wall',     # Enable all warnings.
+         '/Wall',              # Enable all warnings.
       ])
 
 
@@ -660,6 +660,7 @@ class MscCompiler(CxxCompiler):
       """See CxxCompiler._create_job_instance()."""
 
       dictPopenArgs['stderr'] = subprocess.STDOUT
+
       return CxxCompiler._create_job_instance(
          self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
       )
@@ -855,6 +856,7 @@ class MsLinker(Linker):
       """See Linker._create_job_instance()."""
 
       dictPopenArgs['stderr'] = subprocess.STDOUT
+
       return Linker._create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
 
