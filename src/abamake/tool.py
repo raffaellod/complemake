@@ -633,10 +633,10 @@ class MscCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
-         '/nologo',            # Suppress brand banner display.
-         '/c',                 # Compile without linking.
-         '/TP',                # Force all sources to be compiled as C++.
-         '/EHa',               # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
+         '/nologo',   # Suppress brand banner display.
+         '/c',        # Compile without linking.
+         '/TP',       # Force all sources to be compiled as C++.
+         '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
       ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
@@ -645,15 +645,13 @@ class MscCompiler(CxxCompiler):
          # cl.exe requires a separate argument to specify the preprocessed output file path.
          listArgs.append('/Fi' + self._m_sOutputFilePath)
 
-      sPdbFilePath = os.path.splitext(self._m_sOutputFilePath)[0] + '.pdb'
       listArgs.extend([
-         '/DDEBUG=1',          # Enable debug code.
-         '/Fp' + sPdbFilePath, # Create a program database file (PDB).
-         '/Od',                # Disable code optimization.
-         '/Zi',                # Generate debug info for PDB.
+         '/DDEBUG=1', # Enable debug code.
+         '/Od',       # Disable code optimization.
+         '/Z7',       # Generate debug info for PDB, stored in the .obj file.
       ])
       listArgs.extend([
-         '/Wall',              # Enable all warnings.
+         '/Wall',     # Enable all warnings.
       ])
 
 
