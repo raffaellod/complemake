@@ -28,6 +28,7 @@ import subprocess
 
 import make
 import make.job
+import make.logging
 
 
 
@@ -659,7 +660,13 @@ class MscCompiler(CxxCompiler):
    def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """See CxxCompiler._create_job_instance()."""
 
+      # cl.exe logs to stdout instead of stderr.
       dictPopenArgs['stderr'] = subprocess.STDOUT
+
+      # cl.exe has the annoying habit of printing the file name we asked it to compile; create a
+      # filtered logger to hide it.
+      log = make.logging.FilteredLogger(log)
+      log.add_exclusion(os.path.basename(self._m_listInputFilePaths[0]))
 
       return CxxCompiler._create_job_instance(
          self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
@@ -855,6 +862,7 @@ class MsLinker(Linker):
    def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """See Linker._create_job_instance()."""
 
+      # link.exe logs to stdout instead of stderr.
       dictPopenArgs['stderr'] = subprocess.STDOUT
 
       return Linker._create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
