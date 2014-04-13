@@ -865,6 +865,13 @@ class MsLinker(Linker):
       # link.exe logs to stdout instead of stderr.
       dictPopenArgs['stderr'] = subprocess.STDOUT
 
+      # link.exe has the annoying habit of printing the file name we asked it to compile; create a
+      # filtered logger to hide it.
+      log = make.logging.FilteredLogger(log)
+      log.add_exclusion('   Creating library {0}.lib and object {0}.exp'.format(
+         os.path.splitext(self._m_sOutputFilePath)[0]
+      ))
+
       return Linker._create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
 
