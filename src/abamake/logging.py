@@ -224,3 +224,40 @@ class Logger(object):
 
       self._m_lg.write(s)
 
+
+
+####################################################################################################
+# FilteredLogger
+
+class FilteredLogger(Logger):
+   """Logger that omits specific lines."""
+
+   # Set of lines to skip.
+   _m_setExclusions = None
+
+
+   def __init__(self, lg):
+      """See Logger.__init__()."""
+
+      Logger.__init__(self, lg)
+
+      self._m_setExclusions = set()
+
+
+   def add_exclusion(self, s):
+      """Adds a line to the list of lines that should be omitted from the log.
+
+      str s
+         String to be excluded.
+      """
+
+      self._m_setExclusions.add(s)
+
+
+   def _write(self, s):
+      """See Logger._write()."""
+
+      # Skip blacklisted lines.
+      if s not in self._m_setExclusions:
+         Logger._write(self, s)
+
