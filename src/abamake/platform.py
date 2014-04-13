@@ -438,7 +438,7 @@ class GnuPlatform(Platform):
 
       sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
       if sLibPath:
-         sLibPath = ':' + sLibPath
+         sLibPath += ':'
       sLibPath += os.path.abspath(sDir)
       dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
@@ -486,7 +486,7 @@ class WinPlatform(Platform):
 
       sLibPath = dictEnv.get('PATH', '')
       if sLibPath:
-         sLibPath = ';' + sLibPath
+         sLibPath += ';'
       sLibPath += os.path.abspath(sDir)
       dictEnv['PATH'] = sLibPath
       return dictEnv
