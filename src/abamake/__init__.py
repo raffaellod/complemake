@@ -207,7 +207,7 @@ class Make(object):
 
       self._m_dictFileTargets = {}
       self._m_jc = job.JobController(self)
-      self._m_log = logging.Logger()
+      self._m_log = logging.Logger(logging.LogGenerator())
       self._m_dictNamedTargets = {}
       self._m_setTargets = set()
 
