@@ -191,7 +191,7 @@ class Tool(object):
       dictPopenArgs = {
          'args': listArgs,
       }
-      return make.job.ExternalCmdJob(
+      return self._create_job_instance(
          self._get_quiet_cmd(), dictPopenArgs, tgt._m_mk().log, tgt.build_log_path
       )
 
