@@ -433,6 +433,7 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       """
 
       NamedDependencyMixIn.__init__(self, sName)
+
       mk.add_named_target(self, sName)
 
 
@@ -455,6 +456,7 @@ class FileTarget(FileDependencyMixIn, Target):
 
       FileDependencyMixIn.__init__(self, sFilePath)
       Target.__init__(self, mk)
+
       mk.add_file_target(self, self._m_sFilePath)
 
 
@@ -769,6 +771,7 @@ class DynLibTarget(NamedExecutableTarget):
       """
 
       lnk = NamedExecutableTarget._get_tool(self)
+
       lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 

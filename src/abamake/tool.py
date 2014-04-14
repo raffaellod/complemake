@@ -519,6 +519,7 @@ class CxxCompiler(Tool):
       """
 
       iterQuietCmd = Tool._get_quiet_cmd(self)
+
       return [iterQuietCmd[0]] + self._m_listInputFilePaths
 
 
@@ -863,7 +864,7 @@ class MsLinker(Linker):
       # link.exe logs to stdout instead of stderr.
       dictPopenArgs['stderr'] = subprocess.STDOUT
 
-      # link.exe has the annoying habit of printing the file name we asked it to compile; create a
+      # link.exe has the annoying habit of telling us it’s doing what we told it to; create a
       # filtered logger to hide it.
       log = make.logging.FilteredLogger(log)
       log.add_exclusion('   Creating library {0}.lib and object {0}.exp'.format(
