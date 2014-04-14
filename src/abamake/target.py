@@ -1105,8 +1105,9 @@ class UnitTestBuildTarget(ExecutableTargetBase):
       # output_dir/lib to the library path.
       dictEnv = None
       if any(isinstance(dep, DynLibTarget) for dep in self._m_listDependencies):
-         dictEnv = self._m_mk().target_platform.add_dir_to_dynlib_env_path(
-            os.environ.copy(), os.path.join(self._m_mk().output_dir, 'lib')
+         mk = self._m_mk()
+         dictEnv = mk.target_platform.add_dir_to_dynlib_env_path(
+            os.environ.copy(), os.path.join(mk.output_dir, 'lib')
          )
       return dictEnv
 
