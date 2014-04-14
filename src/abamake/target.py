@@ -862,8 +862,6 @@ class UnitTestTarget(NamedTargetMixIn, Target):
    def build_complete(self, job, iRet):
       """See Target.build_complete(). Performs any comparisons defined as part of the unit test."""
 
-      iRet = Target.build_complete(self, job, iRet)
-
       mk = self._m_mk()
       # Only go ahead in case of success of the job, or if no job was run because there’s no build
       # target to execute, and we did build the files to compare (not in “dry run” mode).
@@ -908,7 +906,8 @@ class UnitTestTarget(NamedTargetMixIn, Target):
                iRet = 1
             # This comparison counts as an additional test case with a single assertion.
             log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
-      return iRet
+
+      return Target.build_complete(self, job, iRet)
 
 
    def is_build_needed(self):
