@@ -312,6 +312,21 @@ class Platform(object):
       )
 
 
+   def adjust_popen_args_for_script(self, dictPopenArgs):
+      """Adjusts a dictionary of arguments to be used to run a program with subprocess.Popen in a
+      way that allows to execute non-programs (e.g. scripts), by changing the command into a shell
+      invocation if necessary.
+
+      The default implementation assumes that scripts can be executed directly (e.g. via shebang)
+      without any changes to dictPopenArgs.
+
+      dict(str: object) dictPopenArgs
+         Popen arguments dictionary.
+      """
+
+      pass
+
+
    def configure_tool(self, tool):
       """Configures the specified tool for this platform.
 
@@ -490,6 +505,16 @@ class WinPlatform(Platform):
       sLibPath += os.path.abspath(sDir)
       dictEnv['PATH'] = sLibPath
       return dictEnv
+
+
+   def adjust_popen_args_for_script(self, dictPopenArgs):
+      """See Platform.adjust_popen_args_for_script()."""
+
+      sArg0 = dictPopenArgs['args'][0]
+      if not sArg0.endswith('.exe') and not sArg0.endswith('.com'):
+         # Windows cannot execute non-executables directly; have a shell figure out how to run this
+         # script.
+         dictPopenArgs['shell'] = True
 
 
    def configure_tool(self, tool):

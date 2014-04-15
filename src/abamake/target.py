@@ -823,8 +823,11 @@ class UnitTestTarget(NamedTargetMixIn, Target):
    def build(self):
       """See Target.build(). It executes the unit test built by the build target, if any."""
 
-      if self._m_tgtUnitTestBuild:
+      tgtUnitTestBuild = self._m_tgtUnitTestBuild
+      if tgtUnitTestBuild:
          # One of the dependencies is a unit test to execute.
+
+         mk = self._m_mk()
 
          # Prepare the command line.
          for dep in self._m_listDependencies:
@@ -835,24 +838,29 @@ class UnitTestTarget(NamedTargetMixIn, Target):
                break
          else:
             listArgs = []
-         listArgs.append(self._m_tgtUnitTestBuild.file_path)
+         listArgs.append(tgtUnitTestBuild.file_path)
 
-         # This will store stdout and stderr of the program to file, and will buffer stdout in
-         # memory so we can use it in build_complete() if we need to, without a disk access.
+         # Prepare the arguments for Popen.
+         dictPopenArgs = {
+            'args': listArgs,
+            'env' : tgtUnitTestBuild.get_exec_environ(),
+         }
+         # If we’re using a script to run this unit test, tweak the Popen invocation to run a
+         # possibly non-executable file.
+         if len(listArgs) > 1:
+            mk.target_platform.adjust_popen_args_for_script(dictPopenArgs)
 
          # If the build target uses abc::testing, run it with the special abc::testing end-point
          # job, AbcUnitTestJob.
-         if self._m_tgtUnitTestBuild.uses_abc_testing:
+         if tgtUnitTestBuild.uses_abc_testing:
             clsJob = make.job.AbcUnitTestJob
          else:
             clsJob = make.job.ExternalCmdCapturingJob
+         # This will store stdout and stderr of the program to file, and will buffer stdout in
+         # memory so we can use it in build_complete() if we need to, without a disk access.
          return clsJob(
-            ('TEST', self._m_sName), {
-               'args': listArgs,
-               'env' : self._m_tgtUnitTestBuild.get_exec_environ(),
-            },
-            self._m_mk().log, self._m_tgtUnitTestBuild.build_log_path,
-            self._m_tgtUnitTestBuild.file_path + '.out'
+            ('TEST', self._m_sName), dictPopenArgs,
+            mk.log, tgtUnitTestBuild.build_log_path, tgtUnitTestBuild.file_path + '.out'
          )
       else:
          # No unit test to execute; we’ll compare the two pre-built files in build_complete().
