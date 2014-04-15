@@ -634,10 +634,11 @@ class MscCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
-         '/nologo',   # Suppress brand banner display.
          '/c',        # Compile without linking.
-         '/TP',       # Force all sources to be compiled as C++.
          '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
+         '/MD',       # Use the multithreaded runtime DLL.
+         '/nologo',   # Suppress brand banner display.
+         '/TP',       # Force all sources to be compiled as C++.
       ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
