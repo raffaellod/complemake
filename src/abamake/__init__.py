@@ -62,11 +62,11 @@ import os
 import re
 import xml.dom.minidom
 
-import make.job as job
-import make.logging as logging
-import make.metadata as metadata
-import make.platform as platform
-import make.target as target
+import abcmake.job as job
+import abcmake.logging as logging
+import abcmake.metadata as metadata
+import abcmake.platform as platform
+import abcmake.target as target
 
 
 
@@ -123,7 +123,7 @@ class DependencyCycleError(MakefileError):
 
       str sMessage
          Exception message.
-      iter(make.target.Target) iterTargets
+      iter(abcmake.target.Target) iterTargets
          Targets that create a cycle in the dependency graph.
       iterable(object*) iterArgs
          Other arguments.
@@ -173,7 +173,7 @@ class Make(object):
 
    Example usage:
 
-      mk = make.Make()
+      mk = abcmake.Make()
       mk.parse('project.abcmk')
       mk.job_controller.schedule_build(mk.get_named_target('projectbin'))
       mk.job_controller.build_scheduled_targets()
@@ -215,7 +215,7 @@ class Make(object):
    def add_file_target(self, tgt, sFilePath):
       """Records a file target, making sure no duplicates are added.
 
-      make.target.FileTarget tgt
+      abcmake.target.FileTarget tgt
          Target to add.
       str sFilePath
          Target file path.
@@ -229,7 +229,7 @@ class Make(object):
    def add_named_target(self, tgt, sName):
       """Records a named target, making sure no duplicates are added.
 
-      make.target.NamedTargetMixIn tgt
+      abcmake.target.NamedTargetMixIn tgt
          Target to add.
       str sName
          Target name.
@@ -243,7 +243,7 @@ class Make(object):
    def add_target(self, tgt):
       """Records a target.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target to add.
       """
 
@@ -259,7 +259,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      make.target.Target return
+      abcmake.target.Target return
          Target that builds sFilePath, or oFallback if no such target was defined in the makefile.
       """
 
@@ -278,7 +278,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      make.target.Target return
+      abcmake.target.Target return
          Target named sName, or oFallback if no such target was defined in the makefile.
       """
 
@@ -367,7 +367,7 @@ class Make(object):
 
       xml.dom.Element eltParent
          Parent XML element to parse.
-      list(tuple(make.target.Target, xml.dom.Element)*) listTargetsAndNodes
+      list(tuple(abcmake.target.Target, xml.dom.Element)*) listTargetsAndNodes
          List of parsed targets and their associated XML nodes. This method will add to this list
          any additional targets parsed.
       bool bTopLevel
@@ -381,7 +381,7 @@ class Make(object):
          # (they’re references, not definitions).
          if not self._is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
             if elt.nodeType == elt.ELEMENT_NODE:
-               # Pick a make.target.Target subclass for this target type.
+               # Pick a abcmake.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
                if clsTarget:
                   # Every target must have a name attribute.
@@ -494,7 +494,7 @@ class Make(object):
       rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or raising
       an exception in case of problems with the subtree.
 
-      make.target.Target tgtSubRoot
+      abcmake.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
       set listDependents
          Ancestors of tgtSubRoot. An ordered set with fast push/pop would be faster, since we

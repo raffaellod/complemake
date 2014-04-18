@@ -28,7 +28,7 @@ import threading
 import time
 import weakref
 
-import make.target
+import abcmake.target
 
 
 
@@ -194,7 +194,7 @@ class ExternalCmdJob(Job):
          (ExternalCmdJob._stdout_chunk_read() will never be called), but logging will work as
          expected. 'universal_newlines' should always be omitted, since this class handles stderr as
          text and stdout as binary.
-      make.logging.Logger log
+      abcmake.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -356,7 +356,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
-      make.logging.Logger log
+      abcmake.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -500,7 +500,7 @@ class JobController(object):
    _m_bForceBuild = False
    # See JobController.keep_going.
    _m_bKeepGoing = False
-   # Weak reference to the owning make.Make instance.
+   # Weak reference to the owning abcmake.Make instance.
    _m_mk = None
    # Running jobs for each target build (Job -> Target).
    _m_dictRunningJobs = None
@@ -511,7 +511,7 @@ class JobController(object):
    def __init__(self, mk):
       """Constructor.
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       """
 
@@ -734,7 +734,7 @@ class JobController(object):
       """Schedules the build of the specified target and all its dependencies. Any targets that have
       already been scheduled won’t be scheduled a second time.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target the build of which should be scheduled.
       """
 
@@ -751,7 +751,7 @@ class JobController(object):
       """Recursively removes the target builds blocked by the specified target from the set of
       scheduled builds.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target build to be unscheduled.
       """
 

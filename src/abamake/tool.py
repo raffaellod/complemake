@@ -26,9 +26,9 @@ import os
 import re
 import subprocess
 
-import make
-import make.job
-import make.logging
+import abcmake
+import abcmake.job
+import abcmake.logging
 
 
 
@@ -41,7 +41,7 @@ class AbstractFlag(object):
    def __str__(self):
       """Returns the member name, in the containing class, of the abstract flag.
 
-      Implemented by searching for self in every make.tool.Tool-derived class, and returning the
+      Implemented by searching for self in every abcmake.tool.Tool-derived class, and returning the
       corresponding member name when found.
 
       str return
@@ -51,7 +51,7 @@ class AbstractFlag(object):
       sAttr = self._get_self_in_class(Tool)
       if sAttr:
          return sAttr
-      for cls in make.derived_classes(Tool):
+      for cls in abcmake.derived_classes(Tool):
          sAttr = self._get_self_in_class(cls)
          if sAttr:
             return sAttr
@@ -110,7 +110,7 @@ class Tool(object):
    def __init__(self, st):
       """Constructor.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          Target system type.
       """
 
@@ -124,7 +124,7 @@ class Tool(object):
       will take care of translating each flag into a command-line argument understood by a specific
       tool implementation (e.g. GCC).
 
-      iterable(make.tool.AbstractFlag*) *iterArgs
+      iterable(abcmake.tool.AbstractFlag*) *iterArgs
          Flags to turn on.
       """
 
@@ -146,7 +146,7 @@ class Tool(object):
    def _add_exe_to_system_type_cache(cls, st, sFilePath):
       """Saves the path to the version of the tool that targets st.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          Target system type.
       str sFilePath
          Path to the executable file.
@@ -165,11 +165,11 @@ class Tool(object):
       The default implementation schedules a job whose command line is composed by calling
       Tool._create_job_add_flags() and Tool._create_job_add_inputs().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target that this job will build.
-      make.job.Job return
+      abcmake.job.Job return
          Job scheduled.
       """
 
@@ -228,22 +228,22 @@ class Tool(object):
 
 
    def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
-      """Returns an new make.job.ExternalCmdJob instance constructed with the provided arguments. It
-      allows subclasses to customize the job creation.
+      """Returns an new abcmake.job.ExternalCmdJob instance constructed with the provided arguments.
+      It allows subclasses to customize the job creation.
 
       iterable(str, str*) iterQuietCmd
-         See iterQuietCmd argument in make.job.ExternalCmdJob.__init__().
+         See iterQuietCmd argument in abcmake.job.ExternalCmdJob.__init__().
       dict(str: object) dictPopenArgs
-         See dictPopenArgs argument in make.job.ExternalCmdJob.__init__().
-      make.logging.Logger log
-         See log argument in make.job.ExternalCmdJob.__init__().
+         See dictPopenArgs argument in abcmake.job.ExternalCmdJob.__init__().
+      abcmake.logging.Logger log
+         See log argument in abcmake.job.ExternalCmdJob.__init__().
       str sStdErrFilePath
-         See sStdErrFilePath argument in make.job.ExternalCmdJob.__init__().
-      make.job.ExternalCmdJob return
+         See sStdErrFilePath argument in abcmake.job.ExternalCmdJob.__init__().
+      abcmake.job.ExternalCmdJob return
          Newly instantiated job.
       """
 
-      return make.job.ExternalCmdJob(iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
+      return abcmake.job.ExternalCmdJob(iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
 
    class default_file_name(object):
@@ -275,7 +275,7 @@ class Tool(object):
       The default implementation uses the information provided with the Tool.default_file_name()
       decorator.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          System type.
       str return
          The file name or path to a version of the tool supporting st, or None otherwise.
@@ -307,7 +307,7 @@ class Tool(object):
 
       The default implementation always returns False.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          System type.
       str sFilePath
          Path to the tool’s executable file.
@@ -351,7 +351,7 @@ class Tool(object):
    def _get_exe_from_system_type_cache(cls, st):
       """Returns the path to the version of the tool that targets st, if any was ever cached.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          Target system type.
       str return
          Path to the executable file.
@@ -363,22 +363,22 @@ class Tool(object):
 
    @classmethod
    def get_impl_for_system_type(cls, st, sFilePath = None):
-      """Detects if a tool of the type of this class (e.g. a C++ compiler for make.tool.CxxCompiler)
-      exists for the specified system type, returning the corresponding implementation class (e.g.
-      make.tool.GxxCompiler if G++ for that system type is installed).
+      """Detects if a tool of the type of this class (e.g. a C++ compiler for
+      abcmake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
+      implementation class (e.g. abcmake.tool.GxxCompiler if G++ for that system type is installed).
 
       If the a executable file path is specified, this method will just find an implementation class
       for it, instead of checking whether each class’s tool is installed.
 
-      make.platform.SystemType st
+      abcmake.platform.SystemType st
          System type for which the tool is needed.
       str sFilePath
          Path to the tool’s executable file, or None if the tool should be detected automatically.
       type return
-         Matching make.tool.Tool subclass for the tool found or specified.
+         Matching abcmake.tool.Tool subclass for the tool found or specified.
       """
 
-      for clsDeriv in make.derived_classes(cls):
+      for clsDeriv in abcmake.derived_classes(cls):
          if sFilePath:
             # Explicit file path: only a match if it’s the correct tool and it supports st.
             if clsDeriv._exe_matches_tool_and_system_type(st, sFilePath):
@@ -419,7 +419,7 @@ class Tool(object):
       """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
       implementation using a class-specific _smc_dictAbstactToImplFlags dictionary.
 
-      make.tool.AbstractFlag flag
+      abcmake.tool.AbstractFlag flag
          Abstract flag.
       str return
          Corresponding command-line argument.
@@ -601,8 +601,8 @@ class GxxCompiler(CxxCompiler):
       if not sOut:
          return False
       try:
-         stSupported = make.platform.SystemType.parse_tuple(sOut)
-      except make.platform.SystemTypeTupleError:
+         stSupported = abcmake.platform.SystemType.parse_tuple(sOut)
+      except abcmake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return False
       # This is not a strict equality test.
@@ -665,7 +665,7 @@ class MscCompiler(CxxCompiler):
 
       # cl.exe has the annoying habit of printing the file name we asked it to compile; create a
       # filtered logger to hide it.
-      log = make.logging.FilteredLogger(log)
+      log = abcmake.logging.FilteredLogger(log)
       log.add_exclusion(os.path.basename(self._m_listInputFilePaths[0]))
 
       return CxxCompiler._create_job_instance(
@@ -818,8 +818,8 @@ class GnuLinker(Linker):
       if not sOut:
          return False
       try:
-         stSupported = make.platform.SystemType.parse_tuple(sOut)
-      except make.platform.SystemTypeTupleError:
+         stSupported = abcmake.platform.SystemType.parse_tuple(sOut)
+      except abcmake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return False
       # This is not a strict equality test.
@@ -867,7 +867,7 @@ class MsLinker(Linker):
 
       # link.exe has the annoying habit of telling us it’s doing what we told it to; create a
       # filtered logger to hide it.
-      log = make.logging.FilteredLogger(log)
+      log = abcmake.logging.FilteredLogger(log)
       log.add_exclusion('   Creating library {0}.lib and object {0}.exp'.format(
          os.path.splitext(self._m_sOutputFilePath)[0]
       ))

@@ -29,7 +29,7 @@ import sys
 # LogGenerator
 
 class LogGenerator(object):
-   """Generator of logs. Only one instance of this class exists for each make.Make instance."""
+   """Generator of logs. Only one instance of this class exists for each abcmake.Make instance."""
 
    # Total count of failed test assertions.
    _m_cFailedTestAssertions = None
@@ -86,7 +86,7 @@ class LogGenerator(object):
       )
 
 
-   # Selects a verbosity level (make.logging.Logger.*), affecting what is displayed about the
+   # Selects a verbosity level (abcmake.logging.Logger.*), affecting what is displayed about the
    # operations executed.
    verbosity = None
 
@@ -140,8 +140,8 @@ class Logger(object):
       """Constructor.
 
       object lg
-         make.logging.LogGenerator instance, or make.logging.Logger whose LogGenerator is to be
-         shared.
+         abcmake.logging.LogGenerator instance, or abcmake.logging.Logger whose LogGenerator is to
+         be shared.
       """
 
       if isinstance(lg, LogGenerator):
@@ -210,7 +210,7 @@ class Logger(object):
       self._m_lg.verbosity = iLevel
 
    verbosity = property(_get_verbosity, _set_verbosity, doc = """
-      Selects a verbosity level (make.logging.Logger.*), affecting what is displayed about the
+      Selects a verbosity level (abcmake.logging.Logger.*), affecting what is displayed about the
       operations executed.
    """)
 

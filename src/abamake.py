@@ -23,7 +23,7 @@
 import os
 import sys
 
-import make
+import abcmake
 
 
 
@@ -39,7 +39,7 @@ def main(iterArgs):
       Command return status.
    """
 
-   mk = make.Make()
+   mk = abcmake.Make()
    iArg = 1
    iArgEnd = len(iterArgs)
 

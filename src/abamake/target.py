@@ -25,9 +25,9 @@ import os
 import re
 import weakref
 
-import make
-import make.job
-import make.tool
+import abcmake
+import abcmake.job
+import abcmake.tool
 
 
 
@@ -60,7 +60,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not sName:
-         raise make.MakefileError('missing target name')
+         raise abcmake.MakefileError('missing target name')
       self._m_sName = sName
 
 
@@ -93,7 +93,7 @@ class FileDependencyMixIn(object):
       """
 
       if not sFilePath:
-         raise make.MakefileError('missing target file path')
+         raise abcmake.MakefileError('missing target file path')
       self._m_sFilePath = os.path.normpath(sFilePath)
 
 
@@ -183,11 +183,11 @@ class Target(Dependency):
 
    # Unfinished dependency builds that block building this target.
    _m_cBuildBlocks = None
-   # Dependencies (make.target.Dependency instances) for this target. Cannot be a set, because in
+   # Dependencies (abcmake.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep the order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDependencies = None
-   # Targets (make.target.Target instances) dependent on this target.
+   # Targets (abcmake.target.Target instances) dependent on this target.
    _m_setDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
@@ -199,7 +199,7 @@ class Target(Dependency):
    def __init__(self, mk):
       """Constructor. Automatically registers the target with the specified Make instance.
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       """
 
@@ -215,7 +215,7 @@ class Target(Dependency):
    def add_dependency(self, dep):
       """Adds a target dependency.
 
-      make.target.Dependency dep
+      abcmake.target.Dependency dep
          Dependency.
       """
 
@@ -232,7 +232,7 @@ class Target(Dependency):
    def build(self):
       """Instantiates a job that will build the output.
 
-      make.job.Job return
+      abcmake.job.Job return
          Scheduled job, or None if there’s nothing to be built. Some minor processing may still
          occur synchronously to the main thread in Target.build_complete().
       """
@@ -244,7 +244,7 @@ class Target(Dependency):
       """Invoked by the JobController when the job executed to build this target completes, either
       in success or in failure.
 
-      make.job.Job job
+      abcmake.job.Job job
          Job instance, or None if the job was not started (due to e.g. “dry run” mode).
       int iRet
          Return value of the job’s execution. If job is None, this will be 0 (success).
@@ -283,12 +283,12 @@ class Target(Dependency):
 
 
    def get_dependencies(self, bTargetsOnly = False):
-      """Iterates over the dependencies (make.target.Dependency instances) for this target.
+      """Iterates over the dependencies (abcmake.target.Dependency instances) for this target.
 
       bool bTargetsOnly
-         If True, only make.target.Target instances will be returned; if False, no filtering will
+         If True, only abcmake.target.Target instances will be returned; if False, no filtering will
          occur.
-      make.target.Dependency yield
+      abcmake.target.Dependency yield
          Dependency of this target.
       """
 
@@ -298,9 +298,9 @@ class Target(Dependency):
 
 
    def get_dependents(self):
-      """Iterates over the targets (make.target.Target instances) dependent on this target.
+      """Iterates over the targets (abcmake.target.Target instances) dependent on this target.
 
-      make.target.Target yield
+      abcmake.target.Target yield
          Dependent on this target.
       """
 
@@ -313,7 +313,7 @@ class Target(Dependency):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
 
-      make.tool.Tool return
+      abcmake.tool.Tool return
          Ready-to-use tool.
       """
 
@@ -357,7 +357,7 @@ class Target(Dependency):
    def remove_dependency(self, dep):
       """Removes a target dependency.
 
-      make.target.Dependency dep
+      abcmake.target.Dependency dep
          Dependency.
       """
 
@@ -426,7 +426,7 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       """See NamedDependencyMixIn.__init__(). Automatically registers the name => target association
       with the specified Make instance.
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Dependency name.
@@ -448,7 +448,7 @@ class FileTarget(FileDependencyMixIn, Target):
       """See FileDependencyMixIn.__init__() and Target.__init__(). Automatically registers the path
       => target association with the specified Make instance.
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sFilePath
          Dependency file path.
@@ -487,13 +487,13 @@ class ProcessedSourceTarget(FileTarget):
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput = None):
       """See FileTarget.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
       str sSuffix
          Suffix that is added to sSourceFilePath to generate the target’s file path.
-      make.target.Target tgtFinalOutput
+      abcmake.target.Target tgtFinalOutput
          Target that this target’s output will be linked into. If omitted, no output-driven
          configuration will be applied to the Tool instance generating this output.
       """
@@ -530,7 +530,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
 
       cxx = CxxObjectTarget._get_tool(self)
-      cxx.add_flags(make.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
+      cxx.add_flags(abcmake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
 
@@ -556,7 +556,7 @@ class CxxObjectTarget(ObjectTarget):
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
-         mk.target_platform.get_tool(make.tool.CxxCompiler).object_suffix, tgtFinalOutput
+         mk.target_platform.get_tool(abcmake.tool.CxxCompiler).object_suffix, tgtFinalOutput
       )
 
 
@@ -567,7 +567,7 @@ class CxxObjectTarget(ObjectTarget):
 
       # TODO: Platform should instantiate the Tool and pass it _m_st.
 
-      cxx = mk.target_platform.get_tool(make.tool.CxxCompiler)(mk.target_platform._m_st)
+      cxx = mk.target_platform.get_tool(abcmake.tool.CxxCompiler)(mk.target_platform._m_st)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -622,7 +622,7 @@ class ExecutableTargetBase(FileTarget):
       """Configures the specified Tool instance to generate code suitable for linking in this
       target.
 
-      make.tool.Tool tool
+      abcmake.tool.Tool tool
          Tool (compiler) to configure.
       """
 
@@ -637,7 +637,7 @@ class ExecutableTargetBase(FileTarget):
 
       # TODO: Platform should instantiate the Tool and pass it _m_st.
 
-      lnk = mk.target_platform.get_tool(make.tool.Linker)(mk.target_platform._m_st)
+      lnk = mk.target_platform.get_tool(abcmake.tool.Linker)(mk.target_platform._m_st)
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 
@@ -657,7 +657,9 @@ class ExecutableTargetBase(FileTarget):
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             clsObjTarget = CxxObjectTarget
          else:
-            raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
+            raise abcmake.MakefileError(
+               '{}: unsupported source file type: {}'.format(self, sFilePath)
+            )
          # Create an object target with the file path as its source.
          tgtObj = clsObjTarget(mk, sFilePath, self)
          self.add_dependency(tgtObj)
@@ -675,7 +677,7 @@ class ExecutableTargetBase(FileTarget):
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_named_target(sName, None)
          if not tgtUnitTest:
-            raise make.TargetReferenceError(
+            raise abcmake.TargetReferenceError(
                '{}: could not find definition of referenced unit test: {}'.format(self, sName)
             )
          tgtUnitTest.add_dependency(self)
@@ -694,7 +696,7 @@ class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
    def __init__(self, mk, sName, sFilePath):
       """See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Target name.
@@ -719,7 +721,7 @@ class ExecutableTarget(NamedExecutableTarget):
    def __init__(self, mk, sName):
       """See NamedExecutableTarget.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Target name.
@@ -743,7 +745,7 @@ class DynLibTarget(NamedExecutableTarget):
    def __init__(self, mk, sName):
       """See NamedExecutableTarget.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Target name.
@@ -757,9 +759,9 @@ class DynLibTarget(NamedExecutableTarget):
    def configure_compiler(self, tool):
       """See NamedExecutableTarget.configure_compiler()."""
 
-      if isinstance(tool, make.tool.CxxCompiler):
+      if isinstance(tool, abcmake.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
-         tool.add_flags(make.tool.CxxCompiler.CFLAG_DYNLIB)
+         tool.add_flags(abcmake.tool.CxxCompiler.CFLAG_DYNLIB)
          # Allow building both a dynamic library and its clients using the same header file, by
          # changing “import” to “export” when this macro is defined.
          tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
@@ -772,7 +774,7 @@ class DynLibTarget(NamedExecutableTarget):
 
       lnk = NamedExecutableTarget._get_tool(self)
 
-      lnk.add_flags(make.tool.Linker.LDFLAG_DYNLIB)
+      lnk.add_flags(abcmake.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
 
@@ -797,7 +799,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
    def __init__(self, mk, sName):
       """See NamedTargetMixIn.__init__() and Target.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Target name.
@@ -853,9 +855,9 @@ class UnitTestTarget(NamedTargetMixIn, Target):
          # If the build target uses abc::testing, run it with the special abc::testing end-point
          # job, AbcUnitTestJob.
          if tgtUnitTestBuild.uses_abc_testing:
-            clsJob = make.job.AbcUnitTestJob
+            clsJob = abcmake.job.AbcUnitTestJob
          else:
-            clsJob = make.job.ExternalCmdCapturingJob
+            clsJob = abcmake.job.ExternalCmdCapturingJob
          # This will store stdout and stderr of the program to file, and will buffer stdout in
          # memory so we can use it in build_complete() if we need to, without a disk access.
          return clsJob(
@@ -931,7 +933,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
 
       mk = self._m_mk()
       if elt.nodeName == 'unittest':
-         raise make.MakefileSyntaxError('<unittest> not allowed in <unittest>')
+         raise abcmake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
       elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
          # Due to specifying a non-default tool, this <source> does not generate an object file or
          # an executable.
@@ -942,11 +944,13 @@ class UnitTestTarget(NamedTargetMixIn, Target):
             if sTool == 'preproc':
                clsPreprocTarget = CxxPreprocessedTarget
             else:
-               raise make.MakefileError(
+               raise abcmake.MakefileError(
                   '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
                )
          else:
-            raise make.MakefileError('{}: unsupported source file type: {}'.format(self, sFilePath))
+            raise abcmake.MakefileError(
+               '{}: unsupported source file type: {}'.format(self, sFilePath)
+            )
          # Create a preprocessed target with the file path as its source.
          tgtObj = clsPreprocTarget(mk, sFilePath)
          # Note that we don’t invoke our add_dependency() override.
@@ -960,7 +964,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
          if sFilter:
             self._m_reFilter = re.compile(sFilter, re.DOTALL)
          else:
-            raise make.MakefileError('{}: unsupported output transformation'.format(self))
+            raise abcmake.MakefileError('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
          dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
@@ -1051,13 +1055,15 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       if self._m_tgtUnitTestBuild:
          if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
             # Expected a file against which to compare the unit test’s output.
-            raise make.MakefileError(
+            raise abcmake.MakefileError(
                '{}: can’t compare the unit test output against more than one file'.format(self)
             )
       else:
          if cStaticCmpOperands != 0 and cStaticCmpOperands != 2:
             # Expected two files to compare.
-            raise make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
+            raise abcmake.MakefileError(
+               '{}: need exactly two files/outputs to compare'.format(self)
+            )
 
 
 
@@ -1076,7 +1082,7 @@ class UnitTestBuildTarget(ExecutableTargetBase):
    def __init__(self, mk, sName):
       """See ExecutableTargetBase.__init__().
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sName
          Target name.

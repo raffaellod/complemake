@@ -25,7 +25,7 @@ import os
 import xml.dom
 import xml.dom.minidom
 
-import make.target
+import abcmake.target
 
 
 
@@ -53,7 +53,7 @@ class FileSignature(object):
 
       str sFilePath
          Path to the file for which a signature should be generated.
-      make.metadata.FileSignature return
+      abcmake.metadata.FileSignature return
          Generated signature.
       """
 
@@ -68,7 +68,7 @@ class FileSignature(object):
 
       xml.dom.Element eltFile
          <file> element to parse.
-      make.metadata.FileSignature return
+      abcmake.metadata.FileSignature return
          Loaded signature.
       """
 
@@ -117,9 +117,9 @@ class TargetSnapshot(object):
    def __init__(self, mds, tgt, eltTarget = None):
       """Constructor.
 
-      make.metadata.MetadataStore mds
+      abcmake.metadata.MetadataStore mds
          MetadataStore instance.
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target.
       xml.dom.Element eltTarget
          XML Element to parse to load the target inputs’ and outputs’ signatures. If omitted, the
@@ -150,7 +150,7 @@ class TargetSnapshot(object):
             mds.get_signatures(dep.get_generated_files(), self._m_dictInputSigs)
          # Collect signatures for all the target’s generated files (outputs).
          self._m_dictOutputSigs = {}
-         if isinstance(tgt, make.target.FileTarget):
+         if isinstance(tgt, abcmake.target.FileTarget):
             mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs)
 
 
@@ -158,9 +158,9 @@ class TargetSnapshot(object):
       """Compares self (current snapshot) with the stored snapshot for the same target, logging any
       detected differences.
 
-      make.metadata.TargetSnapshot tssStored
+      abcmake.metadata.TargetSnapshot tssStored
          Stored snapshot.
-      make.Logger log
+      abcmake.Logger log
          Log instance.
       bool return
          True if the two snapshots are equal, of False in case of any differences.
@@ -229,7 +229,7 @@ class TargetSnapshot(object):
       eltTarget = doc.createElement('target')
 
       # Store the name of the target if named, or its file path otherwise.
-      if isinstance(tgt, make.target.NamedTargetMixIn):
+      if isinstance(tgt, abcmake.target.NamedTargetMixIn):
          eltTarget.setAttribute('name', tgt.name)
       else:
          eltTarget.setAttribute('path', tgt.file_path)
@@ -248,11 +248,11 @@ class TargetSnapshot(object):
    def update(self, mds):
       """Updates the snapshot.
 
-      make.metadata.MetadataStore mds
+      abcmake.metadata.MetadataStore mds
          MetadataStore instance.
       """
 
-      if isinstance(self._m_tgt, make.target.FileTarget):
+      if isinstance(self._m_tgt, abcmake.target.FileTarget):
          # Recreate signatures for all the target’s generated files (outputs).
          mds.get_signatures(
             self._m_tgt.get_generated_files(), self._m_dictOutputSigs, bForceCacheUpdate = True
@@ -265,7 +265,7 @@ class TargetSnapshot(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
-   # Freshly-read target snapshots (make.target.Target -> TargetSnapshot).
+   # Freshly-read target snapshots (abcmake.target.Target -> TargetSnapshot).
    _m_dictCurrTargetSnapshots = None
    # True if any changes occurred, which means that the metadata file should be updated.
    _m_bDirty = None
@@ -275,14 +275,14 @@ class MetadataStore(object):
    _m_log = None
    # Signature for each file (str -> FileSignature).
    _m_dictSignatures = None
-   # Target snapshots as stored in the metadata file (make.target.Target -> TargetSnapshot).
+   # Target snapshots as stored in the metadata file (abcmake.target.Target -> TargetSnapshot).
    _m_dictStoredTargetSnapshots = None
 
 
    def __init__(self, mk, sFilePath):
       """Constructor. Reads metadata from the specified file.
 
-      make.Make mk
+      abcmake.Make mk
          Make instance.
       str sFilePath
          Metadata storage file.
@@ -345,7 +345,7 @@ class MetadataStore(object):
 
       iterable(str*) iterFilePaths
          Enumerates file paths.
-      dict(str: make.metadata.FileSignature) dictOut
+      dict(str: abcmake.metadata.FileSignature) dictOut
          Dictionary in which every signature will be stored, even if None.
       bool bForceCacheUpdate
          If True, the signatures cache will not be read, but newly-read signatures will be written
@@ -376,9 +376,9 @@ class MetadataStore(object):
       """Returns a current snapshot for the specified target, creating one first it none such
       exists.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target for which to return a current snapshot.
-      make.metadata.TargetSnapshot return
+      abcmake.metadata.TargetSnapshot return
          Current target snapshot.
       """
 
@@ -399,7 +399,7 @@ class MetadataStore(object):
       The new signatures are stored internally, and will be used to update the target’s snapshot
       once MetadataStore.update_target_snapshot() is called.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target for which to get a new snapshot to compare with the stored one.
       bool return
          True if any files have changed since the last build, or False otherwise.
@@ -422,7 +422,7 @@ class MetadataStore(object):
    def update_target_snapshot(self, tgt):
       """Updates the snapshot for the specified target.
 
-      make.target.Target tgt
+      abcmake.target.Target tgt
          Target for which to update the snapshot.
       """
 
