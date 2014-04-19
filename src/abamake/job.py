@@ -463,7 +463,7 @@ class AbcUnitTestJob(ExternalCmdCapturingJob):
             self._m_cTotalTestAssertions += 1
             self._m_cFailedTestAssertions += 1
             # Make the line more readable before logging it.
-            sLine = 'test assertion failed: {}'.format(sInfo[len('ASSERT-FAIL') + 1:])
+            sLine = sInfo[len('ASSERT-FAIL') + 1:]
          elif sInfo.startswith('CASE-START'):
             self._m_sCurrTestCase = sInfo[len('CASE-START') + 1:]
             self._m_cTotalTestAssertions = 0
