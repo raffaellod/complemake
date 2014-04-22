@@ -33,7 +33,7 @@ ABC Make was created to satisfy these requirements:
    solution and projects to build ABC; this is especially important when thinking of ABC as a
    framework that should simplify building projects with/on top of it;
 
-•  Allow a single makefile per project (impossible with MSBuild);
+•  Allow a single makefile per project (this was just impossible with MSBuild);
 
 •  Simplified syntax for a very shallow learning curve, just like ABC itself aims to be easier to
    use than other C++ frameworks;
@@ -42,18 +42,29 @@ ABC Make was created to satisfy these requirements:
    flags (this was getting difficult with GNU make);
 
 •  Implicit definition of intermediate targets, so that each makefile needs only mention sources and
-   outputs (already achieved via Makefile.inc for GNU make, and not required for MSBuild);
+   outputs (this had already been achieved via Makefile.inc for GNU make, and was not required for
+   MSBuild);
 
-•  Trivial unit test declaration and execution (this required a lot of made-up conventions for both
-   GNU make and MSBuild);
+•  Trivial unit test declaration and execution (this had been implemented in both GNU make and
+   MSBuild, but at the cost of a lot of made-up conventions);
 
-•  Integration with abc::testing unit testing framework (already accomplished for GNU make, and
-   possible for MSBuild);
+•  Integration with abc::testing unit testing framework (this had already been accomplished for GNU
+   make, but was still only planned for MSBuild);
 
 •  Default parallel building of independent targets;
 
-•  Command-line options generally compatible with GNU make, to be immediately usable by new users.
+•  Command-line options generally compatible with GNU make, to be immediately usable by GNU make
+   users.
 
+
+ABC Make loads an ABC Makefile (a fairly simple XML file; see [DOC:5581 ABC Make makefiles]),
+creating a list of named and unnamed (file path-only) targets; these are then scheduled for build,
+and the resulting build is started, proceeding in the necessary order.
+
+Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 ABC Make ‒
+Execution of external commands] for more information. Multiple non-dependent external commands are
+executed in parallel, depending on the multiprocessing capability of the host system and command-
+line options used.
 
 TODO: link to documentation for abc::testing support in ABC Make.
 """

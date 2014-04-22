@@ -20,6 +20,29 @@
 
 """Job scheduling and execution classes."""
 
+"""DOC:6821 ABC Make ‒ Execution of external commands
+
+External commands run by ABC Make are managed by specializations of abcmake.Job. The default
+subclass, abcmake.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing
+them to any subclasses; stderr is always logged to a file, with a name (chosen by the code that
+instantiates the job) that’s typically output_dir/log/<path-to-the-target-built-by-the-job>.
+
+A subclass of abcmake.ExternalCmdJob, abcmake.ExternalCmdCapturingJob, also captures to file the
+standard output of the program; this is typically used to execute unit tests, since stdout is
+considered the non-log output of the test; for example, a unit test for an image manipulation
+library could output a generated bitmap to stdout, to have ABC Make compare it against a pre-
+rendered bitmap and determine whether the test is passed or not, in addition to checking the unit
+test executable’s return code.
+
+Special support is provided for unit tests using the abc::testing framework. Such tests are executed
+using abcmake.AbcUnitTestJob, a subclass of abcmake.ExternalCmdCapturingJob; the stderr and stdout
+are still captured and stored in files, but additionally stderr is parsed to capture progress of the
+assertions and test cases executed, and the resulting counts are used to display a test summary at
+the end of ABC Make’s execution.
+
+TODO: link to documentation for abc::testing support in ABC Make.
+"""
+
 import io
 import multiprocessing
 import os
@@ -36,7 +59,9 @@ import abcmake.target
 # Job
 
 class Job(object):
-   """Job to be executed by a JobController instance."""
+   """Job to be executed by a JobController instance. See [DOC:6821 ABC Make ‒ Execution of external
+   commands] for an overview on external command execution in ABC Make.
+   """
 
    __slots__ = ()
 
