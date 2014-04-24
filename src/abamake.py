@@ -31,6 +31,13 @@ import abcmake
 # Globals
 
 def helptext(sInvalidArg):
+   """Displays a message with instructions on how to invoke ABC Make. This function does not return.
+
+   str sInvalidArg
+      Invalid argument that prompted to show this message, or None if --help was specified on the
+      command line.
+   """
+
    import textwrap
    if sInvalidArg:
       fnWrite = sys.stderr.write
