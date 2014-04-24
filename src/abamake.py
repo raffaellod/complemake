@@ -28,7 +28,31 @@ import abcmake
 
 
 ####################################################################################################
-# __main__
+# Globals
+
+def helptext(sInvalidArg):
+   import textwrap
+   if sInvalidArg:
+      fnWrite = sys.stderr.write
+      fnWrite('error: unknown option argument: {}\n'.format(sInvalidArg))
+   else:
+      fnWrite = sys.stdout.write
+   fnWrite(textwrap.dedent("""\
+      Usage: abc-make.py [options] [makefile] [targets...]
+      Options:
+      -f, --force-build   Unconditionally rebuild targets.
+      -j [N], --jobs[=N]  Build using N processes at at time; if N is omitted,
+                          build all independent targets at the same time. If not
+                          specified, the default is --jobs=<number of processors>.
+      -k, --keep-going    Continue building targets even if other independent
+                          targets fail.
+      -n, --dry-run       Don’t actually run any external commands. Useful to test
+                          if anything needs to be built.
+      -v, --verbose       Increase verbosity level; can be specified multiple
+                          times.
+   """))
+   sys.exit(1 if sInvalidArg else 0)
+
 
 def main(iterArgs):
    """Implementation of __main__.
@@ -51,6 +75,8 @@ def main(iterArgs):
             mk.job_controller.dry_run = True
          elif sArg == '--force-build':
             mk.job_controller.force_build = True
+         elif sArg == '--help':
+            helptext(None)
          elif sArg.startswith('--jobs'):
             if sArg[len('--jobs')] == '=':
                cJobs = int(sArg[len('--jobs') + 1:])
@@ -61,6 +87,8 @@ def main(iterArgs):
             mk.job_controller.keep_going = True
          elif sArg == '--verbose':
             mk.log.verbosity += 1
+         else:
+            helptext(sArg)
       elif sArg.startswith('-'):
          ich = 1
          ichEnd = len(sArg)
@@ -84,6 +112,8 @@ def main(iterArgs):
                mk.job_controller.dry_run = True
             elif sArgChar == 'v':
                mk.log.verbosity += 1
+            else:
+               helptext(sArg)
             ich += 1
       else:
          break
