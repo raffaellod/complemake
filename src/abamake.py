@@ -20,6 +20,17 @@
 
 """Builds outputs and runs unit tests as specified in a .abcmk file."""
 
+# TODO: maybe support launching gdb/devenv to run one of the programs via debugger?
+#
+# POSIX:
+#    gdb --args {exe}
+#
+# Win32:
+#    devenv.exe /debugexe {exe}  Opens the specified executable to be debugged. The remainder of the
+#                                command line is passed to this executable as its arguments.
+#    vsjitdebugger.exe -p {pid}  Attaches the debugger from the command line.
+
+
 import os
 import sys
 
