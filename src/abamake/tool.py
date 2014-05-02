@@ -618,7 +618,11 @@ class GxxCompiler(CxxCompiler):
 
 @Tool.default_file_name('cl')
 class MscCompiler(CxxCompiler):
-   """Microsoft C/C++ compiler (MSC)."""
+   """Microsoft C/C++ compiler (MSC).
+
+   For a list of recognized command-line arguments, see <http://msdn.microsoft.com/en-us/library/
+   fwkeyyhe%28v=vs.100%29.aspx>.
+   """
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
@@ -832,7 +836,11 @@ class GnuLinker(Linker):
 
 @Tool.default_file_name('link')
 class MsLinker(Linker):
-   """Microsoft linker (Link)."""
+   """Microsoft linker (Link).
+
+   For a list of recognized command-line arguments, see <http://msdn.microsoft.com/en-us/library/
+   y0zzbyt4%28v=vs.100%29.aspx>.
+   """
 
    # Mapping table between abstract (*FLAG_*) flags
    _smc_dictAbstactToImplFlags = {
