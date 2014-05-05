@@ -638,26 +638,31 @@ class MscCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
-         '/c',        # Compile without linking.
-         '/EHa',      # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
-         '/MD',       # Use the multithreaded runtime DLL.
-         '/nologo',   # Suppress brand banner display.
-         '/TP',       # Force all sources to be compiled as C++.
+         '/c',         # Compile without linking.
+         '/EHa',       # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
+         '/MD',        # Use the multithreaded runtime DLL.
+         '/nologo',    # Suppress brand banner display.
+         '/TP',        # Force all sources to be compiled as C++.
       ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
 
       if CxxCompiler.CFLAG_PREPROCESS_ONLY in self._m_setAbstractFlags:
-         # cl.exe requires a separate argument to specify the preprocessed output file path.
-         listArgs.append('/Fi' + self._m_sOutputFilePath)
+         listArgs.extend([
+            '/Fi' + self._m_sOutputFilePath, # cl.exe requires a separate argument to specify the
+                       # preprocessed output file path.
+            '/wd4668', # Suppress “'macro' is not defined as a preprocessor macro, replacing with
+                       # '0' for '#if/#elif'”. Somehow cl.exe /P will ignore a supposedly equivalent
+                       # #pragma in a header file. This occurs in MS-provided header files.
+         ])
 
       listArgs.extend([
-         '/DDEBUG=1', # Enable debug code.
-         '/Od',       # Disable code optimization.
-         '/Z7',       # Generate debug info for PDB, stored in the .obj file.
+         '/DDEBUG=1',  # Enable debug code.
+         '/Od',        # Disable code optimization.
+         '/Z7',        # Generate debug info for PDB, stored in the .obj file.
       ])
       listArgs.extend([
-         '/Wall',     # Enable all warnings.
+         '/Wall',      # Enable all warnings.
       ])
 
 
