@@ -353,7 +353,7 @@ class Platform(object):
    def from_system_type(cls, st):
       """Returns an instance of the Platform subclass that most closely matches the specified system
       type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
-      return a abcmake.platform.GnuPlatform instance.
+      return an abcmake.platform.GnuPlatform instance.
 
       abcmake.platform.SystemType st
          System type.

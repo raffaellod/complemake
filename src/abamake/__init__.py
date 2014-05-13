@@ -392,7 +392,7 @@ class Make(object):
          # (they’re references, not definitions).
          if not self._is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
             if elt.nodeType == elt.ELEMENT_NODE:
-               # Pick a abcmake.target.Target subclass for this target type.
+               # Pick an abcmake.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
                if clsTarget:
                   # Every target must have a name attribute.
