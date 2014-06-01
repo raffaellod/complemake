@@ -298,7 +298,7 @@ class MetadataStore(object):
       log = self._m_log
       try:
          doc = xml.dom.minidom.parse(sFilePath)
-      except FileNotFoundError:
+      except (abcmake.FileNotFoundErrorCompat, OSError):
          # If we can’t load the persistent metadata store, start it anew.
          log(log.HIGH, 'metadata: empty or missing store: {}', sFilePath)
       else:
@@ -364,7 +364,7 @@ class MetadataStore(object):
             # Need to read this file’s signature.
             try:
                fs = FileSignature.generate(sFilePath)
-            except FileNotFoundError:
+            except (abcmake.FileNotFoundErrorCompat, OSError):
                fs = None
             # Cache this signature.
             self._m_dictSignatures[sFilePath] = fs

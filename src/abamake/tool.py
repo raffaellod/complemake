@@ -342,7 +342,7 @@ class Tool(object):
             stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
          ) as procTool:
             return procTool.communicate()[0].rstrip('\r\n')
-      except FileNotFoundError:
+      except (abcmake.FileNotFoundErrorCompat, OSError):
          # Could not execute the program.
          return None
 

@@ -80,6 +80,8 @@ import abcmake.platform as platform
 import abcmake.target as target
 
 
+FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
+
 
 ####################################################################################################
 # Non-member functions
