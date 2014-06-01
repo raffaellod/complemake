@@ -39,6 +39,8 @@ class FileSignature(object):
       # Date/time of the file’s last modification.
       '_m_dtMTime',
    )
+   # Format string used to convert a datetime instance to/from a string.
+   _smc_sDateTimeFormat = '%Y-%m-%dT%H:%M:%S.%f'
 
 
    def __init__(self):
@@ -75,7 +77,7 @@ class FileSignature(object):
       self = cls()
       for sName, sValue in eltFile.attributes.items():
          if sName == 'mtime':
-            self._m_dtMTime = datetime.strptime(sValue, '%Y-%m-%d %H:%M:%S.%f')
+            self._m_dtMTime = datetime.strptime(sValue, self._smc_sDateTimeFormat)
       return self
 
 
@@ -91,7 +93,7 @@ class FileSignature(object):
       """
 
       eltFile = doc.createElement(sEltName)
-      eltFile.setAttribute('mtime', self._m_dtMTime.isoformat(' '))
+      eltFile.setAttribute('mtime', self._m_dtMTime.strftime(self._smc_sDateTimeFormat))
       return eltFile
 
 
