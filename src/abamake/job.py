@@ -4,43 +4,43 @@
 # Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Job scheduling and execution classes."""
 
-"""DOC:6821 ABC Make ‒ Execution of external commands
+"""DOC:6821 Abamake ‒ Execution of external commands
 
-External commands run by ABC Make are managed by specializations of abcmake.Job. The default
-subclass, abcmake.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing
+External commands run by Abamake are managed by specializations of abamake.Job. The default
+subclass, abamake.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing
 them to any subclasses; stderr is always logged to a file, with a name (chosen by the code that
 instantiates the job) that’s typically output_dir/log/<path-to-the-target-built-by-the-job>.
 
-A subclass of abcmake.ExternalCmdJob, abcmake.ExternalCmdCapturingJob, also captures to file the
+A subclass of abamake.ExternalCmdJob, abamake.ExternalCmdCapturingJob, also captures to file the
 standard output of the program; this is typically used to execute unit tests, since stdout is
 considered the non-log output of the test; for example, a unit test for an image manipulation
-library could output a generated bitmap to stdout, to have ABC Make compare it against a pre-
-rendered bitmap and determine whether the test is passed or not, in addition to checking the unit
-test executable’s return code.
+library could output a generated bitmap to stdout, to have Abamake compare it against a pre-rendered
+bitmap and determine whether the test is passed or not, in addition to checking the unit test
+executable’s return code.
 
 Special support is provided for unit tests using the abc::testing framework. Such tests are executed
-using abcmake.AbcUnitTestJob, a subclass of abcmake.ExternalCmdCapturingJob; the stderr and stdout
-are still captured and stored in files, but additionally stderr is parsed to capture progress of the
-assertions and test cases executed, and the resulting counts are used to display a test summary at
-the end of ABC Make’s execution.
+using abamake.AbacladeUnitTestJob, a subclass of abamake.ExternalCmdCapturingJob; the stderr and
+stdout are still captured and stored in files, but additionally stderr is parsed to capture progress
+of the assertions and test cases executed, and the resulting counts are used to display a test
+summary at the end of Abamake’s execution.
 
-TODO: link to documentation for abc::testing support in ABC Make.
+TODO: link to documentation for abc::testing support in Abamake.
 """
 
 import io
@@ -51,7 +51,7 @@ import threading
 import time
 import weakref
 
-import abcmake.target
+import abamake.target
 
 
 
@@ -59,8 +59,8 @@ import abcmake.target
 # Job
 
 class Job(object):
-   """Job to be executed by a JobController instance. See [DOC:6821 ABC Make ‒ Execution of external
-   commands] for an overview on external command execution in ABC Make.
+   """Job to be executed by a JobController instance. See [DOC:6821 Abamake ‒ Execution of external
+   commands] for an overview on external command execution in Abamake.
    """
 
    __slots__ = ()
@@ -219,7 +219,7 @@ class ExternalCmdJob(Job):
          (ExternalCmdJob._stdout_chunk_read() will never be called), but logging will work as
          expected. 'universal_newlines' should always be omitted, since this class handles stderr as
          text and stdout as binary.
-      abcmake.logging.Logger log
+      abamake.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -381,7 +381,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
-      abcmake.logging.Logger log
+      abamake.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -448,9 +448,9 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
 
 ####################################################################################################
-# AbcUnitTestJob
+# AbacladeUnitTestJob
 
-class AbcUnitTestJob(ExternalCmdCapturingJob):
+class AbacladeUnitTestJob(ExternalCmdCapturingJob):
    """External program performing tests using the abc::testing framework. Such a program will
    communicate via stderr its test results (courtesy of abc::testing::runner), which this class will
    parse and log.
@@ -476,7 +476,7 @@ class AbcUnitTestJob(ExternalCmdCapturingJob):
       contain the entire stderr output anyway).
       """
 
-      # TODO: document possible abc::testing output info and link to it from [DOC:6931 ABC Make],
+      # TODO: document possible abc::testing output info and link to it from [DOC:6931 Abamake],
       # here, and in every involved abc::testing::runner method.
 
       if sLine.startswith('ABCMK-TEST-'):
@@ -515,7 +515,7 @@ class AbcUnitTestJob(ExternalCmdCapturingJob):
 # JobController
 
 class JobController(object):
-   """Schedules any jobs necessary to build targets in an ABC makefile (.abcmk), running them with
+   """Schedules any jobs necessary to build targets in an Abamakefile (.abamk), running them with
    the selected degree of parallelism.
    """
 
@@ -525,7 +525,7 @@ class JobController(object):
    _m_bForceBuild = False
    # See JobController.keep_going.
    _m_bKeepGoing = False
-   # Weak reference to the owning abcmake.Make instance.
+   # Weak reference to the owning abamake.Make instance.
    _m_mk = None
    # Running jobs for each target build (Job -> Target).
    _m_dictRunningJobs = None
@@ -536,7 +536,7 @@ class JobController(object):
    def __init__(self, mk):
       """Constructor.
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       """
 
@@ -759,7 +759,7 @@ class JobController(object):
       """Schedules the build of the specified target and all its dependencies. Any targets that have
       already been scheduled won’t be scheduled a second time.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target the build of which should be scheduled.
       """
 
@@ -776,7 +776,7 @@ class JobController(object):
       """Recursively removes the target builds blocked by the specified target from the set of
       scheduled builds.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target build to be unscheduled.
       """
 

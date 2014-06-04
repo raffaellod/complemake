@@ -4,39 +4,39 @@
 # Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""This module contains the implementation of ABC Make.
+"""This module contains the implementation of Abamake (short for “Abaclade Make”).
 
-This file contains Make and other core classes.
+This file contains Abamake and other core classes.
 
-See [DOC:6931 ABC Make] for more information.
+See [DOC:6931 Abamake] for more information.
 """
 
-"""DOC:6931 ABC Make
+"""DOC:6931 Abamake
 
-ABC Make was created to satisfy these requirements:
+Abamake (short for “Abaclade Make”) was created to satisfy these requirements:
 
 •  Cross-platform enough to no longer need to separately maintain a GNU makefile and a Visual Studio
-   solution and projects to build ABC; this is especially important when thinking of ABC as a
-   framework that should simplify building projects with/on top of it;
+   solution and projects to build Abaclade; this is especially important when thinking of Abaclade
+   as a framework that should simplify building projects with/on top of it;
 
 •  Allow a single makefile per project (this was just impossible with MSBuild);
 
-•  Simplified syntax for a very shallow learning curve, just like ABC itself aims to be easier to
-   use than other C++ frameworks;
+•  Simplified syntax for a very shallow learning curve, just like Abaclade itself aims to be easier
+   to use than other C++ frameworks;
 
 •  Minimal-to-no build instructions required in each makefile, and no toolchain-specific commands/
    flags (this was getting difficult with GNU make);
@@ -57,27 +57,27 @@ ABC Make was created to satisfy these requirements:
    users.
 
 
-ABC Make loads an ABC Makefile (a fairly simple XML file; see [DOC:5581 ABC Make makefiles]),
-creating a list of named and unnamed (file path-only) targets; these are then scheduled for build,
-and the resulting build is started, proceeding in the necessary order.
+Abamake loads an Abamakefile (short for “Abamake makefile”, a fairly simple XML file; see [DOC:5581
+Abamakefiles]), creating a list of named and unnamed (file path-only) targets; these are then
+scheduled for build, and the resulting build is started, proceeding in the necessary order.
 
-Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 ABC Make ‒
+Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 Abamake ‒
 Execution of external commands] for more information. Multiple non-dependent external commands are
 executed in parallel, depending on the multiprocessing capability of the host system and command-
 line options used.
 
-TODO: link to documentation for abc::testing support in ABC Make.
+TODO: link to documentation for abc::testing support in Abamake.
 """
 
 import os
 import re
 import xml.dom.minidom
 
-import abcmake.job as job
-import abcmake.logging as logging
-import abcmake.metadata as metadata
-import abcmake.platform as platform
-import abcmake.target as target
+import abamake.job as job
+import abamake.logging as logging
+import abamake.metadata as metadata
+import abamake.platform as platform
+import abamake.target as target
 
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
@@ -136,7 +136,7 @@ class DependencyCycleError(MakefileError):
 
       str sMessage
          Exception message.
-      iter(abcmake.target.Target) iterTargets
+      iter(abamake.target.Target) iterTargets
          Targets that create a cycle in the dependency graph.
       iterable(object*) iterArgs
          Other arguments.
@@ -181,13 +181,13 @@ class TargetReferenceError(MakefileError):
 # Make
 
 class Make(object):
-   """Parses an ABC makefile (.abcmk) and exposes a JobController instance that can be used to
+   """Parses an Abamakefile (.abamk) and exposes a JobController instance that can be used to
    schedule target builds and run them.
 
    Example usage:
 
-      mk = abcmake.Make()
-      mk.parse('project.abcmk')
+      mk = abamake.Make()
+      mk.parse('project.abamk')
       mk.job_controller.schedule_build(mk.get_named_target('projectbin'))
       mk.job_controller.build_scheduled_targets()
    """
@@ -228,7 +228,7 @@ class Make(object):
    def add_file_target(self, tgt, sFilePath):
       """Records a file target, making sure no duplicates are added.
 
-      abcmake.target.FileTarget tgt
+      abamake.target.FileTarget tgt
          Target to add.
       str sFilePath
          Target file path.
@@ -242,7 +242,7 @@ class Make(object):
    def add_named_target(self, tgt, sName):
       """Records a named target, making sure no duplicates are added.
 
-      abcmake.target.NamedTargetMixIn tgt
+      abamake.target.NamedTargetMixIn tgt
          Target to add.
       str sName
          Target name.
@@ -256,7 +256,7 @@ class Make(object):
    def add_target(self, tgt):
       """Records a target.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target to add.
       """
 
@@ -272,7 +272,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      abcmake.target.Target return
+      abamake.target.Target return
          Target that builds sFilePath, or oFallback if no such target was defined in the makefile.
       """
 
@@ -291,7 +291,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      abcmake.target.Target return
+      abamake.target.Target return
          Target named sName, or oFallback if no such target was defined in the makefile.
       """
 
@@ -356,7 +356,7 @@ class Make(object):
 
 
    def parse(self, sFilePath):
-      """Parses an ABC makefile.
+      """Parses an Abamakefile.
 
       str sFilePath
          Path to the makefile to parse.
@@ -371,7 +371,7 @@ class Make(object):
       for tgt in self._m_setTargets:
          tgt.validate()
 
-      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abcmk-metadata.xml')
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
 
 
@@ -380,7 +380,7 @@ class Make(object):
 
       xml.dom.Element eltParent
          Parent XML element to parse.
-      list(tuple(abcmake.target.Target, xml.dom.Element)*) listTargetsAndNodes
+      list(tuple(abamake.target.Target, xml.dom.Element)*) listTargetsAndNodes
          List of parsed targets and their associated XML nodes. This method will add to this list
          any additional targets parsed.
       bool bTopLevel
@@ -394,7 +394,7 @@ class Make(object):
          # (they’re references, not definitions).
          if not self._is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
             if elt.nodeType == elt.ELEMENT_NODE:
-               # Pick an abcmake.target.Target subclass for this target type.
+               # Pick an abamake.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
                if clsTarget:
                   # Every target must have a name attribute.
@@ -420,7 +420,7 @@ class Make(object):
 
 
    def _parse_doc(self, doc):
-      """Parses a DOM representation of an ABC makefile.
+      """Parses a DOM representation of an Abamakefile.
 
       xml.dom.Document doc
          XML document to parse.
@@ -507,7 +507,7 @@ class Make(object):
       rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or raising
       an exception in case of problems with the subtree.
 
-      abcmake.target.Target tgtSubRoot
+      abamake.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
       set listDependents
          Ancestors of tgtSubRoot. An ordered set with fast push/pop would be faster, since we

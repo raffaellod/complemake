@@ -4,21 +4,21 @@
 # Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Builds outputs and runs unit tests as specified in a .abcmk file."""
+"""Builds outputs and runs unit tests as specified in a .abamk file."""
 
 # TODO: maybe support launching gdb/devenv to run one of the programs via debugger?
 #
@@ -34,7 +34,7 @@
 import os
 import sys
 
-import abcmake
+import abamake
 
 
 
@@ -42,7 +42,7 @@ import abcmake
 # Globals
 
 def helptext(sInvalidArg):
-   """Displays a message with instructions on how to invoke ABC Make. This function does not return.
+   """Displays a message with instructions on how to invoke Abamake. This function does not return.
 
    str sInvalidArg
       Invalid argument that prompted to show this message, or None if --help was specified on the
@@ -56,7 +56,7 @@ def helptext(sInvalidArg):
    else:
       fnWrite = sys.stdout.write
    fnWrite(textwrap.dedent("""\
-      Usage: abc-make.py [options] [makefile] [targets...]
+      Usage: abamake.py [options] [makefile] [targets...]
       Options:
       -f, --force-build   Unconditionally rebuild targets.
       -j [N], --jobs[=N]  Build using N processes at at time; if N is omitted,
@@ -81,7 +81,7 @@ def main(iterArgs):
       Command return status.
    """
 
-   mk = abcmake.Make()
+   mk = abamake.Make()
    iArg = 1
    iArgEnd = len(iterArgs)
 
@@ -141,15 +141,15 @@ def main(iterArgs):
    sMakefilePath = None
    if iArg < iArgEnd:
       sArg = iterArgs[iArg]
-      if sArg.endswith('.abcmk'):
+      if sArg.endswith('.abamk'):
          # Save the argument as the makefile path and consume it.
          sMakefilePath = sArg
          iArg += 1
    # No makefile specified?
    if not sMakefilePath:
-      # Check if the current directory contains a single ABC makefile.
+      # Check if the current directory contains a single Abamakefile.
       for sFilePath in os.listdir():
-         if sFilePath.endswith('.abcmk') and len(sFilePath) > len('.abcmk'):
+         if sFilePath.endswith('.abamk') and len(sFilePath) > len('.abamk'):
             if sMakefilePath:
                sys.stderr.write(
                   'error: multiple makefiles found in the current directory, please specify one ' +

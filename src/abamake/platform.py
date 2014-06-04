@@ -4,29 +4,29 @@
 # Copyright 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Classes that abstract different software platforms, concealing their differences for the rest of
-ABC Make.
+Abamake.
 """
 
 import os
 import sys
 
-import abcmake
-import abcmake.tool
+import abamake
+import abamake.tool
 
 
 
@@ -126,9 +126,9 @@ class SystemType(object):
 
    @staticmethod
    def detect_host():
-      """Returns a SystemType instance describing the host on which ABC Make is being run.
+      """Returns a SystemType instance describing the host on which Abamake is being run.
 
-      abcmake.platform.SystemType return
+      abamake.platform.SystemType return
          Host system type.
       """
 
@@ -166,7 +166,7 @@ class SystemType(object):
       •  SystemType.parse_tuple('i386-unknown-mingw32') will yield 'i386-unknown-mingw32',
          'i386-mingw32', '';
 
-      abcmake.platform.SystemType yield
+      abamake.platform.SystemType yield
          System type.
       """
 
@@ -232,7 +232,7 @@ class SystemType(object):
 
       str sTuple
          String that will be parsed to extract the necessary information.
-      abcmake.platform.SystemType return
+      abamake.platform.SystemType return
          Parsed system type.
       """
 
@@ -277,7 +277,7 @@ class SystemType(object):
 class Platform(object):
    """Generic software platform (OS/runtime environment)."""
 
-   # Tools to be used for this platform (abcmake.tool.Tool => abcmake.tool.Tool). Associates a Tool
+   # Tools to be used for this platform (abamake.tool.Tool => abamake.tool.Tool). Associates a Tool
    # subclass to a more derived Tool subclass, representing the implementation to use of the tool.
    _m_dictTools = None
    # System type (more specific than the platform type).
@@ -287,7 +287,7 @@ class Platform(object):
    def __init__(self, st):
       """Constructor.
 
-      abcmake.platform.SystemType st
+      abamake.platform.SystemType st
          System type of this platform.
       """
 
@@ -330,7 +330,7 @@ class Platform(object):
    def configure_tool(self, tool):
       """Configures the specified tool for this platform.
 
-      abcmake.tool.Tool tool
+      abamake.tool.Tool tool
          Tool to configure.
       """
 
@@ -342,7 +342,7 @@ class Platform(object):
       """Attempts to detect the underlying (host) platform, returning an instance of the Platform
       subclass that models it best.
 
-      abcmake.platform.Platform return
+      abamake.platform.Platform return
          Model for the underlying (host) platform.
       """
 
@@ -353,16 +353,16 @@ class Platform(object):
    def from_system_type(cls, st):
       """Returns an instance of the Platform subclass that most closely matches the specified system
       type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
-      return an abcmake.platform.GnuPlatform instance.
+      return an abamake.platform.GnuPlatform instance.
 
-      abcmake.platform.SystemType st
+      abamake.platform.SystemType st
          System type.
-      abcmake.platform.Platform return
+      abamake.platform.Platform return
          Corresponding platform.
       """
 
       iBestMatch, clsBestMatch = 0, None
-      for clsDeriv in abcmake.derived_classes(cls):
+      for clsDeriv in abamake.derived_classes(cls):
          iMatch = clsDeriv._match_system_type(st)
          if iMatch > iBestMatch:
             iBestMatch, clsBestMatch = iMatch, clsDeriv
@@ -409,11 +409,11 @@ class Platform(object):
       """Returns a subclass of the specified Tool subclass modeling the implementation of the
       specified tool for the platform.
 
-      For example, my_platform.get_tool(abcmake.tool.CxxCompiler) will return
-      abcmake.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
+      For example, my_platform.get_tool(abamake.tool.CxxCompiler) will return
+      abamake.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
 
       type clsTool
-         Subclass of abcmake.tool.Tool.
+         Subclass of abamake.tool.Tool.
       type return
          Subclass of clsTool.
       """
@@ -432,7 +432,7 @@ class Platform(object):
 
       The default implementation always returns 0.
 
-      abcmake.platform.SystemType st
+      abamake.platform.SystemType st
          System type.
       int return
          A value in range 0-4, representing how many elements of st match the platform.
@@ -462,7 +462,7 @@ class GnuPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      if isinstance(tool, abcmake.tool.Linker):
+      if isinstance(tool, abamake.tool.Linker):
          tool.add_input_lib('dl')
          tool.add_input_lib('pthread')
 
@@ -520,7 +520,7 @@ class WinPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      if isinstance(tool, abcmake.tool.Linker):
+      if isinstance(tool, abamake.tool.Linker):
          tool.add_input_lib('kernel32')
          tool.add_input_lib('user32')
 

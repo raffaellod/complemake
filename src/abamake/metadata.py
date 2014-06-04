@@ -4,17 +4,17 @@
 # Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ import os
 import xml.dom
 import xml.dom.minidom
 
-import abcmake.target
+import abamake.target
 
 
 
@@ -55,7 +55,7 @@ class FileSignature(object):
 
       str sFilePath
          Path to the file for which a signature should be generated.
-      abcmake.metadata.FileSignature return
+      abamake.metadata.FileSignature return
          Generated signature.
       """
 
@@ -70,7 +70,7 @@ class FileSignature(object):
 
       xml.dom.Element eltFile
          <file> element to parse.
-      abcmake.metadata.FileSignature return
+      abamake.metadata.FileSignature return
          Loaded signature.
       """
 
@@ -119,9 +119,9 @@ class TargetSnapshot(object):
    def __init__(self, mds, tgt, eltTarget = None):
       """Constructor.
 
-      abcmake.metadata.MetadataStore mds
+      abamake.metadata.MetadataStore mds
          MetadataStore instance.
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target.
       xml.dom.Element eltTarget
          XML Element to parse to load the target inputs’ and outputs’ signatures. If omitted, the
@@ -152,7 +152,7 @@ class TargetSnapshot(object):
             mds.get_signatures(dep.get_generated_files(), self._m_dictInputSigs)
          # Collect signatures for all the target’s generated files (outputs).
          self._m_dictOutputSigs = {}
-         if isinstance(tgt, abcmake.target.FileTarget):
+         if isinstance(tgt, abamake.target.FileTarget):
             mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs)
 
 
@@ -160,9 +160,9 @@ class TargetSnapshot(object):
       """Compares self (current snapshot) with the stored snapshot for the same target, logging any
       detected differences.
 
-      abcmake.metadata.TargetSnapshot tssStored
+      abamake.metadata.TargetSnapshot tssStored
          Stored snapshot.
-      abcmake.Logger log
+      abamake.Logger log
          Log instance.
       bool return
          True if the two snapshots are equal, of False in case of any differences.
@@ -231,7 +231,7 @@ class TargetSnapshot(object):
       eltTarget = doc.createElement('target')
 
       # Store the name of the target if named, or its file path otherwise.
-      if isinstance(tgt, abcmake.target.NamedTargetMixIn):
+      if isinstance(tgt, abamake.target.NamedTargetMixIn):
          eltTarget.setAttribute('name', tgt.name)
       else:
          eltTarget.setAttribute('path', tgt.file_path)
@@ -250,11 +250,11 @@ class TargetSnapshot(object):
    def update(self, mds):
       """Updates the snapshot.
 
-      abcmake.metadata.MetadataStore mds
+      abamake.metadata.MetadataStore mds
          MetadataStore instance.
       """
 
-      if isinstance(self._m_tgt, abcmake.target.FileTarget):
+      if isinstance(self._m_tgt, abamake.target.FileTarget):
          # Recreate signatures for all the target’s generated files (outputs).
          mds.get_signatures(
             self._m_tgt.get_generated_files(), self._m_dictOutputSigs, bForceCacheUpdate = True
@@ -267,7 +267,7 @@ class TargetSnapshot(object):
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
-   # Freshly-read target snapshots (abcmake.target.Target -> TargetSnapshot).
+   # Freshly-read target snapshots (abamake.target.Target -> TargetSnapshot).
    _m_dictCurrTargetSnapshots = None
    # True if any changes occurred, which means that the metadata file should be updated.
    _m_bDirty = None
@@ -277,14 +277,14 @@ class MetadataStore(object):
    _m_log = None
    # Signature for each file (str -> FileSignature).
    _m_dictSignatures = None
-   # Target snapshots as stored in the metadata file (abcmake.target.Target -> TargetSnapshot).
+   # Target snapshots as stored in the metadata file (abamake.target.Target -> TargetSnapshot).
    _m_dictStoredTargetSnapshots = None
 
 
    def __init__(self, mk, sFilePath):
       """Constructor. Reads metadata from the specified file.
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sFilePath
          Metadata storage file.
@@ -300,7 +300,7 @@ class MetadataStore(object):
       log = self._m_log
       try:
          doc = xml.dom.minidom.parse(sFilePath)
-      except (abcmake.FileNotFoundErrorCompat, OSError):
+      except (abamake.FileNotFoundErrorCompat, OSError):
          # If we can’t load the persistent metadata store, start it anew.
          log(log.HIGH, 'metadata: empty or missing store: {}', sFilePath)
       else:
@@ -347,7 +347,7 @@ class MetadataStore(object):
 
       iterable(str*) iterFilePaths
          Enumerates file paths.
-      dict(str: abcmake.metadata.FileSignature) dictOut
+      dict(str: abamake.metadata.FileSignature) dictOut
          Dictionary in which every signature will be stored, even if None.
       bool bForceCacheUpdate
          If True, the signatures cache will not be read, but newly-read signatures will be written
@@ -366,7 +366,7 @@ class MetadataStore(object):
             # Need to read this file’s signature.
             try:
                fs = FileSignature.generate(sFilePath)
-            except (abcmake.FileNotFoundErrorCompat, OSError):
+            except (abamake.FileNotFoundErrorCompat, OSError):
                fs = None
             # Cache this signature.
             self._m_dictSignatures[sFilePath] = fs
@@ -378,9 +378,9 @@ class MetadataStore(object):
       """Returns a current snapshot for the specified target, creating one first it none such
       exists.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target for which to return a current snapshot.
-      abcmake.metadata.TargetSnapshot return
+      abamake.metadata.TargetSnapshot return
          Current target snapshot.
       """
 
@@ -401,7 +401,7 @@ class MetadataStore(object):
       The new signatures are stored internally, and will be used to update the target’s snapshot
       once MetadataStore.update_target_snapshot() is called.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target for which to get a new snapshot to compare with the stored one.
       bool return
          True if any files have changed since the last build, or False otherwise.
@@ -424,7 +424,7 @@ class MetadataStore(object):
    def update_target_snapshot(self, tgt):
       """Updates the snapshot for the specified target.
 
-      abcmake.target.Target tgt
+      abamake.target.Target tgt
          Target for which to update the snapshot.
       """
 
@@ -452,7 +452,7 @@ class MetadataStore(object):
          namespaceURI  = None,
          qualifiedName = None,
       )
-      eltRoot = doc.appendChild(doc.createElement('abcmk-metadata'))
+      eltRoot = doc.appendChild(doc.createElement('abamk-metadata'))
 
       # Add the stored target snapshots to their section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))

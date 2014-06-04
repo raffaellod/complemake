@@ -4,17 +4,17 @@
 # Copyright 2013, 2014
 # Raffaello D. Di Napoli
 #
-# This file is part of Application-Building Components (henceforth referred to as ABC).
+# This file is part of Abaclade.
 #
-# ABC is free software: you can redistribute it and/or modify it under the terms of the GNU General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Abaclade is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# ABC is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+# Abaclade is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with ABC. If not, see
+# You should have received a copy of the GNU General Public License along with Abaclade. If not, see
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
@@ -25,9 +25,9 @@ import os
 import re
 import weakref
 
-import abcmake
-import abcmake.job
-import abcmake.tool
+import abamake
+import abamake.job
+import abamake.tool
 
 
 
@@ -60,7 +60,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not sName:
-         raise abcmake.MakefileError('missing target name')
+         raise abamake.MakefileError('missing target name')
       self._m_sName = sName
 
 
@@ -93,7 +93,7 @@ class FileDependencyMixIn(object):
       """
 
       if not sFilePath:
-         raise abcmake.MakefileError('missing target file path')
+         raise abamake.MakefileError('missing target file path')
       self._m_sFilePath = os.path.normpath(sFilePath)
 
 
@@ -124,7 +124,7 @@ class FileDependencyMixIn(object):
 
 class ForeignDependency(Dependency):
    """Abstract foreign dependency. Used by Target and its subclasses to represent files not built by
-   ABC Make.
+   Abamake.
    """
 
    pass
@@ -168,7 +168,7 @@ class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
 
 class UnitTestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
    """Executable that runs a unit test according to a “script”. Used to mimic interaction with a
-   shell that ABC Make does not implement.
+   shell that Abamake does not implement.
    """
 
    pass
@@ -183,11 +183,11 @@ class Target(Dependency):
 
    # Unfinished dependency builds that block building this target.
    _m_cBuildBlocks = None
-   # Dependencies (abcmake.target.Dependency instances) for this target. Cannot be a set, because in
+   # Dependencies (abamake.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep the order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDependencies = None
-   # Targets (abcmake.target.Target instances) dependent on this target.
+   # Targets (abamake.target.Target instances) dependent on this target.
    _m_setDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
@@ -199,7 +199,7 @@ class Target(Dependency):
    def __init__(self, mk):
       """Constructor. Automatically registers the target with the specified Make instance.
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       """
 
@@ -215,7 +215,7 @@ class Target(Dependency):
    def add_dependency(self, dep):
       """Adds a target dependency.
 
-      abcmake.target.Dependency dep
+      abamake.target.Dependency dep
          Dependency.
       """
 
@@ -232,7 +232,7 @@ class Target(Dependency):
    def build(self):
       """Instantiates a job that will build the output.
 
-      abcmake.job.Job return
+      abamake.job.Job return
          Scheduled job, or None if there’s nothing to be built. Some minor processing may still
          occur synchronously to the main thread in Target.build_complete().
       """
@@ -244,7 +244,7 @@ class Target(Dependency):
       """Invoked by the JobController when the job executed to build this target completes, either
       in success or in failure.
 
-      abcmake.job.Job job
+      abamake.job.Job job
          Job instance, or None if the job was not started (due to e.g. “dry run” mode).
       int iRet
          Return value of the job’s execution. If job is None, this will be 0 (success).
@@ -283,12 +283,12 @@ class Target(Dependency):
 
 
    def get_dependencies(self, bTargetsOnly = False):
-      """Iterates over the dependencies (abcmake.target.Dependency instances) for this target.
+      """Iterates over the dependencies (abamake.target.Dependency instances) for this target.
 
       bool bTargetsOnly
-         If True, only abcmake.target.Target instances will be returned; if False, no filtering will
+         If True, only abamake.target.Target instances will be returned; if False, no filtering will
          occur.
-      abcmake.target.Dependency yield
+      abamake.target.Dependency yield
          Dependency of this target.
       """
 
@@ -298,9 +298,9 @@ class Target(Dependency):
 
 
    def get_dependents(self):
-      """Iterates over the targets (abcmake.target.Target instances) dependent on this target.
+      """Iterates over the targets (abamake.target.Target instances) dependent on this target.
 
-      abcmake.target.Target yield
+      abamake.target.Target yield
          Dependent on this target.
       """
 
@@ -313,7 +313,7 @@ class Target(Dependency):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
 
-      abcmake.tool.Tool return
+      abamake.tool.Tool return
          Ready-to-use tool.
       """
 
@@ -357,7 +357,7 @@ class Target(Dependency):
    def remove_dependency(self, dep):
       """Removes a target dependency.
 
-      abcmake.target.Dependency dep
+      abamake.target.Dependency dep
          Dependency.
       """
 
@@ -426,7 +426,7 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       """See NamedDependencyMixIn.__init__(). Automatically registers the name => target association
       with the specified Make instance.
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Dependency name.
@@ -448,7 +448,7 @@ class FileTarget(FileDependencyMixIn, Target):
       """See FileDependencyMixIn.__init__() and Target.__init__(). Automatically registers the path
       => target association with the specified Make instance.
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sFilePath
          Dependency file path.
@@ -487,13 +487,13 @@ class ProcessedSourceTarget(FileTarget):
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput = None):
       """See FileTarget.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
       str sSuffix
          Suffix that is added to sSourceFilePath to generate the target’s file path.
-      abcmake.target.Target tgtFinalOutput
+      abamake.target.Target tgtFinalOutput
          Target that this target’s output will be linked into. If omitted, no output-driven
          configuration will be applied to the Tool instance generating this output.
       """
@@ -530,7 +530,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
 
       cxx = CxxObjectTarget._get_tool(self)
-      cxx.add_flags(abcmake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
+      cxx.add_flags(abamake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
 
@@ -556,7 +556,7 @@ class CxxObjectTarget(ObjectTarget):
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
-         mk.target_platform.get_tool(abcmake.tool.CxxCompiler).object_suffix, tgtFinalOutput
+         mk.target_platform.get_tool(abamake.tool.CxxCompiler).object_suffix, tgtFinalOutput
       )
 
 
@@ -567,7 +567,7 @@ class CxxObjectTarget(ObjectTarget):
 
       # TODO: Platform should instantiate the Tool and pass it _m_st.
 
-      cxx = mk.target_platform.get_tool(abcmake.tool.CxxCompiler)(mk.target_platform._m_st)
+      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)(mk.target_platform._m_st)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -622,7 +622,7 @@ class ExecutableTargetBase(FileTarget):
       """Configures the specified Tool instance to generate code suitable for linking in this
       target.
 
-      abcmake.tool.Tool tool
+      abamake.tool.Tool tool
          Tool (compiler) to configure.
       """
 
@@ -637,7 +637,7 @@ class ExecutableTargetBase(FileTarget):
 
       # TODO: Platform should instantiate the Tool and pass it _m_st.
 
-      lnk = mk.target_platform.get_tool(abcmake.tool.Linker)(mk.target_platform._m_st)
+      lnk = mk.target_platform.get_tool(abamake.tool.Linker)(mk.target_platform._m_st)
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 
@@ -657,7 +657,7 @@ class ExecutableTargetBase(FileTarget):
          if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
             clsObjTarget = CxxObjectTarget
          else:
-            raise abcmake.MakefileError(
+            raise abamake.MakefileError(
                '{}: unsupported source file type: {}'.format(self, sFilePath)
             )
          # Create an object target with the file path as its source.
@@ -677,7 +677,7 @@ class ExecutableTargetBase(FileTarget):
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_named_target(sName, None)
          if not tgtUnitTest:
-            raise abcmake.TargetReferenceError(
+            raise abamake.TargetReferenceError(
                '{}: could not find definition of referenced unit test: {}'.format(self, sName)
             )
          tgtUnitTest.add_dependency(self)
@@ -696,7 +696,7 @@ class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
    def __init__(self, mk, sName, sFilePath):
       """See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Target name.
@@ -721,7 +721,7 @@ class ExecutableTarget(NamedExecutableTarget):
    def __init__(self, mk, sName):
       """See NamedExecutableTarget.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Target name.
@@ -745,7 +745,7 @@ class DynLibTarget(NamedExecutableTarget):
    def __init__(self, mk, sName):
       """See NamedExecutableTarget.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Target name.
@@ -759,9 +759,9 @@ class DynLibTarget(NamedExecutableTarget):
    def configure_compiler(self, tool):
       """See NamedExecutableTarget.configure_compiler()."""
 
-      if isinstance(tool, abcmake.tool.CxxCompiler):
+      if isinstance(tool, abamake.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
-         tool.add_flags(abcmake.tool.CxxCompiler.CFLAG_DYNLIB)
+         tool.add_flags(abamake.tool.CxxCompiler.CFLAG_DYNLIB)
          # Allow building both a dynamic library and its clients using the same header file, by
          # changing “import” to “export” when this macro is defined.
          tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
@@ -774,7 +774,7 @@ class DynLibTarget(NamedExecutableTarget):
 
       lnk = NamedExecutableTarget._get_tool(self)
 
-      lnk.add_flags(abcmake.tool.Linker.LDFLAG_DYNLIB)
+      lnk.add_flags(abamake.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
 
@@ -799,7 +799,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
    def __init__(self, mk, sName):
       """See NamedTargetMixIn.__init__() and Target.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Target name.
@@ -853,11 +853,11 @@ class UnitTestTarget(NamedTargetMixIn, Target):
             mk.target_platform.adjust_popen_args_for_script(dictPopenArgs)
 
          # If the build target uses abc::testing, run it with the special abc::testing end-point
-         # job, AbcUnitTestJob.
+         # job, AbacladeUnitTestJob.
          if tgtUnitTestBuild.uses_abc_testing:
-            clsJob = abcmake.job.AbcUnitTestJob
+            clsJob = abamake.job.AbacladeUnitTestJob
          else:
-            clsJob = abcmake.job.ExternalCmdCapturingJob
+            clsJob = abamake.job.ExternalCmdCapturingJob
          # This will store stdout and stderr of the program to file, and will buffer stdout in
          # memory so we can use it in build_complete() if we need to, without a disk access.
          return clsJob(
@@ -933,7 +933,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
 
       mk = self._m_mk()
       if elt.nodeName == 'unittest':
-         raise abcmake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
+         raise abamake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
       elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
          # Due to specifying a non-default tool, this <source> does not generate an object file or
          # an executable.
@@ -944,11 +944,11 @@ class UnitTestTarget(NamedTargetMixIn, Target):
             if sTool == 'preproc':
                clsPreprocTarget = CxxPreprocessedTarget
             else:
-               raise abcmake.MakefileError(
+               raise abamake.MakefileError(
                   '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
                )
          else:
-            raise abcmake.MakefileError(
+            raise abamake.MakefileError(
                '{}: unsupported source file type: {}'.format(self, sFilePath)
             )
          # Create a preprocessed target with the file path as its source.
@@ -964,7 +964,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
          if sFilter:
             self._m_reFilter = re.compile(sFilter, re.DOTALL)
          else:
-            raise abcmake.MakefileError('{}: unsupported output transformation'.format(self))
+            raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
          dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
@@ -981,7 +981,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
          # If the build target can handle it, then self will have correctly changed into a build +
          # run pair with its build target.
          # If the build target doesn’t know what to do with it, we’ll forward its False return
-         # value, which means that ABC Make will terminate and the erroneous creation of a separate
+         # value, which means that Abamake will terminate and the erroneous creation of a separate
          # build target won’t have any ill effects.
          tgtUnitTestBuild = self._m_tgtUnitTestBuild
          if not tgtUnitTestBuild:
@@ -1055,13 +1055,13 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       if self._m_tgtUnitTestBuild:
          if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
             # Expected a file against which to compare the unit test’s output.
-            raise abcmake.MakefileError(
+            raise abamake.MakefileError(
                '{}: can’t compare the unit test output against more than one file'.format(self)
             )
       else:
          if cStaticCmpOperands != 0 and cStaticCmpOperands != 2:
             # Expected two files to compare.
-            raise abcmake.MakefileError(
+            raise abamake.MakefileError(
                '{}: need exactly two files/outputs to compare'.format(self)
             )
 
@@ -1076,13 +1076,13 @@ class UnitTestBuildTarget(ExecutableTargetBase):
    """
 
    # See UnitTestBuildTarget.uses_abc_testing.
-   _m_bUsesAbcTesting = None
+   _m_bUsesAbacladeTesting = None
 
 
    def __init__(self, mk, sName):
       """See ExecutableTargetBase.__init__().
 
-      abcmake.Make mk
+      abamake.Make mk
          Make instance.
       str sName
          Target name.
@@ -1095,13 +1095,13 @@ class UnitTestBuildTarget(ExecutableTargetBase):
 
    def add_dependency(self, dep):
       """See Target.add_dependency(). Overridden to detect if the unit test is linked to
-      abc-testing, making it compatible with being run via AbcUnitTestJob.
+      abaclade-testing, making it compatible with being run via AbacladeUnitTestJob.
       """
 
-      # Check if this unit test uses the abc-testing framework.
+      # Check if this unit test uses the abaclade-testing framework.
       if isinstance(dep, (ForeignLibDependency, DynLibTarget)):
-         if dep.name == 'abc-testing':
-            self._m_bUsesAbcTesting = True
+         if dep.name == 'abaclade-testing':
+            self._m_bUsesAbacladeTesting = True
 
       Target.add_dependency(self, dep)
 
@@ -1126,12 +1126,12 @@ class UnitTestBuildTarget(ExecutableTargetBase):
 
 
    def _get_uses_abc_testing(self):
-      return self._m_bUsesAbcTesting
+      return self._m_bUsesAbacladeTesting
 
    uses_abc_testing = property(_get_uses_abc_testing, doc = """
       True if the unit test executable uses abc::testing to execute test cases and report their
-      results, making it compatible with being run via AbcUnitTestJob, or False if it’s a monolithic
-      single test, executed via ExternalCmdCapturingJob.
+      results, making it compatible with being run via AbacladeUnitTestJob, or False if it’s a
+      monolithic single test, executed via ExternalCmdCapturingJob.
 
       TODO: make this a three-state, with True/False meaning explicit declaration, for example by
       <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with
