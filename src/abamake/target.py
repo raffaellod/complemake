@@ -764,7 +764,9 @@ class DynLibTarget(NamedExecutableTarget):
          tool.add_flags(abamake.tool.CxxCompiler.CFLAG_DYNLIB)
          # Allow building both a dynamic library and its clients using the same header file, by
          # changing “import” to “export” when this macro is defined.
-         tool.add_macro('ABCMK_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper())))
+         tool.add_macro(
+            'ABAMAKE_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper()))
+         )
 
 
    def _get_tool(self):
