@@ -28,6 +28,12 @@ import sys
 import abamake
 import abamake.tool
 
+import imp
+tpl = imp.find_module('platform', sys.path[1:])
+pyplatform = imp.load_module('pyplatform', *tpl)
+tpl[0].close()
+del tpl
+
 
 
 ####################################################################################################
@@ -132,9 +138,7 @@ class SystemType(object):
          Host system type.
       """
 
-      import platform
-
-      sOS, sNode, sRelease, sVersion, sMachine, sProcessor = platform.uname()
+      sOS, sNode, sRelease, sVersion, sMachine, sProcessor = pyplatform.uname()
 
       if sOS == 'Windows':
          if sMachine == 'x86':
