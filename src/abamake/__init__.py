@@ -362,8 +362,7 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      with xml.dom.minidom.parse(sFilePath) as doc:
-         self._parse_doc(doc)
+      self._parse_doc(xml.dom.minidom.parse(sFilePath))
 
       # Make sure the makefile doesn’t define circular dependencies.
       self.validate_dependency_graph()
