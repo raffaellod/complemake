@@ -148,7 +148,7 @@ def main(iterArgs):
    # No makefile specified?
    if not sMakefilePath:
       # Check if the current directory contains a single Abamakefile.
-      for sFilePath in os.listdir():
+      for sFilePath in os.listdir(os.getcwd()):
          if sFilePath.endswith('.abamk') and len(sFilePath) > len('.abamk'):
             if sMakefilePath:
                sys.stderr.write(
