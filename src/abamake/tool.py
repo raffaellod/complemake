@@ -337,11 +337,10 @@ class Tool(object):
          cls._sm_dictUSEngEnv = dictUSEngEnv
 
       try:
-         with subprocess.Popen(
+         return subprocess.Popen(
             iterArgs, env = dictUSEngEnv,
             stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
-         ) as procTool:
-            return procTool.communicate()[0].rstrip('\r\n')
+         ).communicate()[0].rstrip('\r\n')
       except (abamake.FileNotFoundErrorCompat, OSError):
          # Could not execute the program.
          return None
