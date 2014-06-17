@@ -109,6 +109,20 @@ def derived_classes(clsBase):
             listClassesToScan.append(clsDeriv)
 
 
+def makedirs(sPath):
+   """Implementation of os.makedirs(exists_ok = True) for both Python 2.7 and 3.x.
+
+   str sPath
+      Full path to the directory that should exist.
+   """
+
+   try:
+      os.makedirs(sPath)
+   except OSError:
+      if not os.path.isdir(sPath):
+         raise
+
+
 
 ####################################################################################################
 # MakefileError
