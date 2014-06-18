@@ -22,6 +22,8 @@
 
 import threading
 import sys
+if sys.hexversion < 0x03000000:
+   import io
 
 
 
@@ -35,6 +37,8 @@ class LogGenerator(object):
    _m_cFailedTestAssertions = None
    # Total count of failed test cases.
    _m_cFailedTestCases = None
+   # Standard error output.
+   _m_fileStdErr = None
    # Lock that must be acquired prior to writing to stderr.
    _m_lockStdErr = None
    # Total count of test assertions performed.
@@ -48,6 +52,11 @@ class LogGenerator(object):
 
       self._m_cFailedTestAssertions = 0
       self._m_cFailedTestCases = 0
+      if sys.hexversion >= 0x03000000:
+         self._m_fileStdErr = sys.stderr
+      else:
+         # Create a text I/O wrapper for sys.stderr.
+         self._m_fileStdErr = io.open(sys.stderr.fileno(), 'w', closefd = False)
       self._m_lockStdErr = threading.Lock()
       self._m_cTotalTestAssertions = 0
       self._m_cTotalTestCases = 0
@@ -95,9 +104,11 @@ class LogGenerator(object):
       """Implementation of Logger._write()."""
 
       s += '\n'
+      if sys.hexversion < 0x03000000 and not isinstance(s, unicode):
+         s = unicode(s)
       # Lock stderr and write to it.
       with self._m_lockStdErr as lock:
-         sys.stderr.write(s)
+         self._m_fileStdErr.write(s)
 
 
    def write_test_summary(self):
@@ -167,6 +178,8 @@ class Logger(object):
       """
 
       if iLevel is None or self._m_lg.verbosity >= iLevel:
+         if sys.hexversion < 0x03000000 and not isinstance(sFormat, unicode):
+            sFormat = unicode(sFormat)
          self._write(sFormat.format(*iterArgs, **dictKwArgs))
 
 

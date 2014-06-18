@@ -47,6 +47,7 @@ import io
 import multiprocessing
 import os
 import subprocess
+import sys
 import threading
 import time
 import weakref
@@ -318,11 +319,16 @@ class ExternalCmdJob(Job):
       else:
          fileErrOut = self._m_popen.stderr
       # Always read the file as text.
-      fileStdErrTextPipe = io.TextIOWrapper(fileErrOut)
+      if sys.hexversion >= 0x03000000:
+         fileStdErrTextPipe = io.TextIOWrapper(fileErrOut)
+      else:
+         # Create a 3.x text I/O object for the 2.x file opened by subprocess.Popen.
+         fileStdErrTextPipe = io.open(fileErrOut.fileno(), 'r', closefd = False)
       del fileErrOut
       # Make sure that the directory in which we’ll write stdout exists.
       abamake.makedirs(os.path.dirname(self._m_sStdErrFilePath))
-      with open(self._m_sStdErrFilePath, 'w') as fileStdErr:
+      # Use io.open() instead of just open() for Python 2.x.
+      with io.open(self._m_sStdErrFilePath, 'w') as fileStdErr:
          for sLine in fileStdErrTextPipe:
             self._stderr_line_read(sLine.rstrip('\r\n'))
             fileStdErr.write(sLine)
@@ -343,10 +349,14 @@ class ExternalCmdJob(Job):
    def _stdout_reader_thread(self):
       """Reads from the job process’ stdout."""
 
-      while True:
+      if sys.hexversion >= 0x03000000:
          # Use the underlying RawIOBase object to avoid redundant buffering and to make any output
          # immediately available (instead of waiting for multiple os.read() calls).
-         by = self._m_popen.stdout.raw.read(io.DEFAULT_BUFFER_SIZE)
+         fileStdOutRaw = self._m_popen.stdout.raw
+      else:
+         fileStdOutRaw = self._m_popen.stdout
+      while True:
+         by = fileStdOutRaw.read(io.DEFAULT_BUFFER_SIZE)
          if not by:
             # EOF.
             break
