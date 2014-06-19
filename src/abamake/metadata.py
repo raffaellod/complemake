@@ -307,27 +307,26 @@ class MetadataStore(object):
          log(log.HIGH, 'metadata: loading store: {}', sFilePath)
          # Parse the metadata.
          doc.documentElement.normalize()
-         with doc.documentElement as eltRoot:
-            for eltTop in eltRoot.childNodes:
-               # Skip unimportant nodes.
-               if eltTop.nodeType != eltTop.ELEMENT_NODE:
-                  continue
-               if eltTop.nodeName == 'target-snapshots':
-                  # Parse all target snapshots.
-                  for eltTarget in eltTop.childNodes:
-                     # Skip unimportant nodes.
-                     if eltTarget.nodeType != eltTarget.ELEMENT_NODE or \
-                        eltTarget.nodeName != 'target' \
-                     :
-                        continue
-                     # Allow for None because it’s possible that no such target exists – maybe it
-                     # used to, but not anymore.
-                     tgt = mk.get_named_target(eltTarget.getAttribute('name'), None) or \
-                           mk.get_file_target(eltTarget.getAttribute('path'), None)
-                     if tgt:
-                        self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
-                           self, tgt, eltTarget
-                        )
+         for eltTop in doc.documentElement.childNodes:
+            # Skip unimportant nodes.
+            if eltTop.nodeType != eltTop.ELEMENT_NODE:
+               continue
+            if eltTop.nodeName == 'target-snapshots':
+               # Parse all target snapshots.
+               for eltTarget in eltTop.childNodes:
+                  # Skip unimportant nodes.
+                  if eltTarget.nodeType != eltTarget.ELEMENT_NODE or \
+                     eltTarget.nodeName != 'target' \
+                  :
+                     continue
+                  # Allow for None because it’s possible that no such target exists – maybe it
+                  # used to, but not anymore.
+                  tgt = mk.get_named_target(eltTarget.getAttribute('name'), None) or \
+                        mk.get_file_target(eltTarget.getAttribute('path'), None)
+                  if tgt:
+                     self._m_dictStoredTargetSnapshots[tgt] = TargetSnapshot(
+                        self, tgt, eltTarget
+                     )
          log(log.HIGH, 'metadata: store loaded: {}', sFilePath)
 
 
