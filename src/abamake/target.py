@@ -527,9 +527,26 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
 
    def _get_tool(self):
-      """See ProcessedSourceTarget._get_tool(). Implemented using CxxObjectTarget._get_tool()."""
+      """See ProcessedSourceTarget._get_tool()."""
 
-      cxx = CxxObjectTarget._get_tool(self)
+      # TODO: refactor code shared with CxxObjectTarget._get_tool().
+
+      mk = self._m_mk()
+
+      # TODO: Platform should instantiate the Tool and pass it _m_st.
+
+      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)(mk.target_platform._m_st)
+      cxx.output_file_path = self._m_sFilePath
+      cxx.add_input(self._m_sSourceFilePath)
+
+      if self._m_tgtFinalOutput:
+         # Let the final output configure the compiler.
+         self._m_tgtFinalOutput().configure_compiler(cxx)
+
+      # Let the platform configure the compiler.
+      mk.target_platform.configure_tool(cxx)
+
+      # TODO: add file-specific flags.
       cxx.add_flags(abamake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
@@ -562,6 +579,8 @@ class CxxObjectTarget(ObjectTarget):
 
    def _get_tool(self):
       """See ObjectTarget._get_tool()."""
+
+      # TODO: refactor code shared with CxxPreprocessedTarget._get_tool().
 
       mk = self._m_mk()
 
