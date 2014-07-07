@@ -136,6 +136,9 @@ class SystemType(object):
             return SystemType('i386', None, None, 'win32')
          elif sMachine == 'AMD64':
             return SystemType('x86_64', None, None, 'win64')
+      elif sOS == 'Darwin':
+         # TODO: don’t assume Vendor == Apple.
+         return SystemType(sMachine, 'apple', None, 'darwin')
       elif sOS in ('FreeBSD', 'Linux'):
          if sOS == 'Linux':
             sKernel = 'linux'
