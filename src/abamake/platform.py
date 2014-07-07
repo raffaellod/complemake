@@ -409,6 +409,47 @@ class Platform(object):
       return 0
 
 ####################################################################################################
+# DarwinPlatform
+
+class DarwinPlatform(Platform):
+   """Darwin (OS X) platform."""
+
+   def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
+      """See Platform.add_dir_to_dynlib_env_path()."""
+
+      raise NotImplementedError('TODO')
+
+
+   def configure_tool(self, tool):
+      """See Platform.configure_tool()."""
+
+      raise NotImplementedError('TODO')
+
+
+   def dynlib_file_name(self, sName):
+      """See Platform.dynlib_file_name()."""
+
+      raise NotImplementedError('TODO')
+
+
+   def exe_file_name(self, sName):
+      """See Platform.exe_file_name()."""
+
+      return '{}'.format(sName)
+
+
+   @classmethod
+   def _match_system_type(cls, st):
+      """See Platform._match_system_type()."""
+
+      if st.os == 'darwin':
+         return 1
+      else:
+         return 0
+
+
+
+####################################################################################################
 # GnuPlatform
 
 class GnuPlatform(Platform):
