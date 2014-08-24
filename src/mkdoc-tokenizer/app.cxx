@@ -63,9 +63,7 @@ ABC_ENUM(char_type,
    /** Star/asterisk. */
    (star,  14),
    /** Whitespace. */
-   (whsp,  15),
-   /** Count of char_types. */
-   (count, 16)
+   (whsp,  15)
 );
 
 /** Mapping from character values to character types. */
@@ -141,11 +139,7 @@ ABC_ENUM(state,
    /** Double-quoted string literal, after the closing double-quote. */
    (sle,   20),
    /** Whitespace run, */
-   (whsp,  21),
-   /** Count of states. */
-   (count, 22),
-   /** Error; will cause the tokenizer to stop. */
-   (err,   22)
+   (whsp,  21)
 );
 
 /** Tokenizer action. */
@@ -174,31 +168,31 @@ struct evo_t {
 };
 
 /** Tokenizer evolutions: map from (state, char_type) to (state, action). */
-static evo_t const evos[state::count][char_type::count] = {
+static evo_t const evos[state::size_const][char_type::size_const] = {
 #define E(s, a) { state::s, action::a }
    /*        bksl        digit       dot         eol         fwsl        inval       ltr         ltre        minus       plus        pound       punct       qdbl        qsng        star        whsp       */
-   /*bksl*/ {E(err ,err),E(err ,err),E(err ,err),E(bksl,spp),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err)},
+   /*bksl*/ {E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,spp),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err)},
    /*bsac*/ {E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spp),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb)},
-   /*bol */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(cpp ,o_a),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(bol ,out)},
+   /*bol */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(bol ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(cpp ,o_a),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(bol ,out)},
    /*cl  */ {E(bsac,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cle ,acc),E(cl  ,acc),E(cl  ,acc)},
-   /*cle */ {E(bksl,sps),E(cle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(cle ,acc),E(cle ,acc),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*cmm */ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(err ,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
-   /*cmms*/ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(fwsl,acc),E(err ,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
-   /*cms */ {E(bksl,sps),E(cms ,acc),E(cms ,acc),E(bol ,out),E(cms ,acc),E(err ,err),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc)},
-   /*cpp */ {E(bksl,sps),E(cpp ,acc),E(cpp ,acc),E(bol ,out),E(cpp ,acc),E(err ,err),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc)},
-   /*dot */ {E(bksl,sps),E(num ,acc),E(dot2,acc),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*dot2*/ {E(bksl,sps),E(err ,err),E(gen ,acc),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err),E(err ,err)},
-   /*fwsl*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(cms ,acc),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(cmm ,acc),E(whsp,o_a)},
-   /*gen */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*id  */ {E(bksl,sps),E(id  ,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,acc),E(id  ,acc),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*mns */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(gen ,acc),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*num */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(err ,err),E(nums,acc),E(nume,acc),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*nume*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(nums,acc),E(nums,acc),E(nums,acc),E(nums,acc),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*nums*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(nums,acc),E(nums,acc),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*pls */ {E(bksl,sps),E(num ,o_a),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(gen ,acc),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*cle */ {E(bksl,sps),E(cle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(cle ,err),E(cle ,acc),E(cle ,acc),E(mns ,o_a),E(pls ,o_a),E(cle ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*cmm */ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
+   /*cmms*/ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(fwsl,acc),E(cmms,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
+   /*cms */ {E(bksl,sps),E(cms ,acc),E(cms ,acc),E(bol ,out),E(cms ,acc),E(cms ,err),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc)},
+   /*cpp */ {E(bksl,sps),E(cpp ,acc),E(cpp ,acc),E(bol ,out),E(cpp ,acc),E(cpp ,err),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc)},
+   /*dot */ {E(bksl,sps),E(num ,acc),E(dot2,acc),E(bol ,out),E(fwsl,o_a),E(dot ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(dot ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*dot2*/ {E(bksl,sps),E(dot2,err),E(gen ,acc),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err)},
+   /*fwsl*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(cms ,acc),E(fwsl,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(fwsl,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(cmm ,acc),E(whsp,o_a)},
+   /*gen */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(gen ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(gen ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*id  */ {E(bksl,sps),E(id  ,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(id  ,err),E(id  ,acc),E(id  ,acc),E(mns ,o_a),E(pls ,o_a),E(id  ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*mns */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(mns ,err),E(id  ,o_a),E(id  ,o_a),E(gen ,acc),E(pls ,o_a),E(mns ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*num */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(num ,err),E(nums,acc),E(nume,acc),E(mns ,o_a),E(pls ,o_a),E(num ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*nume*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nume,err),E(nums,acc),E(nums,acc),E(nums,acc),E(nums,acc),E(nume,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*nums*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nums,err),E(nums,acc),E(nums,acc),E(mns ,o_a),E(pls ,o_a),E(nums,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*pls */ {E(bksl,sps),E(num ,o_a),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(pls ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(gen ,acc),E(pls ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
    /*sl  */ {E(bsac,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sle ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc)},
-   /*sle */ {E(bksl,sps),E(sle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(err ,err),E(sle ,acc),E(sle ,acc),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*whsp*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,acc),E(fwsl,o_a),E(err ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(err ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,acc)}
+   /*sle */ {E(bksl,sps),E(sle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(sle ,err),E(sle ,acc),E(sle ,acc),E(mns ,o_a),E(pls ,o_a),E(sle ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*whsp*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,acc),E(fwsl,o_a),E(whsp,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(whsp,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,acc)}
 #undef E
 };
 
@@ -237,7 +231,7 @@ ABC_ENUM(token_type,
 );
 
 /** Tokens output by each state when the evolution’s action is “output”. */
-static token_type const ttStateOutputs[state::count] = {
+static token_type const ttStateOutputs[state::size_const] = {
 #define T token_type::
 #undef T
 };
