@@ -28,45 +28,45 @@ using namespace abc;
 // mkdoc_tokenizer_app
 
 
-/** Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
+/*! Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
 all evolutions for ‘A’ will always apply to ‘B’.
 */
 ABC_ENUM(char_type,
-   /** Backslash. */
+   /*! Backslash. */
    (bksl,   0),
-   /** Decimal digit. */
+   /*! Decimal digit. */
    (digit,  1),
-   /** Dot. */
+   /*! Dot. */
    (dot,    2),
-   /** End-of-line character. */
+   /*! End-of-line character. */
    (eol,    3),
-   /** Forward slash. */
+   /*! Forward slash. */
    (fwsl,   4),
-   /** Invalid character that can only appear in literals. */
+   /*! Invalid character that can only appear in literals. */
    (inval,  5),
-   /** Letter. */
+   /*! Letter. */
    (ltr,    6),
-   /** Letter ‘e’ or ‘E’. */
+   /*! Letter ‘e’ or ‘E’. */
    (ltre,   7),
-   /** Minus sign/hyphen. */
+   /*! Minus sign/hyphen. */
    (minus,  8),
-   /** Plus sign. */
+   /*! Plus sign. */
    (plus,   9),
-   /** Pound sign/hash. */
+   /*! Pound sign/hash. */
    (pound, 10),
-   /** Punctuation. */
+   /*! Punctuation. */
    (punct, 11),
-   /** Double quotes. */
+   /*! Double quotes. */
    (qdbl,  12),
-   /** Single quote. */
+   /*! Single quote. */
    (qsng,  13),
-   /** Star/asterisk. */
+   /*! Star/asterisk. */
    (star,  14),
-   /** Whitespace. */
+   /*! Whitespace. */
    (whsp,  15)
 );
 
-/** Mapping from character values to character types. */
+/*! Mapping from character values to character types. */
 static char_type::enum_type const chtMap[128] = {
 #define T char_type::
    /*00 */T inval, /*01 */T inval, /*02 */T inval, /*03 */T inval, /*04 */T inval, /*05 */T inval,
@@ -94,80 +94,80 @@ static char_type::enum_type const chtMap[128] = {
 #undef T
 };
 
-/** Tokenizer state. */
+/*! Tokenizer state. */
 ABC_ENUM(state,
-   /** Found a single backslash. */
+   /*! Found a single backslash. */
    (bksl,   0),
-   /** Found a single backslash that may need to be accumulated in the current token. */
+   /*! Found a single backslash that may need to be accumulated in the current token. */
    (bsac,   1),
-   /** Start of a new, non-continued line. This is the initial (BOF) state. */
+   /*! Start of a new, non-continued line. This is the initial (BOF) state. */
    (bol,    2),
-   /** Single-quoted character literal. */
+   /*! Single-quoted character literal. */
    (cl,     3),
-   /** Single-quoted character literal, after the closing single-quote. */
+   /*! Single-quoted character literal, after the closing single-quote. */
    (cle,    4),
-   /** Multi-line comment. */
+   /*! Multi-line comment. */
    (cmm,    5),
-   /** Multi-line comment, after a star (potential terminator sequence start). */
+   /*! Multi-line comment, after a star (potential terminator sequence start). */
    (cmms,   6),
-   /** Single-line comment. */
+   /*! Single-line comment. */
    (cms,    7),
-   /** C preprocessor directive. */
+   /*! C preprocessor directive. */
    (cpp,    8),
-   /** Single dot. */
+   /*! Single dot. */
    (dot,    9),
-   /** Two dots. */
+   /*! Two dots. */
    (dot2,  10),
-   /** Found a single forward slash. */
+   /*! Found a single forward slash. */
    (fwsl,  11),
-   /** Generic token. Default state others go to when their tokens are finished. */
+   /*! Generic token. Default state others go to when their tokens are finished. */
    (gen,   12),
-   /** Identifier. */
+   /*! Identifier. */
    (id,    13),
-   /** Minus sign. */
+   /*! Minus sign. */
    (mns,   14),
-   /** Number. */
+   /*! Number. */
    (num,   15),
-   /** Number followed by ‘e’ or ‘E’ (could be suffix or exponent). */
+   /*! Number followed by ‘e’ or ‘E’ (could be suffix or exponent). */
    (nume,  16),
-   /** Suffix following a number, or exponent of a number. */
+   /*! Suffix following a number, or exponent of a number. */
    (nums,  17),
-   /** Plus sign. */
+   /*! Plus sign. */
    (pls,   18),
-   /** Double-quoted string literal. */
+   /*! Double-quoted string literal. */
    (sl,    19),
-   /** Double-quoted string literal, after the closing double-quote. */
+   /*! Double-quoted string literal, after the closing double-quote. */
    (sle,   20),
-   /** Whitespace run, */
+   /*! Whitespace run, */
    (whsp,  21)
 );
 
-/** Tokenizer action. */
+/*! Tokenizer action. */
 ABC_ENUM(action,
-   /** Accumulate the character into the current token. */
+   /*! Accumulate the character into the current token. */
    (acc, 0),
-   /** Error; will cause the tokenizer to stop. */
+   /*! Error; will cause the tokenizer to stop. */
    (err, 1),
-   /** Output the current token, then start a new one, ignoring the current character. */
+   /*! Output the current token, then start a new one, ignoring the current character. */
    (out, 2),
-   /** Output the current token, then start a new one accumulating the current character into it. */
+   /*! Output the current token, then start a new one accumulating the current character into it. */
    (o_a, 3),
-   /** Pushe the current state into the state stack. */
+   /*! Pushe the current state into the state stack. */
    (sps, 4),
-   /** Pop from the state stack into the current state. */
+   /*! Pop from the state stack into the current state. */
    (spp, 5),
-   /** Pop from the state stack into the current state, accumulating a backslash and the current
+   /*! Pop from the state stack into the current state, accumulating a backslash and the current
    character into the current token. */
    (spb, 6)
 );
 
-/** Tokenizer evolution. */
+/*! Tokenizer evolution. */
 struct evo_t {
    state::enum_type stateNext;
    action::enum_type actionNext;
 };
 
-/** Tokenizer evolutions: map from (state, char_type) to (state, action). */
+/*! Tokenizer evolutions: map from (state, char_type) to (state, action). */
 static evo_t const evos[state::size_const][char_type::size_const] = {
 #define E(s, a) { state::s, action::a }
    /*        bksl        digit       dot         eol         fwsl        inval       ltr         ltre        minus       plus        pound       punct       qdbl        qsng        star        whsp       */
@@ -196,7 +196,7 @@ static evo_t const evos[state::size_const][char_type::size_const] = {
 #undef E
 };
 
-/** Possible output token types. */
+/*! Possible output token types. */
 ABC_ENUM(token_type,
    (ampers,     0),
    (bkslash,    1),
@@ -230,7 +230,7 @@ ABC_ENUM(token_type,
    (whitesp,   29)
 );
 
-/** Tokens output by each state when the evolution’s action is “output”. */
+/*! Tokens output by each state when the evolution’s action is “output”. */
 static token_type const ttStateOutputs[state::size_const] = {
 #define T token_type::
 #undef T
@@ -240,7 +240,7 @@ class mkdoc_tokenizer_app :
    public app {
 public:
 
-   /** See app::main().
+   /*! See app::main().
    */
    virtual int main(mvector<istr const> const & vsArgs) {
       ABC_TRACE_FUNC(this, vsArgs);
@@ -253,7 +253,7 @@ public:
    }
 
 
-   /** TODO: comment.
+   /*! TODO: comment.
    */
    static void tokenize(istr const & sAll) {
       auto ftwErr(io::text::stderr());
