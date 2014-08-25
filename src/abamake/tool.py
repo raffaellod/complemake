@@ -639,7 +639,8 @@ class MscCompiler(CxxCompiler):
       listArgs.extend([
          '/c',         # Compile without linking.
          '/EHa',       # Allow catching synchronous (C++) and asynchronous (SEH) exceptions.
-         '/MD',        # Use the multithreaded runtime DLL.
+#        '/MD',        # Use the multithreaded runtime DLL.
+         '/MDd',       # Use the multithreaded debug runtime DLL.
          '/nologo',    # Suppress brand banner display.
          '/TP',        # Force all sources to be compiled as C++.
       ])
