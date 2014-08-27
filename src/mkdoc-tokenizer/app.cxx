@@ -31,42 +31,27 @@ using namespace abc;
 /*! Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
 all evolutions for ‘A’ will always apply to ‘B’.
 */
-ABC_ENUM(char_type,
-   /*! Backslash. */
-   (bksl,   0),
-   /*! Decimal digit. */
-   (digit,  1),
-   /*! Dot. */
-   (dot,    2),
-   /*! End-of-line character. */
-   (eol,    3),
-   /*! Forward slash. */
-   (fwsl,   4),
-   /*! Invalid character that can only appear in literals. */
-   (inval,  5),
-   /*! Letter. */
-   (ltr,    6),
-   /*! Letter ‘e’ or ‘E’. */
-   (ltre,   7),
-   /*! Minus sign/hyphen. */
-   (minus,  8),
-   /*! Plus sign. */
-   (plus,   9),
-   /*! Pound sign/hash. */
-   (pound, 10),
-   /*! Punctuation. */
-   (punct, 11),
-   /*! Double quotes. */
-   (qdbl,  12),
-   /*! Single quote. */
-   (qsng,  13),
-   /*! Star/asterisk. */
-   (star,  14),
-   /*! Whitespace. */
-   (whsp,  15)
+ABC_ENUM_AUTO_VALUES(char_type,
+   bksl,  //! Backslash.
+   digit, //! Decimal digit.
+   dot,   //! Dot.
+   eol,   //! End-of-line character.
+   fwsl,  //! Forward slash.
+   inval, //! Invalid character that can only appear in literals.
+   ltr,   //! Letter.
+   ltre,  //! Letter ‘e’ or ‘E’.
+   minus, //! Minus sign/hyphen.
+   plus,  //! Plus sign.
+   pound, //! Pound sign/hash.
+   punct, //! Punctuation.
+   qdbl,  //! Double quotes.
+   qsng,  //! Single quote.
+   star,  //! Star/asterisk.
+   whsp   //! Whitespace.
 );
 
-/*! Mapping from character values to character types. */
+/*! Mapping from character values to character types.
+*/
 static char_type::enum_type const chtMap[128] = {
 #define T char_type::
    /*00 */T inval, /*01 */T inval, /*02 */T inval, /*03 */T inval, /*04 */T inval, /*05 */T inval,
@@ -94,80 +79,62 @@ static char_type::enum_type const chtMap[128] = {
 #undef T
 };
 
-/*! Tokenizer state. */
-ABC_ENUM(state,
-   /*! Found a single backslash. */
-   (bksl,   0),
-   /*! Found a single backslash that may need to be accumulated in the current token. */
-   (bsac,   1),
-   /*! Start of a new, non-continued line. This is the initial (BOF) state. */
-   (bol,    2),
-   /*! Single-quoted character literal. */
-   (cl,     3),
-   /*! Single-quoted character literal, after the closing single-quote. */
-   (cle,    4),
-   /*! Multi-line comment. */
-   (cmm,    5),
-   /*! Multi-line comment, after a star (potential terminator sequence start). */
-   (cmms,   6),
-   /*! Single-line comment. */
-   (cms,    7),
-   /*! C preprocessor directive. */
-   (cpp,    8),
-   /*! Single dot. */
-   (dot,    9),
-   /*! Two dots. */
-   (dot2,  10),
-   /*! Found a single forward slash. */
-   (fwsl,  11),
-   /*! Generic token. Default state others go to when their tokens are finished. */
-   (gen,   12),
-   /*! Identifier. */
-   (id,    13),
-   /*! Minus sign. */
-   (mns,   14),
-   /*! Number. */
-   (num,   15),
-   /*! Number followed by ‘e’ or ‘E’ (could be suffix or exponent). */
-   (nume,  16),
-   /*! Suffix following a number, or exponent of a number. */
-   (nums,  17),
-   /*! Plus sign. */
-   (pls,   18),
-   /*! Double-quoted string literal. */
-   (sl,    19),
-   /*! Double-quoted string literal, after the closing double-quote. */
-   (sle,   20),
-   /*! Whitespace run, */
-   (whsp,  21)
+/*! Tokenizer state.
+*/
+ABC_ENUM_AUTO_VALUES(state,
+   bksl, //! Found a single backslash.
+   bsac, //! Found a single backslash that may need to be accumulated in the current token.
+   bol,  //! Start of a new, non-continued line. This is the initial (BOF) state.
+   cl,   //! Single-quoted character literal.
+   cle,  //! Single-quoted character literal, after the closing single-quote.
+   cmm,  //! Multi-line comment.
+   cmms, //! Multi-line comment, after a star (potential terminator sequence start).
+   cms,  //! Single-line comment.
+   cpp,  //! C preprocessor directive.
+   dot,  //! Single dot.
+   dot2, //! Two dots.
+   fwsl, //! Found a single forward slash.
+   gen,  //! Generic token. Default state others go to when their tokens are finished.
+   id,   //! Identifier.
+   mns,  //! Minus sign.
+   num,  //! Number.
+   nume, //! Number followed by ‘e’ or ‘E’ (could be suffix or exponent).
+   nums, //! Suffix following a number, or exponent of a number.
+   pls,  //! Plus sign.
+   sl,   //! Double-quoted string literal.
+   sle,  //! Double-quoted string literal, after the closing double-quote.
+   whsp  //! Whitespace run.
 );
 
-/*! Tokenizer action. */
-ABC_ENUM(action,
+/*! Tokenizer action.
+*/
+ABC_ENUM_AUTO_VALUES(action,
    /*! Accumulate the character into the current token. */
-   (acc, 0),
+   acc,
    /*! Error; will cause the tokenizer to stop. */
-   (err, 1),
+   err,
    /*! Output the current token, then start a new one, ignoring the current character. */
-   (out, 2),
+   out,
    /*! Output the current token, then start a new one accumulating the current character into it. */
-   (o_a, 3),
+   o_a,
    /*! Pushe the current state into the state stack. */
-   (sps, 4),
+   sps,
    /*! Pop from the state stack into the current state. */
-   (spp, 5),
+   spp,
    /*! Pop from the state stack into the current state, accumulating a backslash and the current
    character into the current token. */
-   (spb, 6)
+   spb
 );
 
-/*! Tokenizer evolution. */
+/*! Tokenizer evolution.
+*/
 struct evo_t {
    state::enum_type stateNext;
    action::enum_type actionNext;
 };
 
-/*! Tokenizer evolutions: map from (state, char_type) to (state, action). */
+/*! Tokenizer evolutions: map from (state, char_type) to (state, action).
+*/
 static evo_t const evos[state::size_const][char_type::size_const] = {
 #define E(s, a) { state::s, action::a }
    /*        bksl        digit       dot         eol         fwsl        inval       ltr         ltre        minus       plus        pound       punct       qdbl        qsng        star        whsp       */
@@ -196,38 +163,39 @@ static evo_t const evos[state::size_const][char_type::size_const] = {
 #undef E
 };
 
-/*! Possible output token types. */
-ABC_ENUM(token_type,
-   (ampers,     0),
-   (bkslash,    1),
-   (bracel,     2),
-   (bracer,     3),
-   (bracketl,   4),
-   (bracketr,   5),
-   (caret,      6),
-   (chrlit,     7),
-   (colon,      8),
-   (comma,      9),
-   (cpreproc,  10),
-   (ellipsis,  11),
-   (dot,       12),
-   (equal,     13),
-   (excl,      14),
-   (fwdslash,  15),
-   (gt,        16),
-   (ident,     17),
-   (less,      18),
-   (minus,     19),
-   (number,    20),
-   (parenl,    21),
-   (parenr,    22),
-   (percent,   23),
-   (pipe,      24),
-   (plus,      25),
-   (semicol,   26),
-   (strlit,    27),
-   (tilde,     28),
-   (whitesp,   29)
+/*! Possible output token types.
+*/
+ABC_ENUM_AUTO_VALUES(token_type,
+   ampers,
+   bkslash,
+   bracel,
+   bracer,
+   bracketl,
+   bracketr,
+   caret,
+   chrlit,
+   colon,
+   comma,
+   cpreproc,
+   ellipsis,
+   dot,
+   equal,
+   excl,
+   fwdslash,
+   gt,
+   ident,
+   less,
+   minus,
+   number,
+   parenl,
+   parenr,
+   percent,
+   pipe,
+   plus,
+   semicol,
+   strlit,
+   tilde,
+   whitesp
 );
 
 /*! Tokens output by each state when the evolution’s action is “output”. */
