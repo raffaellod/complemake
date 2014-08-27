@@ -607,8 +607,8 @@ class JobController(object):
                      # Obtain a job to build this target.
                      job = tgt.build()
                      if not job:
-                        # tgt’s Target.build() didn’t create a job; probably it only performs
-                        # post-build steps, for whatever reason.
+                        # tgt’s Target.build() didn’t create a job; probably it only performs post-
+                        # build steps.
                         bBuild = False
 
                   if bBuild:
