@@ -89,6 +89,7 @@ ABC_ENUM_AUTO_VALUES(state,
    cle,  //! Single-quoted character literal, after the closing single-quote.
    cmm,  //! Multi-line comment.
    cmms, //! Multi-line comment, after a star (potential terminator sequence start).
+   cmmz, //! End of a multi-line comment.
    cms,  //! Single-line comment.
    cpp,  //! C preprocessor directive.
    dot,  //! Single dot.
@@ -145,7 +146,8 @@ static evo_t const evos[state::size_const][char_type::size_const] = {
    /*cl  */ {E(bsac,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cle ,acc),E(cl  ,acc),E(cl  ,acc)},
    /*cle */ {E(bksl,sps),E(cle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(cle ,err),E(cle ,acc),E(cle ,acc),E(mns ,o_a),E(pls ,o_a),E(cle ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
    /*cmm */ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
-   /*cmms*/ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(fwsl,acc),E(cmms,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
+   /*cmms*/ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmmz,acc),E(cmms,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
+   /*cmmz*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(cmmz,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(cmmz,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(cmmz,acc)},
    /*cms */ {E(bksl,sps),E(cms ,acc),E(cms ,acc),E(bol ,out),E(cms ,acc),E(cms ,err),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc)},
    /*cpp */ {E(bksl,sps),E(cpp ,acc),E(cpp ,acc),E(bol ,out),E(cpp ,acc),E(cpp ,err),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc)},
    /*dot */ {E(bksl,sps),E(num ,acc),E(dot2,acc),E(bol ,out),E(fwsl,o_a),E(dot ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(dot ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
@@ -309,7 +311,7 @@ public:
    token_type get_comment_token_type(state final_state, istr const & sToken) {
       ABC_UNUSED_ARG(final_state);
       // Check for “/*!” and “//!”.
-      if (sToken[3] == '!') {
+      if (sToken[2] == '!') {
          // Special documentation comment.
          return token_type::document;
       } else {
@@ -348,8 +350,9 @@ output_token_t const mkdoc_tokenizer_app::smc_ttStateOutputs[state::size_const] 
    /* bol  */ OF(error),
    /* cl   */ OF(error),
    /* cle  */ OF(charlit),
-   /* cmm  */ OS(get_comment_token_type),
-   /* cmms */ OS(get_comment_token_type),
+   /* cmm  */ OF(error),
+   /* cmms */ OF(error),
+   /* cmmz */ OS(get_comment_token_type),
    /* cms  */ OS(get_comment_token_type),
    /* cpp  */ OS(get_cpreproc_token_type),
    /* dot  */ OF(dot),
