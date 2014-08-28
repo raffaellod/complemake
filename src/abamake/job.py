@@ -534,6 +534,8 @@ class JobController(object):
    _m_bDryRun = False
    # See JobController.force_build.
    _m_bForceBuild = False
+   # See JobController.force_test.
+   _m_bForceTest = False
    # See JobController.keep_going.
    _m_bKeepGoing = False
    # Weak reference to the owning abamake.Make instance.
@@ -599,6 +601,9 @@ class JobController(object):
                      log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes', tgt)
                   elif self._m_bForceBuild:
                      log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced', tgt)
+                     bBuild = True
+                  elif self._m_bForceTest and isinstance(tgt, abamake.target.UnitTestTarget):
+                     log(log.MEDIUM, 'controller: {}: up-to-date, but re-testing forced', tgt)
                      bBuild = True
                   else:
                      log(log.MEDIUM, 'controller: {}: up-to-date', tgt)
@@ -745,6 +750,18 @@ class JobController(object):
 
    force_build = property(_get_force_build, _set_force_build, doc = """
       If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
+   """)
+
+
+   def _get_force_test(self):
+      return self._m_bForceTest
+
+   def _set_force_test(self, bForceTest):
+      self._m_bForceTest = bForceTest
+
+   force_test = property(_get_force_test, _set_force_test, doc = """
+      If True, all test targets are executed unconditionally; if False, test targets are only
+      executed if triggered by their dependencies.
    """)
 
 

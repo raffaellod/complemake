@@ -66,6 +66,7 @@ def helptext(sInvalidArg):
                           targets fail.
       -n, --dry-run       Don’t actually run any external commands. Useful to test
                           if anything needs to be built.
+      -t, --force-test    Unconditionally run all test targets.
       -v, --verbose       Increase verbosity level; can be specified multiple
                           times.
    """))
@@ -93,6 +94,8 @@ def main(iterArgs):
             mk.job_controller.dry_run = True
          elif sArg == '--force-build':
             mk.job_controller.force_build = True
+         elif sArg == '--force-test':
+            mk.job_controller.force_test = True
          elif sArg == '--help':
             helptext(None)
          elif sArg.startswith('--jobs'):
@@ -128,6 +131,8 @@ def main(iterArgs):
                mk.job_controller.keep_going = True
             elif sArgChar == 'n':
                mk.job_controller.dry_run = True
+            elif sArgChar == 't':
+               mk.job_controller.force_test = True
             elif sArgChar == 'v':
                mk.log.verbosity += 1
             else:

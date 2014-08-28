@@ -898,7 +898,7 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       # Only go ahead in case of success of the job, or if any of the target’s inputs has changed,
       # and we did build the files to compare (not in “dry run” mode).
       if iRet == 0 and (
-         job or mk.metadata.has_target_snapshot_changed(self)
+         job or mk.metadata.has_target_snapshot_changed(self) or mk.job_controller.force_test
       ) and not mk.job_controller.dry_run:
          # Extract and transform the contents of the two dependencies to compare, and generate a
          # display name for them.
@@ -945,16 +945,6 @@ class UnitTestTarget(NamedTargetMixIn, Target):
             job = True
 
       return Target.build_complete(self, job, iRet)
-
-
-#   def is_build_needed(self):
-#      """See Target.is_build_needed()."""
-#
-#      TODO: add override --force-test, similar to --force-build but only affecting UnitTestTarget
-#      instances. Though maybe the check needs to be added to JobController, just like the
-#      force_build override?
-#
-#      return self._m_mk().force_run_tests or Target.is_build_needed()
 
 
    def parse_makefile_child(self, elt):
