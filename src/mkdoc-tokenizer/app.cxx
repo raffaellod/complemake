@@ -84,7 +84,7 @@ static char_type::enum_type const chtMap[128] = {
 ABC_ENUM_AUTO_VALUES(state,
    bksl, //! Found a single backslash.
    bsac, //! Found a single backslash that may need to be accumulated in the current token.
-   bol,  //! Start of a new, non-continued line. This is the initial (BOF) state.
+   bol,  //! Start of a new, non-continued line, with no token. This is the initial (BOF) state.
    cl,   //! Single-quoted character literal.
    cle,  //! Single-quoted character literal, after the closing single-quote.
    cmm,  //! Multi-line comment.
@@ -93,14 +93,15 @@ ABC_ENUM_AUTO_VALUES(state,
    cpp,  //! C preprocessor directive.
    dot,  //! Single dot.
    dot2, //! Two dots.
+   dot3, //! Three dots.
    fwsl, //! Found a single forward slash.
-   gen,  //! Generic token. Default state others go to when their tokens are finished.
    id,   //! Identifier.
    mns,  //! Minus sign.
    num,  //! Number.
    nume, //! Number followed by ‘e’ or ‘E’ (could be suffix or exponent).
    nums, //! Suffix following a number, or exponent of a number.
    pls,  //! Plus sign.
+   punc, //! Other punctuation.
    sl,   //! Double-quoted string literal.
    sle,  //! Double-quoted string literal, after the closing double-quote.
    whsp  //! Whitespace run.
@@ -140,44 +141,52 @@ static evo_t const evos[state::size_const][char_type::size_const] = {
    /*        bksl        digit       dot         eol         fwsl        inval       ltr         ltre        minus       plus        pound       punct       qdbl        qsng        star        whsp       */
    /*bksl*/ {E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,spp),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err)},
    /*bsac*/ {E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spp),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb)},
-   /*bol */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(bol ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(cpp ,o_a),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(bol ,out)},
+   /*bol */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(bol ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(cpp ,o_a),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(bol ,out)},
    /*cl  */ {E(bsac,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cl  ,acc),E(cle ,acc),E(cl  ,acc),E(cl  ,acc)},
-   /*cle */ {E(bksl,sps),E(cle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(cle ,err),E(cle ,acc),E(cle ,acc),E(mns ,o_a),E(pls ,o_a),E(cle ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*cle */ {E(bksl,sps),E(cle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(cle ,err),E(cle ,acc),E(cle ,acc),E(mns ,o_a),E(pls ,o_a),E(cle ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
    /*cmm */ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
    /*cmms*/ {E(bksl,sps),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(fwsl,acc),E(cmms,err),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmm ,acc),E(cmms,acc),E(cmm ,acc)},
    /*cms */ {E(bksl,sps),E(cms ,acc),E(cms ,acc),E(bol ,out),E(cms ,acc),E(cms ,err),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc)},
    /*cpp */ {E(bksl,sps),E(cpp ,acc),E(cpp ,acc),E(bol ,out),E(cpp ,acc),E(cpp ,err),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc)},
-   /*dot */ {E(bksl,sps),E(num ,acc),E(dot2,acc),E(bol ,out),E(fwsl,o_a),E(dot ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(dot ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*dot2*/ {E(bksl,sps),E(dot2,err),E(gen ,acc),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err)},
-   /*fwsl*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(cms ,acc),E(fwsl,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(fwsl,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(cmm ,acc),E(whsp,o_a)},
-   /*gen */ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(gen ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(gen ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*id  */ {E(bksl,sps),E(id  ,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(id  ,err),E(id  ,acc),E(id  ,acc),E(mns ,o_a),E(pls ,o_a),E(id  ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*mns */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(mns ,err),E(id  ,o_a),E(id  ,o_a),E(gen ,acc),E(pls ,o_a),E(mns ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*num */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(num ,err),E(nums,acc),E(nume,acc),E(mns ,o_a),E(pls ,o_a),E(num ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*nume*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nume,err),E(nums,acc),E(nums,acc),E(nums,acc),E(nums,acc),E(nume,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*nums*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nums,err),E(nums,acc),E(nums,acc),E(mns ,o_a),E(pls ,o_a),E(nums,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*pls */ {E(bksl,sps),E(num ,o_a),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(pls ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(gen ,acc),E(pls ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
+   /*dot */ {E(bksl,sps),E(num ,acc),E(dot2,acc),E(bol ,out),E(fwsl,o_a),E(dot ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(dot ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*dot2*/ {E(bksl,sps),E(dot2,err),E(dot3,acc),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err)},
+   /*dot3*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(dot3,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(mns ,o_a),E(dot3,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*fwsl*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(cms ,acc),E(fwsl,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(fwsl,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(cmm ,acc),E(whsp,o_a)},
+   /*id  */ {E(bksl,sps),E(id  ,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(id  ,err),E(id  ,acc),E(id  ,acc),E(mns ,o_a),E(pls ,o_a),E(id  ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*mns */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(mns ,err),E(id  ,o_a),E(id  ,o_a),E(punc,acc),E(pls ,o_a),E(mns ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*num */ {E(bksl,sps),E(num ,acc),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(num ,err),E(nums,acc),E(nume,acc),E(mns ,o_a),E(pls ,o_a),E(num ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*nume*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nume,err),E(nums,acc),E(nums,acc),E(nums,acc),E(nums,acc),E(nume,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*nums*/ {E(bksl,sps),E(nums,acc),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(nums,err),E(nums,acc),E(nums,acc),E(mns ,o_a),E(pls ,o_a),E(nums,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*pls */ {E(bksl,sps),E(num ,o_a),E(num ,acc),E(bol ,out),E(fwsl,o_a),E(pls ,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(punc,acc),E(pls ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*punc*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(punc,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
    /*sl  */ {E(bsac,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sle ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc)},
-   /*sle */ {E(bksl,sps),E(sle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(sle ,err),E(sle ,acc),E(sle ,acc),E(mns ,o_a),E(pls ,o_a),E(sle ,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,o_a)},
-   /*whsp*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,acc),E(fwsl,o_a),E(whsp,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(whsp,err),E(gen ,o_a),E(sl  ,o_a),E(cl  ,o_a),E(gen ,o_a),E(whsp,acc)}
+   /*sle */ {E(bksl,sps),E(sle ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(sle ,err),E(sle ,acc),E(sle ,acc),E(mns ,o_a),E(pls ,o_a),E(sle ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,o_a)},
+   /*whsp*/ {E(bksl,sps),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(fwsl,o_a),E(whsp,err),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(pls ,o_a),E(whsp,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(punc,o_a),E(whsp,acc)}
 #undef E
 };
 
 /*! Possible output token types.
 */
 ABC_ENUM_AUTO_VALUES(token_type,
-   ampers,
-   bkslash,
+   ampersand,
+   backslash,
    bracel,
    bracer,
    bracketl,
    bracketr,
    caret,
-   chrlit,
+   charlit,
+   cmt_ml,
+   cmt_sl,
    colon,
    comma,
-   cpreproc,
+   cpp_def,
+   cpp_flow,
+   cpp_incl,
+   cpp_other,
    ellipsis,
+   error,
+   document,
    dot,
    equal,
    excl,
@@ -192,16 +201,19 @@ ABC_ENUM_AUTO_VALUES(token_type,
    percent,
    pipe,
    plus,
-   semicol,
-   strlit,
+   qmark,
+   semicolon,
+   stringlit,
    tilde,
    whitesp
 );
 
-/*! Tokens output by each state when the evolution’s action is “output”. */
-static token_type const ttStateOutputs[state::size_const] = {
-#define T token_type::
-#undef T
+// Forward declaration.
+class mkdoc_tokenizer_app;
+
+struct output_token_t {
+   token_type (mkdoc_tokenizer_app::* pfnSpecialCase)(state final_state, istr const & sToken);
+   token_type ttFixed;
 };
 
 class mkdoc_tokenizer_app :
@@ -223,7 +235,7 @@ public:
 
    /*! TODO: comment.
    */
-   static void tokenize(istr const & sAll) {
+   void tokenize(istr const & sAll) {
       auto ftwErr(io::text::stderr());
 
       state stateCurr(state::bol);
@@ -253,7 +265,16 @@ public:
             case action::out:
             case action::o_a:
                if (sCurrToken) {
-                  ftwErr->print(ABC_SL("token: {}\n"), sCurrToken);
+                  // Determine the output token type for the current final state.
+                  output_token_t const & ot(smc_ttStateOutputs[stateCurr.base()]);
+                  token_type tt;
+                  if (ot.pfnSpecialCase) {
+                     tt = (this->*ot.pfnSpecialCase)(stateCurr, sCurrToken);
+                  } else {
+                     tt = ot.ttFixed;
+                  }
+
+                  ftwErr->print(ABC_SL("Token (type={}): {}\n"), tt, sCurrToken);
                }
                sCurrToken = ABC_SL("");
                if (evo.actionNext != action::o_a) {
@@ -282,6 +303,67 @@ public:
          stateCurr = evo.stateNext;
       }
    }
+
+
+   /*! TODO: comment.
+   */
+   token_type get_comment_token_type(state final_state, istr const & sToken) {
+      ABC_UNUSED_ARG(final_state);
+      ABC_UNUSED_ARG(sToken);
+      return token_type::error;
+   }
+
+
+   /*! TODO: comment.
+   */
+   token_type get_cpreproc_token_type(state final_state, istr const & sToken) {
+      ABC_UNUSED_ARG(final_state);
+      ABC_UNUSED_ARG(sToken);
+      return token_type::error;
+   }
+
+
+   /*! TODO: comment.
+   */
+   token_type get_punctuation_token_type(state final_state, istr const & sToken) {
+      ABC_UNUSED_ARG(final_state);
+      ABC_UNUSED_ARG(sToken);
+      return token_type::error;
+   }
+
+private:
+   /*! Tokens output by each state when the evolution’s action is “output”. */
+   static output_token_t const smc_ttStateOutputs[state::size_const];
+};
+
+output_token_t const mkdoc_tokenizer_app::smc_ttStateOutputs[state::size_const] = {
+#define OF(fixed)   { nullptr, token_type::fixed }
+#define OS(special) { &mkdoc_tokenizer_app::special, token_type::error }
+   /* bksl */ OF(backslash),
+   /* bsac */ OF(error),
+   /* bol  */ OF(error),
+   /* cl   */ OF(error),
+   /* cle  */ OF(charlit),
+   /* cmm  */ OS(get_comment_token_type),
+   /* cmms */ OS(get_comment_token_type),
+   /* cms  */ OS(get_comment_token_type),
+   /* cpp  */ OS(get_cpreproc_token_type),
+   /* dot  */ OF(dot),
+   /* dot2 */ OF(error),
+   /* dot3 */ OF(ellipsis),
+   /* fwsl */ OF(fwdslash),
+   /* id   */ OF(ident),
+   /* mns  */ OF(minus),
+   /* num  */ OF(number),
+   /* nume */ OF(number),
+   /* nums */ OF(number),
+   /* pls  */ OF(plus),
+   /* punc */ OS(get_punctuation_token_type),
+   /* sl   */ OF(error),
+   /* sle  */ OF(stringlit),
+   /* whsp */ OF(whitesp)
+#undef OF
+#undef OS
 };
 
 ABC_APP_CLASS(mkdoc_tokenizer_app)
