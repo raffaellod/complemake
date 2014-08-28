@@ -176,8 +176,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    bracketr,
    caret,
    charlit,
-   cmt_ml,
-   cmt_sl,
+   comment,
    colon,
    comma,
    cpp_def,
@@ -274,7 +273,7 @@ public:
                      tt = ot.ttFixed;
                   }
 
-                  ftwErr->print(ABC_SL("Token (type={}): {}\n"), tt, sCurrToken);
+                  ftwErr->print(ABC_SL("Token (type: {}): {}\n"), tt, sCurrToken);
                }
                sCurrToken = ABC_SL("");
                if (evo.actionNext != action::o_a) {
@@ -305,12 +304,17 @@ public:
    }
 
 
-   /*! TODO: comment.
+   /*! Determines the output token type for a given comment token.
    */
    token_type get_comment_token_type(state final_state, istr const & sToken) {
       ABC_UNUSED_ARG(final_state);
-      ABC_UNUSED_ARG(sToken);
-      return token_type::error;
+      // Check for “/*!” and “//!”.
+      if (sToken[3] == '!') {
+         // Special documentation comment.
+         return token_type::document;
+      } else {
+         return token_type::comment;
+      }
    }
 
 
