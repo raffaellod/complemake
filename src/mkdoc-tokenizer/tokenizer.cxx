@@ -144,7 +144,7 @@ void tokenizer::tokenize(istr const & sAll) {
       evo_t const & evo(smc_evos[stateCurr.base()][cht.base()]);
       /*ftwErr->print(
          ABC_SL("evolution: (state: {}, char_type: {} ‘{}’) -> (state: {}, action: {})\n"),
-         stateCurr, cht, ch, state(evo.stateNext), action(evo.actionNext)
+         stateCurr, cht, ch, tokenizer_state(evo.stateNext), tokenizer_action(evo.actionNext)
       );*/
 
       switch (evo.actionNext) {
