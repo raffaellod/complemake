@@ -33,6 +33,7 @@ all evolutions for ‘A’ will always apply to ‘B’.
 */
 ABC_ENUM_AUTO_VALUES(char_type,
    bksl,  //! Backslash.
+   colon, //! Colon.
    digit, //! Decimal digit.
    dot,   //! Dot.
    eol,   //! End-of-line character.
@@ -58,6 +59,8 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    bol,  //! Start of a new, non-continued line, with no token. This is the initial (BOF) state.
    cl,   //! Single-quoted character literal.
    cle,  //! Single-quoted character literal, after the closing single-quote.
+   cln,  //! Colon.
+   cln2, //! Double-colon (“::”).
    cmm,  //! Multi-line comment.
    cmms, //! Multi-line comment, after a star (potential terminator sequence start).
    cmmz, //! End of a multi-line comment.
@@ -117,6 +120,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    cpp_flow,
    cpp_incl,
    cpp_other,
+   dbl_colon,
    ellipsis,
    error,
    document,
