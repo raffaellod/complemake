@@ -60,7 +60,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    cl,   //! Single-quoted character literal.
    cle,  //! Single-quoted character literal, after the closing single-quote.
    cln,  //! Colon.
-   cln2, //! Double-colon (“::”).
+   cln2, //! Double-colon “::”.
    cmm,  //! Multi-line comment.
    cmms, //! Multi-line comment, after a star (potential terminator sequence start).
    cmmz, //! End of a multi-line comment.
@@ -72,10 +72,12 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    fwsl, //! Found a single forward slash.
    id,   //! Identifier.
    mns,  //! Minus sign.
+   mns2, //! Two minus signs.
    num,  //! Number.
    nume, //! Number followed by ‘e’ or ‘E’ (could be suffix or exponent).
    nums, //! Suffix following a number, or exponent of a number.
    pls,  //! Plus sign.
+   pls2, //! Two plus signs.
    punc, //! Other punctuation.
    sl,   //! Double-quoted string literal.
    sle,  //! Double-quoted string literal, after the closing double-quote.
@@ -121,6 +123,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    cpp_incl,
    cpp_other,
    dbl_colon,
+   decr,
    ellipsis,
    error,
    document,
@@ -130,6 +133,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    fwdslash,
    gt,
    ident,
+   incr,
    less,
    minus,
    number,
