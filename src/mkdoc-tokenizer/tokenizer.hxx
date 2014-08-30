@@ -246,7 +246,7 @@ public:
    token_iterator & operator++();
 
 
-   /*! Equality comparison operator.
+   /*! Equality relational operator.
 
    it
       Object to compare to *this.
@@ -258,7 +258,7 @@ public:
    }
 
 
-   /*! Inequality comparison operator.
+   /*! Inequality relational operator.
 
    it
       Object to compare to *this.
