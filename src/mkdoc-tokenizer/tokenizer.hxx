@@ -129,6 +129,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    document,
    dot,
    equal,
+   end,       //! EOF with no associated token text.
    excl,
    fwdslash,
    gt,
@@ -149,30 +150,59 @@ ABC_ENUM_AUTO_VALUES(token_type,
    whitesp
 );
 
-class tokenizer {
+
+//! Token.
+class token {
 public:
 
-   //! Token.
-   class token {
-   public:
+   /*! Constructor.
 
-      /*! Constructor.
+   s
+      Text of the token.
+   */
+   token() :
+      m_tt(token_type::error) {
+   }
+   explicit token(token_type tt) :
+      m_tt(tt) {
+   }
+   explicit token(mstr && s) :
+      m_s(std::move(s)),
+      m_tt(token_type::error) {
+   }
+   token(token && tk) :
+      m_s(std::move(tk.m_s)),
+      m_tt(std::move(tk.m_tt)) {
+   }
 
-      s
-         Text of the token.
-      */
-      token(mstr && s) :
-         m_s(std::move(s)),
-         m_tt(token_type::error) {
-      }
 
-   public:
+   /*! Assignment operator.
 
-      //! Token text.
-      dmstr m_s;
-      //! Token type.
-      token_type m_tt;
-   };
+   tk
+      Source token.
+   return
+      *this.
+   */
+   token & operator=(token && tk) {
+      m_s = std::move(tk.m_s);
+      m_tt = std::move(tk.m_tt);
+      return *this;
+   }
+
+
+public:
+
+   //! Token text.
+   dmstr m_s;
+   //! Token type.
+   token_type m_tt;
+};
+
+
+//! Iterates over the C++ tokens in a string.
+class token_iterator {
+
+   friend token_iterator const & token_end();
 
 private:
 
@@ -186,7 +216,7 @@ private:
    /*! Token type output for a final state.
    */
    struct output_token_t {
-      void (tokenizer::* pfnSpecialCase)(tokenizer_state stateFinal, token * ptk);
+      void (token_iterator::* pfnSpecialCase)();
       token_type ttFixed;
    };
 
@@ -198,29 +228,82 @@ public:
    sAll
       String to tokenize.
    */
-   tokenizer(mstr && sAll);
+   explicit token_iterator(mstr && sAll);
 
-   /*! Decomposes m_sAll into a list of tokens.
-   */
-   void tokenize();
 
-   /*! Determines the output token type for a given comment token.
+   /*! Dereferencing operator.
    */
-   void get_comment_token_type(tokenizer_state stateFinal, token * ptk);
+   token const & operator*() const {
+      return m_tkCurr;
+   }
 
-   /*! TODO: comment.
-   */
-   void get_cpreproc_token_type(tokenizer_state stateFinal, token * ptk);
 
-   /*! TODO: comment.
+   /*! Pre-increment operator.
+
+   return
+      *this.
    */
-   void get_punctuation_token_type(tokenizer_state stateFinal, token * ptk);
+   token_iterator & operator++();
+
+
+   /*! Equality comparison operator.
+
+   it
+      Object to compare to *this.
+   return
+      true if both *this and it are unable to yield any more tokens, or false otherwise.
+   */
+   bool operator==(token_iterator const & it) const {
+      return m_tkCurr.m_tt == token_type::end && it.m_tkCurr.m_tt == token_type::end;
+   }
+
+
+   /*! Inequality comparison operator.
+
+   it
+      Object to compare to *this.
+   return
+      true if *this or it can still yield tokens, or false otherwise.
+   */
+   bool operator!=(token_iterator const & it) const {
+      return !operator==(it);
+   }
+
+
+private:
+
+   /*! Constructor.
+   */
+   token_iterator(token_type tt) :
+      m_tkCurr(tt) {
+   }
+
+   //! Finalizes the current token, allowing to yield it.
+   void finalize_next_token();
+
+   //! Determines the output token type for a given comment token.
+   void get_comment_token_type();
+
+   //! TODO: comment.
+   void get_cpreproc_token_type();
+
+   //! TODO: comment.
+   void get_punctuation_token_type();
 
 
 private:
 
    //! String to tokenize.
    dmstr m_sAll;
+   //! Iterator to the current character in m_sAll.
+   dmstr::const_iterator m_itAllCurr;
+   //! Current state of the tokenizer.
+   tokenizer_state m_stateCurr;
+   //! Current token.
+   token m_tkCurr;
+   /*! Next token, potentially written by a different thread while the client’s thread consumes
+   m_tkCurr. */
+   token m_tkNext;
    //! Mapping from character values to character types.
    static char_type::enum_type const smc_chtMap[];
    //! Tokenizer evolutions: map from (state, char_type) to (state, action).
@@ -228,4 +311,8 @@ private:
    //! Tokens output by each state when the evolution’s action is “output”.
    static output_token_t const smc_ttStateOutputs[tokenizer_state::size_const];
 };
+
+
+//! Returns an “end” iterator.
+token_iterator const & token_end();
 

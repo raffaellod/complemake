@@ -25,10 +25,10 @@ using namespace abc;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// mkdoc_tokenizer_app
+// token_iterator
 
 
-char_type::enum_type const tokenizer::smc_chtMap[128] = {
+char_type::enum_type const token_iterator::smc_chtMap[128] = {
 #define T char_type::
    /*00 */T inval, /*01 */T inval, /*02 */T inval, /*03 */T inval, /*04 */T inval, /*05 */T inval,
    /*06 */T inval, /*\a */T inval, /*08 */T inval, /*\t */T whsp , /*\n */T eol  , /*\v */T whsp ,
@@ -55,7 +55,8 @@ char_type::enum_type const tokenizer::smc_chtMap[128] = {
 #undef T
 };
 
-tokenizer::evo_t const tokenizer::smc_evos[tokenizer_state::size_const][char_type::size_const] = {
+token_iterator::evo_t const token_iterator::smc_evos
+   [tokenizer_state::size_const][char_type::size_const] = {
 #define E(s, a) { tokenizer_state::s, tokenizer_action::a }
    /*        bksl        colon       digit       dot         eol         fwsl        inval       ltr         ltre        minus       plus        pound       punct       qdbl        qsng        star        whsp       */
    /*bksl*/ {E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,spp),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err)},
@@ -89,9 +90,9 @@ tokenizer::evo_t const tokenizer::smc_evos[tokenizer_state::size_const][char_typ
 #undef E
 };
 
-tokenizer::output_token_t const tokenizer::smc_ttStateOutputs[tokenizer_state::size_const] = {
+token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[tokenizer_state::size_const] = {
 #define OF(fixed)   { nullptr, token_type::fixed }
-#define OS(special) { &tokenizer::special, token_type::error }
+#define OS(special) { &token_iterator::special, token_type::error }
    /* bksl */ OF(backslash),
    /* bsac */ OF(error),
    /* bol  */ OF(error),
@@ -125,19 +126,20 @@ tokenizer::output_token_t const tokenizer::smc_ttStateOutputs[tokenizer_state::s
 };
 
 
-tokenizer::tokenizer(mstr && sAll) :
-   m_sAll(std::move(sAll)) {
+/*explicit*/ token_iterator::token_iterator(mstr && sAll) :
+   m_sAll(std::move(sAll)),
+   m_itAllCurr(m_sAll.cbegin()),
+   m_stateCurr(tokenizer_state::bol) {
 }
 
 
-void tokenizer::tokenize() {
+token_iterator & token_iterator::operator++() {
    auto ftwErr(io::text::stderr());
 
-   tokenizer_state stateCurr(tokenizer_state::bol);
-   smstr<256> sCurrToken;
    tokenizer_state statePushed;
-   for (auto it(m_sAll.cbegin()); it != m_sAll.cend(); ++it) {
-      char32_t ch(*it);
+   bool bYield(false);
+   while (m_itAllCurr != m_sAll.cend() && !bYield) {
+      char32_t ch(*m_itAllCurr++);
       // Determine the type of the current character.
       char_type cht;
       if (static_cast<size_t>(ch) < ABC_COUNTOF(smc_chtMap)) {
@@ -146,33 +148,23 @@ void tokenizer::tokenize() {
          cht = char_type::ltr;
       }
 
-      evo_t const & evo(smc_evos[stateCurr.base()][cht.base()]);
+      evo_t const & evo(smc_evos[m_stateCurr.base()][cht.base()]);
       /*ftwErr->print(
          ABC_SL("evolution: (state: {}, char_type: {} ‘{}’) -> (state: {}, action: {})\n"),
-         stateCurr, cht, ch, tokenizer_state(evo.stateNext), tokenizer_action(evo.actionNext)
+         m_stateCurr, cht, ch, tokenizer_state(evo.stateNext), tokenizer_action(evo.actionNext)
       );*/
 
       switch (evo.actionNext) {
          case tokenizer_action::err:
             // Error; will cause the tokenizer to stop.
             ftwErr->write_line(ABC_SL("ERROR"));
-            return;
+            bYield = true;
+            break;
          case tokenizer_action::out:
          case tokenizer_action::o_a:
-            if (sCurrToken) {
-               // Prepare a new token.
-               token tk(std::move(sCurrToken));
-               // Determine the output token type for the current final state.
-               output_token_t const & ot(smc_ttStateOutputs[stateCurr.base()]);
-               if (ot.pfnSpecialCase) {
-                  (this->*ot.pfnSpecialCase)(stateCurr, &tk);
-               } else {
-                  tk.m_tt = ot.ttFixed;
-               }
-
-               ftwErr->print(ABC_SL("Token (type: {}): {}\n"), tk.m_tt, tk.m_s);
-            } else {
-               sCurrToken = ABC_SL("");
+            if (m_tkNext.m_s) {
+               finalize_next_token();
+               bYield = true;
             }
             if (evo.actionNext != tokenizer_action::o_a) {
                break;
@@ -180,48 +172,77 @@ void tokenizer::tokenize() {
             // Fall through.
          case tokenizer_action::acc:
             // Accumulate the character into the current token.
-            sCurrToken += ch;
+            m_tkNext.m_s += ch;
             break;
          case tokenizer_action::sps:
             // Pushe the current state into the state stack.
-            statePushed = stateCurr;
+            statePushed = m_stateCurr;
             break;
          case tokenizer_action::spp:
          case tokenizer_action::spb:
             // Pop from the state stack into the current state.
-            stateCurr = statePushed;
+            m_stateCurr = statePushed;
             if (evo.actionNext == tokenizer_action::spb) {
                // Accumulate a backslash and the current character into the current token.
-               sCurrToken += '\\';
-               sCurrToken += ch;
+               m_tkNext.m_s += '\\';
+               m_tkNext.m_s += ch;
             }
+            // We already selected the next state, skip the last line in the loop.
             continue;
       }
-      stateCurr = evo.stateNext;
+      m_stateCurr = evo.stateNext;
    }
+   if (!bYield) {
+      // Check for a final token to yield.
+      if (m_tkNext.m_s) {
+         finalize_next_token();
+         bYield = true;
+      } else {
+         // Set *this to the “end” state.
+         m_tkCurr.m_tt = token_type::end;
+      }
+   }
+   return *this;
 }
 
 
-void tokenizer::get_comment_token_type(tokenizer_state stateFinal, token * ptk) {
-   ABC_UNUSED_ARG(stateFinal);
-   // Check for “/*!” and “//!”.
-   if (ptk->m_s[2] == '!') {
-      // Special documentation comment.
-      ptk->m_tt = token_type::document;
+void token_iterator::finalize_next_token() {
+   // Determine the output token type for the current final state.
+   output_token_t const & ot(smc_ttStateOutputs[m_stateCurr.base()]);
+   if (ot.pfnSpecialCase) {
+      // Default the token type to catch bugs in the special-case functions.
+      m_tkNext.m_tt = token_type::error;
+      (this->*ot.pfnSpecialCase)();
    } else {
-      ptk->m_tt = token_type::comment;
+      m_tkNext.m_tt = ot.ttFixed;
+   }
+   // Move the resulting token into m_tkCurr.
+   // TODO: lock m_tkCurr before writing to it.
+   m_tkCurr = std::move(m_tkNext);
+}
+
+
+void token_iterator::get_comment_token_type() {
+   // Check for “/*!” and “//!”.
+   if (m_tkNext.m_s[2] == '!') {
+      // Special documentation comment.
+      m_tkNext.m_tt = token_type::document;
+   } else {
+      m_tkNext.m_tt = token_type::comment;
    }
 }
 
 
-void tokenizer::get_cpreproc_token_type(tokenizer_state stateFinal, token * ptk) {
-   ABC_UNUSED_ARG(stateFinal);
-   ABC_UNUSED_ARG(ptk);
+void token_iterator::get_cpreproc_token_type() {
 }
 
 
-void tokenizer::get_punctuation_token_type(tokenizer_state stateFinal, token * ptk) {
-   ABC_UNUSED_ARG(stateFinal);
-   ABC_UNUSED_ARG(ptk);
+void token_iterator::get_punctuation_token_type() {
+}
+
+
+token_iterator const & token_end() {
+   static token_iterator const sc_itEnd(token_type(token_type::end));
+   return sc_itEnd;
 }
 

@@ -39,10 +39,14 @@ public:
    virtual int main(mvector<istr const> const & vsArgs) {
       ABC_TRACE_FUNC(this, vsArgs);
 
+      auto ftwErr(io::text::stderr());
+
       dmstr sAll;
       io::text::open_reader(dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
-      tokenizer tk(std::move(sAll));
-      tk.tokenize();
+      for (token_iterator it(std::move(sAll)); it != token_end(); ++it) {
+         token const & tk(*it);
+         ftwErr->print(ABC_SL("\033[35;1mToken:\033[0m (type: {}): {}\n"), tk.m_tt, tk.m_s);
+      }
 
       return 0;
    }
