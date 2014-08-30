@@ -125,13 +125,18 @@ tokenizer::output_token_t const tokenizer::smc_ttStateOutputs[tokenizer_state::s
 };
 
 
-void tokenizer::tokenize(istr const & sAll) {
+tokenizer::tokenizer(mstr && sAll) :
+   m_sAll(std::move(sAll)) {
+}
+
+
+void tokenizer::tokenize() {
    auto ftwErr(io::text::stderr());
 
    tokenizer_state stateCurr(tokenizer_state::bol);
    smstr<256> sCurrToken;
    tokenizer_state statePushed;
-   for (auto it(sAll.cbegin()); it != sAll.cend(); ++it) {
+   for (auto it(m_sAll.cbegin()); it != m_sAll.cend(); ++it) {
       char32_t ch(*it);
       // Determine the type of the current character.
       char_type cht;
@@ -155,18 +160,20 @@ void tokenizer::tokenize(istr const & sAll) {
          case tokenizer_action::out:
          case tokenizer_action::o_a:
             if (sCurrToken) {
+               // Prepare a new token.
+               token tk(std::move(sCurrToken));
                // Determine the output token type for the current final state.
                output_token_t const & ot(smc_ttStateOutputs[stateCurr.base()]);
-               token_type tt;
                if (ot.pfnSpecialCase) {
-                  tt = (this->*ot.pfnSpecialCase)(stateCurr, sCurrToken);
+                  (this->*ot.pfnSpecialCase)(stateCurr, &tk);
                } else {
-                  tt = ot.ttFixed;
+                  tk.m_tt = ot.ttFixed;
                }
 
-               ftwErr->print(ABC_SL("Token (type: {}): {}\n"), tt, sCurrToken);
+               ftwErr->print(ABC_SL("Token (type: {}): {}\n"), tk.m_tt, tk.m_s);
+            } else {
+               sCurrToken = ABC_SL("");
             }
-            sCurrToken = ABC_SL("");
             if (evo.actionNext != tokenizer_action::o_a) {
                break;
             }
@@ -195,28 +202,26 @@ void tokenizer::tokenize(istr const & sAll) {
 }
 
 
-token_type tokenizer::get_comment_token_type(tokenizer_state stateFinal, istr const & sToken) {
+void tokenizer::get_comment_token_type(tokenizer_state stateFinal, token * ptk) {
    ABC_UNUSED_ARG(stateFinal);
    // Check for “/*!” and “//!”.
-   if (sToken[2] == '!') {
+   if (ptk->m_s[2] == '!') {
       // Special documentation comment.
-      return token_type::document;
+      ptk->m_tt = token_type::document;
    } else {
-      return token_type::comment;
+      ptk->m_tt = token_type::comment;
    }
 }
 
 
-token_type tokenizer::get_cpreproc_token_type(tokenizer_state stateFinal, istr const & sToken) {
+void tokenizer::get_cpreproc_token_type(tokenizer_state stateFinal, token * ptk) {
    ABC_UNUSED_ARG(stateFinal);
-   ABC_UNUSED_ARG(sToken);
-   return token_type::error;
+   ABC_UNUSED_ARG(ptk);
 }
 
 
-token_type tokenizer::get_punctuation_token_type(tokenizer_state stateFinal, istr const & sToken) {
+void tokenizer::get_punctuation_token_type(tokenizer_state stateFinal, token * ptk) {
    ABC_UNUSED_ARG(stateFinal);
-   ABC_UNUSED_ARG(sToken);
-   return token_type::error;
+   ABC_UNUSED_ARG(ptk);
 }
 

@@ -150,6 +150,30 @@ ABC_ENUM_AUTO_VALUES(token_type,
 );
 
 class tokenizer {
+public:
+
+   //! Token.
+   class token {
+   public:
+
+      /*! Constructor.
+
+      s
+         Text of the token.
+      */
+      token(mstr && s) :
+         m_s(std::move(s)),
+         m_tt(token_type::error) {
+      }
+
+   public:
+
+      //! Token text.
+      dmstr m_s;
+      //! Token type.
+      token_type m_tt;
+   };
+
 private:
 
    /*! Tokenizer evolution.
@@ -162,32 +186,41 @@ private:
    /*! Token type output for a final state.
    */
    struct output_token_t {
-      token_type (tokenizer::* pfnSpecialCase)(tokenizer_state stateFinal, istr const & sToken);
+      void (tokenizer::* pfnSpecialCase)(tokenizer_state stateFinal, token * ptk);
       token_type ttFixed;
    };
 
 
 public:
 
-   /*! TODO: comment.
+   /*! Constructor.
+
+   sAll
+      String to tokenize.
    */
-   void tokenize(istr const & sAll);
+   tokenizer(mstr && sAll);
+
+   /*! Decomposes m_sAll into a list of tokens.
+   */
+   void tokenize();
 
    /*! Determines the output token type for a given comment token.
    */
-   token_type get_comment_token_type(tokenizer_state stateFinal, istr const & sToken);
+   void get_comment_token_type(tokenizer_state stateFinal, token * ptk);
 
    /*! TODO: comment.
    */
-   token_type get_cpreproc_token_type(tokenizer_state stateFinal, istr const & sToken);
+   void get_cpreproc_token_type(tokenizer_state stateFinal, token * ptk);
 
    /*! TODO: comment.
    */
-   token_type get_punctuation_token_type(tokenizer_state stateFinal, istr const & sToken);
+   void get_punctuation_token_type(tokenizer_state stateFinal, token * ptk);
 
 
 private:
 
+   //! String to tokenize.
+   dmstr m_sAll;
    //! Mapping from character values to character types.
    static char_type::enum_type const smc_chtMap[];
    //! Tokenizer evolutions: map from (state, char_type) to (state, action).

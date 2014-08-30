@@ -41,8 +41,8 @@ public:
 
       dmstr sAll;
       io::text::open_reader(dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
-      tokenizer tk;
-      tk.tokenize(sAll);
+      tokenizer tk(std::move(sAll));
+      tk.tokenize();
 
       return 0;
    }
