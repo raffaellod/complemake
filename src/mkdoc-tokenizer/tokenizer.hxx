@@ -32,55 +32,74 @@ using namespace abc;
 all evolutions for ‘A’ will always apply to ‘B’.
 */
 ABC_ENUM_AUTO_VALUES(char_type,
+   amp,   //! Ampersand.
+   aster, //! Asterisk/star.
    bksl,  //! Backslash.
+   caret, //! Caret.
    colon, //! Colon.
    digit, //! Decimal digit.
    dot,   //! Dot.
    eol,   //! End-of-line character.
+   equal, //! Equal sign.
+   excl,  //! Exclamation point.
    fwsl,  //! Forward slash.
+   gt,    //! Greater-than sign.
    inval, //! Invalid character that can only appear in literals.
+   lt,    //! Less-than sign.
    ltr,   //! Letter.
    ltre,  //! Letter ‘e’ or ‘E’.
    minus, //! Minus sign/hyphen.
+   perc,  //! Percent sign.
+   pipe,  //! Pipe/vertical bar.
    plus,  //! Plus sign.
    pound, //! Pound sign/hash.
    punct, //! Punctuation.
    qdbl,  //! Double quotes.
    qsng,  //! Single quote.
-   star,  //! Star/asterisk.
+   tilde, //! Tilde.
    whsp   //! Whitespace.
 );
 
 /*! Tokenizer state.
 */
 ABC_ENUM_AUTO_VALUES(tokenizer_state,
-   bksl, //! Found a single backslash.
-   bsac, //! Found a single backslash that may need to be accumulated in the current token.
+   amp,  //! Ampersand.
+   astr, //! Asterisk/star.
+   bksl, //! Single backslash.
+   bsac, //! Single backslash that may need to be accumulated in the current token.
    bol,  //! Start of a new, non-continued line, with no token. This is the initial (BOF) state.
    cl,   //! Single-quoted character literal.
    cle,  //! Single-quoted character literal, after the closing single-quote.
    cln,  //! Colon.
    cln2, //! Double-colon “::”.
    cmm,  //! Multi-line comment.
-   cmms, //! Multi-line comment, after a star (potential terminator sequence start).
+   cmms, //! Multi-line comment, after an asterisk (potential terminator sequence start).
    cmmz, //! End of a multi-line comment.
    cms,  //! Single-line comment.
    cpp,  //! C preprocessor directive.
+   crt,  //! Caret.
    dot,  //! Single dot.
    dot2, //! Two dots.
    dot3, //! Three dots.
-   fwsl, //! Found a single forward slash.
+   eql,  //! Equal sign.
+   excl, //! Exclamation point.
+   fwsl, //! Single forward slash.
+   gt,   //! Greater-than sign.
    id,   //! Identifier.
+   lt,   //! Less-than sign.
    mns,  //! Minus sign.
    mns2, //! Two minus signs.
    num,  //! Number.
    nume, //! Number followed by ‘e’ or ‘E’ (could be suffix or exponent).
    nums, //! Suffix following a number, or exponent of a number.
+   perc, //! Percent sign.
+   pip,  //! Pipe/vertical bar.
    pls,  //! Plus sign.
    pls2, //! Two plus signs.
    punc, //! Other punctuation.
    sl,   //! Double-quoted string literal.
    sle,  //! Double-quoted string literal, after the closing double-quote.
+   tild, //! Tilde.
    whsp  //! Whitespace run.
 );
 
@@ -108,6 +127,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_action,
 */
 ABC_ENUM_AUTO_VALUES(token_type,
    ampersand,
+   asterisk,
    backslash,
    bracel,
    bracer,
@@ -126,16 +146,15 @@ ABC_ENUM_AUTO_VALUES(token_type,
    decr,
    ellipsis,
    error,
+   exclam,
    document,
    dot,
    equal,
    end,       //! EOF with no associated token text.
    excl,
    fwdslash,
-   gt,
    ident,
    incr,
-   less,
    minus,
    number,
    parenl,
@@ -144,6 +163,9 @@ ABC_ENUM_AUTO_VALUES(token_type,
    pipe,
    plus,
    qmark,
+   rel_equal,
+   rel_gt,
+   rel_lt,
    semicolon,
    stringlit,
    tilde,
