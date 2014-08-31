@@ -150,6 +150,8 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[tokenize
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
    m_stateCurr(tokenizer_state::bol) {
+   // Find the first token.
+   operator++();
 }
 
 
