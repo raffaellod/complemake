@@ -258,6 +258,17 @@ void token_iterator::get_cpreproc_token_type() {
 
 
 void token_iterator::get_punctuation_token_type() {
+   switch (static_cast<char>(m_tkNext.m_s[0])) {
+      case '(': m_tkNext.m_tt = token_type::parenl;
+      case ')': m_tkNext.m_tt = token_type::parenr;
+      case ',': m_tkNext.m_tt = token_type::comma;
+      case ';': m_tkNext.m_tt = token_type::semicolon;
+      case '?': m_tkNext.m_tt = token_type::qmark;
+      case '[': m_tkNext.m_tt = token_type::bracketl;
+      case ']': m_tkNext.m_tt = token_type::bracketr;
+      case '{': m_tkNext.m_tt = token_type::bracel;
+      case '}': m_tkNext.m_tt = token_type::bracer;
+   }
 }
 
 
