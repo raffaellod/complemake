@@ -338,7 +338,7 @@ private:
 
 
 //! Returns an “end” iterator.
-token_iterator const & token_iterator_end() {
+inline token_iterator const & token_iterator_end() {
    return token_iterator::smc_itEnd;
 }
 
