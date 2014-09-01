@@ -60,8 +60,7 @@ ABC_ENUM_AUTO_VALUES(char_type,
    whsp   //! Whitespace.
 );
 
-/*! Tokenizer state.
-*/
+//! Tokenizer state.
 ABC_ENUM_AUTO_VALUES(tokenizer_state,
    amp,  //! Ampersand.
    amp2, //! Two ampersands.
@@ -112,28 +111,27 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    whsp  //! Whitespace run.
 );
 
-/*! Tokenizer action.
-*/
+//! Tokenizer action.
 ABC_ENUM_AUTO_VALUES(tokenizer_action,
-   /*! Accumulate the character into the current token. */
+   //! Accumulate the character into the current token.
    accumulate,
-   /*! Error; will cause the tokenizer to stop. */
+   //! Error; will cause the tokenizer to stop.
    error,
-   /*! Pop from the state stack into the current state. */
+   //! Pop from the state stack into the current state.
    pop_state,
    /*! Pop from the state stack into the current state, accumulating a backslash and the current
-   character into the current token. */
+   character into the current token.
+   */
    pop_state_and_accumulate_backslash,
-   /*! Pushes the current state into the state stack. */
+   //! Pushes the current state into the state stack.
    push_state,
-   /*! Yield the current token, then start a new one accumulating the current character into it. */
+   //! Yield the current token, then start a new one accumulating the current character into it.
    yield_and_accumulate,
-   /*! Yield the current token, then start a new one, ignoring the current character. */
+   //! Yield the current token, then start a new one, ignoring the current character.
    yield_and_ignore
 );
 
-/*! Possible output token types.
-*/
+//! Possible output token types.
 ABC_ENUM_AUTO_VALUES(token_type,
    ampersand,
    assign,
@@ -257,15 +255,13 @@ class token_iterator {
 
 private:
 
-   /*! Tokenizer evolution.
-   */
+   //! Tokenizer evolution.
    struct evo_t {
       tokenizer_state::enum_type stateNext;
       tokenizer_action::enum_type actionNext;
    };
 
-   /*! Token type output for a final state.
-   */
+   //! Token type output for a final state.
    struct output_token_t {
       void (token_iterator::* pfnSpecialCase)();
       token_type ttFixed;
@@ -283,6 +279,9 @@ public:
 
 
    /*! Dereferencing operator.
+
+   return
+      Reference to the current token.
    */
    token const & operator*() const {
       return m_tkCurr;
@@ -323,7 +322,10 @@ public:
 
 private:
 
-   /*! Constructor.
+   /*! Constructor. Used internally to generate token_iterator constants.
+
+   tt
+      Initial token type.
    */
    token_iterator(token_type tt) :
       m_tkCurr(tt) {
@@ -356,7 +358,8 @@ private:
    //! Current token.
    token m_tkCurr;
    /*! Next token, potentially written by a different thread while the client’s thread consumes
-   m_tkCurr. */
+   m_tkCurr.
+   */
    token m_tkNext;
    //! Mapping from character values to character types.
    static char_type::enum_type const smc_chtMap[];
