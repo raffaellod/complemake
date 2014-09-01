@@ -66,6 +66,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    amp,  //! Ampersand.
    amp2, //! Two ampersands.
    arw,  //! Arrow “->”.
+   arwa, //! Arrow followed by an asterisk “->*”.
    astr, //! Asterisk/star.
    bksl, //! Single backslash.
    bsac, //! Single backslash that may need to be accumulated in the current token.
@@ -84,6 +85,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    dot,  //! Single dot.
    dot2, //! Two dots.
    dot3, //! Three dots.
+   dota, //! Dot followed by an asterisk.
    eql,  //! Equal sign.
    excl, //! Exclamation point.
    fwsl, //! Single forward slash.
@@ -136,7 +138,6 @@ ABC_ENUM_AUTO_VALUES(token_type,
    ampersand,
    assign,
    asterisk,
-   arrow,
    bracel,
    bracer,
    bracketl,
@@ -167,6 +168,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    op_bit_xor,
    op_bit_xor_assign,
    op_decr,
+   op_deref_member_access,
    op_div,
    op_div_assign,
    op_incr,
@@ -179,6 +181,8 @@ ABC_ENUM_AUTO_VALUES(token_type,
    op_mod,
    op_mod_assign,
    op_mult_assign,
+   op_ptr_to_member_deref_val,
+   op_ptr_to_member_deref_ptr,
    op_rel_equal,
    op_rel_noteq,
    op_rel_gt,
