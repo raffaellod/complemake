@@ -64,6 +64,7 @@ ABC_ENUM_AUTO_VALUES(char_type,
 */
 ABC_ENUM_AUTO_VALUES(tokenizer_state,
    amp,  //! Ampersand.
+   amp2, //! Two ampersands.
    astr, //! Asterisk/star.
    bksl, //! Single backslash.
    bsac, //! Single backslash that may need to be accumulated in the current token.
@@ -78,10 +79,12 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    cms,  //! Single-line comment.
    cpp,  //! C preprocessor directive.
    crt,  //! Caret.
+   crt2, //! Two carets.
    dot,  //! Single dot.
    dot2, //! Two dots.
    dot3, //! Three dots.
    eql,  //! Equal sign.
+   eql2, //! Two equal signs.
    excl, //! Exclamation point.
    fwsl, //! Single forward slash.
    gt,   //! Greater-than sign.
@@ -127,13 +130,12 @@ ABC_ENUM_AUTO_VALUES(tokenizer_action,
 */
 ABC_ENUM_AUTO_VALUES(token_type,
    ampersand,
+   assign,
    asterisk,
-   backslash,
    bracel,
    bracer,
    bracketl,
    bracketr,
-   caret,
    charlit,
    comment,
    colon,
@@ -143,32 +145,44 @@ ABC_ENUM_AUTO_VALUES(token_type,
    cpp_incl,
    cpp_other,
    dbl_colon,
-   decr,
    ellipsis,
    error,
-   exclam,
    document,
    dot,
-   equal,
-   end,       //! EOF with no associated token text.
-   excl,
-   fwdslash,
-   ident,
-   incr,
+   end,               //! EOF with no associated token text.
+   identifier,
    minus,
    number,
+   op_bit_and,
+   op_bit_and_assign,
+   op_bit_not,
+   op_bit_or,
+   op_bit_or_assign,
+   op_bit_xor,
+   op_bit_xor_assign,
+   op_decr,
+   op_div,
+   op_div_assign,
+   op_incr,
+   op_log_and,
+   op_log_not,
+   op_log_or,
+   op_log_xor,
+   op_mod,
+   op_mod_assign,
+   op_mult_assign,
+   op_rel_equal,
+   op_rel_noteq,
+   op_rel_gt,
+   op_rel_gteq,
+   op_rel_lt,
+   op_rel_lteq,
    parenl,
    parenr,
-   percent,
-   pipe,
    plus,
    qmark,
-   rel_equal,
-   rel_gt,
-   rel_lt,
    semicolon,
    stringlit,
-   tilde,
    whitesp
 );
 
@@ -303,13 +317,13 @@ private:
    //! Finalizes the current token, allowing to yield it.
    void finalize_next_token();
 
-   //! Determines the output token type for a given comment token.
+   //! Determines the output token type for the current comment token.
    void get_comment_token_type();
 
-   //! TODO: comment.
+   //! Determines the output token type for the current C preprocessor token.
    void get_cpreproc_token_type();
 
-   //! TODO: comment.
+   //! Determines the output token type for the current punctuation token.
    void get_punctuation_token_type();
 
 

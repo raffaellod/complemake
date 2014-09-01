@@ -59,8 +59,9 @@ token_iterator::evo_t const token_iterator::smc_evos
    [tokenizer_state::size_const][char_type::size_const] = {
 #define E(s, a) { tokenizer_state::s, tokenizer_action::a }
    /*        amp         aster       bksl        caret       colon       digit       dot         eol         equal       excl        fwsl        gt          inval       lt          ltr         ltre        minus       perc        pipe        plus        pound       punct       qdbl        qsng        tilde       whsp       */
-   /*amp  */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*astr */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*amp */ {E(amp2,acc),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(amp ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(amp ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*amp2*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(amp2,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(amp2,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*astr*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(astr,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(astr,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*bksl*/ {E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,spp),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err),E(bksl,err)},
    /*bsac*/ {E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spp),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb),E(bsac,spb)},
    /*bol */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(bol ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(cpp ,o_a),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(bol ,out)},
@@ -73,39 +74,44 @@ token_iterator::evo_t const token_iterator::smc_evos
    /*cmmz*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(cmmz,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(cmmz,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(cmmz,acc)},
    /*cms */ {E(cms ,acc),E(cms ,acc),E(bksl,sps),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(bol ,out),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,err),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc),E(cms ,acc)},
    /*cpp */ {E(cpp ,acc),E(cpp ,acc),E(bksl,sps),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(bol ,out),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,err),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc),E(cpp ,acc)},
-   /*crt  */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*crt */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(crt ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(crt ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*crt2*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(crt2,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(crt2,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*dot */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,acc),E(dot2,acc),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(dot ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(mns ,o_a),E(dot ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*dot2*/ {E(dot2,err),E(dot2,err),E(bksl,sps),E(dot2,err),E(dot2,err),E(dot2,err),E(dot3,acc),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err),E(dot2,err)},
    /*dot3*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(dot3,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(mns ,o_a),E(dot3,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*eql  */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*excl */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*eql */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql2,acc),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(eql ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(eql ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*eql2*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(eql2,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(eql2,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*excl*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(excl,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(excl,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*fwsl*/ {E(amp ,o_a),E(cmm ,acc),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(cms ,acc),E(gt  ,o_a),E(fwsl,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(fwsl,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*gt   */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*gt  */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(gt  ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(gt  ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*id  */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(id  ,acc),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(id  ,err),E(lt  ,o_a),E(id  ,acc),E(id  ,acc),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(id  ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*lt   */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*lt  */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(lt  ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(lt  ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*mns */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,acc),E(num ,acc),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(mns ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns2,acc),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(mns ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*mns2*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(num ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(mns2,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(mns2,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*num */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,acc),E(num ,acc),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(num ,err),E(lt  ,o_a),E(nums,acc),E(nume,acc),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(num ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*nume*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(nums,acc),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(nume,err),E(lt  ,o_a),E(nums,acc),E(nums,acc),E(nums,acc),E(perc,o_a),E(pip ,o_a),E(nums,acc),E(nume,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*nums*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(nums,acc),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(nums,err),E(lt  ,o_a),E(nums,acc),E(nums,acc),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(nums,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*perc */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*pip  */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*perc*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(perc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(perc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*pip */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(pip ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(pip ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*pls */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,acc),E(num ,acc),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(pls ,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls2,acc),E(pls ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*pls2*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(num ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(pls2,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(pls2,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*punc*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*sl  */ {E(sl  ,acc),E(sl  ,acc),E(bsac,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc),E(sle ,acc),E(sl  ,acc),E(sl  ,acc),E(sl  ,acc)},
    /*sle */ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(sle ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(sle ,err),E(lt  ,o_a),E(sle ,acc),E(sle ,acc),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(sle ,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
-   /*tild */{E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(punc,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(punc,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
+   /*tild*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(tild,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(tild,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,o_a)},
    /*whsp*/ {E(amp ,o_a),E(astr,o_a),E(bksl,sps),E(crt ,o_a),E(cln ,o_a),E(num ,o_a),E(dot ,o_a),E(bol ,out),E(eql ,o_a),E(excl,o_a),E(fwsl,o_a),E(gt  ,o_a),E(whsp,err),E(lt  ,o_a),E(id  ,o_a),E(id  ,o_a),E(mns ,o_a),E(perc,o_a),E(pip ,o_a),E(pls ,o_a),E(whsp,err),E(punc,o_a),E(sl  ,o_a),E(cl  ,o_a),E(tild,o_a),E(whsp,acc)}
 #undef E
 };
 
-token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[tokenizer_state::size_const] = {
+token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
+   tokenizer_state::size_const
+] = {
 #define OF(fixed)   { nullptr, token_type::fixed }
 #define OS(special) { &token_iterator::special, token_type::error }
    /* amp  */ OF(ampersand),
+   /* amp2 */ OF(op_log_and),
    /* astr */ OF(asterisk),
-   /* bksl */ OF(backslash),
+   /* bksl */ OF(error),
    /* bsac */ OF(error),
    /* bol  */ OF(error),
    /* cl   */ OF(error),
@@ -117,29 +123,31 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[tokenize
    /* cmmz */ OS(get_comment_token_type),
    /* cms  */ OS(get_comment_token_type),
    /* cpp  */ OS(get_cpreproc_token_type),
-   /* crt  */ OF(caret),
+   /* crt  */ OF(op_bit_xor),
+   /* crt2 */ OF(op_log_xor),
    /* dot  */ OF(dot),
    /* dot2 */ OF(error),
    /* dot3 */ OF(ellipsis),
-   /* eql  */ OF(rel_equal),
-   /* excl */ OF(exclam),
-   /* fwsl */ OF(fwdslash),
-   /* gt   */ OF(rel_gt),
-   /* id   */ OF(ident),
-   /* lt   */ OF(rel_lt),
+   /* eql  */ OF(assign),
+   /* eql2 */ OF(op_rel_equal),
+   /* excl */ OF(op_log_not),
+   /* fwsl */ OF(op_div),
+   /* gt   */ OF(op_rel_gt),
+   /* id   */ OF(identifier),
+   /* lt   */ OF(op_rel_lt),
    /* mns  */ OF(minus),
-   /* mns2 */ OF(decr),
+   /* mns2 */ OF(op_decr),
    /* num  */ OF(number),
    /* nume */ OF(number),
    /* nums */ OF(number),
-   /* perc */ OF(percent),
-   /* pip  */ OF(pipe),
+   /* perc */ OF(op_mod),
+   /* pip  */ OF(op_bit_or),
    /* pls  */ OF(plus),
-   /* pls2 */ OF(incr),
+   /* pls2 */ OF(op_incr),
    /* punc */ OS(get_punctuation_token_type),
    /* sl   */ OF(error),
    /* sle  */ OF(stringlit),
-   /* tild */ OF(tilde),
+   /* tild */ OF(op_bit_not),
    /* whsp */ OF(whitesp)
 #undef OF
 #undef OS
@@ -258,6 +266,7 @@ void token_iterator::get_comment_token_type() {
 
 
 void token_iterator::get_cpreproc_token_type() {
+   // TODO
 }
 
 
