@@ -283,7 +283,29 @@ void token_iterator::get_comment_token_type() {
 
 
 void token_iterator::get_compound_assignm_token_type() {
-   // TODO
+   char ch0(static_cast<char>(m_tkNext.m_s[0]));
+   switch (ch0) {
+      case '!': m_tkNext.m_tt = token_type::op_rel_noteq;      break;
+      case '%': m_tkNext.m_tt = token_type::op_mod_assign;     break;
+      case '&': m_tkNext.m_tt = token_type::op_bit_and_assign; break;
+      case '*': m_tkNext.m_tt = token_type::op_mult_assign;    break;
+      case '+': m_tkNext.m_tt = token_type::op_add_assign;     break;
+      case '-': m_tkNext.m_tt = token_type::op_sub_assign;     break;
+      case '/': m_tkNext.m_tt = token_type::op_div_assign;     break;
+      case '=': m_tkNext.m_tt = token_type::op_rel_equal;      break;
+      case '^': m_tkNext.m_tt = token_type::op_bit_xor_assign; break;
+      case '|': m_tkNext.m_tt = token_type::op_bit_or_assign;  break;
+      case '<':
+      case '>':
+         if (static_cast<char>(m_tkNext.m_s[1]) == ch0) {
+            // “<<=” or “>>=”.
+            m_tkNext.m_tt = ch0 == '<' ? token_type::op_lsh_assign : token_type::op_rsh_assign;
+         } else {
+            // “<=” or “>=”.
+            m_tkNext.m_tt = ch0 == '<' ? token_type::op_rel_lteq : token_type::op_rel_gteq;
+         }
+         break;
+   }
 }
 
 
