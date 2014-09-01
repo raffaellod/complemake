@@ -65,6 +65,7 @@ ABC_ENUM_AUTO_VALUES(char_type,
 ABC_ENUM_AUTO_VALUES(tokenizer_state,
    amp,  //! Ampersand.
    amp2, //! Two ampersands.
+   arw,  //! Arrow “->”.
    astr, //! Asterisk/star.
    bksl, //! Single backslash.
    bsac, //! Single backslash that may need to be accumulated in the current token.
@@ -135,6 +136,7 @@ ABC_ENUM_AUTO_VALUES(token_type,
    ampersand,
    assign,
    asterisk,
+   arrow,
    bracel,
    bracer,
    bracketl,
