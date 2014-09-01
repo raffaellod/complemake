@@ -145,6 +145,8 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[tokenize
 #undef OS
 };
 
+token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
+
 
 /*explicit*/ token_iterator::token_iterator(mstr && sAll) :
    m_sAll(std::move(sAll)),
@@ -271,11 +273,5 @@ void token_iterator::get_punctuation_token_type() {
       case '{': m_tkNext.m_tt = token_type::bracel;
       case '}': m_tkNext.m_tt = token_type::bracer;
    }
-}
-
-
-token_iterator const & token_end() {
-   static token_iterator const sc_itEnd(token_type(token_type::end));
-   return sc_itEnd;
 }
 

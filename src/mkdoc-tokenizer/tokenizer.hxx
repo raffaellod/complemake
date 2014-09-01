@@ -224,7 +224,7 @@ public:
 //! Iterates over the C++ tokens in a string.
 class token_iterator {
 
-   friend token_iterator const & token_end();
+   friend token_iterator const & token_iterator_end();
 
 private:
 
@@ -332,9 +332,13 @@ private:
    static evo_t const smc_evos[tokenizer_state::size_const][char_type::size_const];
    //! Tokens output by each state when the evolution’s action is “output”.
    static output_token_t const smc_ttStateOutputs[tokenizer_state::size_const];
+   //! Iterator in final state.
+   static token_iterator const smc_itEnd;
 };
 
 
 //! Returns an “end” iterator.
-token_iterator const & token_end();
+token_iterator const & token_iterator_end() {
+   return token_iterator::smc_itEnd;
+}
 
