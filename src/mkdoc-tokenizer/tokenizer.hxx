@@ -110,20 +110,20 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
 */
 ABC_ENUM_AUTO_VALUES(tokenizer_action,
    /*! Accumulate the character into the current token. */
-   acc,
+   accumulate,
    /*! Error; will cause the tokenizer to stop. */
-   err,
-   /*! Output the current token, then start a new one, ignoring the current character. */
-   out,
-   /*! Output the current token, then start a new one accumulating the current character into it. */
-   o_a,
-   /*! Pushe the current state into the state stack. */
-   sps,
+   error,
    /*! Pop from the state stack into the current state. */
-   spp,
+   pop_state,
    /*! Pop from the state stack into the current state, accumulating a backslash and the current
    character into the current token. */
-   spb
+   pop_state_and_accumulate_backslash,
+   /*! Pushes the current state into the state stack. */
+   push_state,
+   /*! Yield the current token, then start a new one accumulating the current character into it. */
+   yield_and_accumulate,
+   /*! Yield the current token, then start a new one, ignoring the current character. */
+   yield_and_ignore
 );
 
 /*! Possible output token types.
