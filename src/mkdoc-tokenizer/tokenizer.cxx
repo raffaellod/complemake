@@ -65,9 +65,9 @@ token_iterator::evo_t const token_iterator::smc_evos
 #define YA(next) { tokenizer_state::next, tokenizer_action::yield_and_accumulate }
 #define YI(next) { tokenizer_state::next, tokenizer_action::yield_and_ignore }
    /*        amp      aster    bksl     caret    colon    digit    dot      eol      equal    excl     fwsl     gt       inval    lt       ltr      ltre     minus    perc     pipe     plus     pound    punct    qdbl     qsng     tilde    whsp             */
-   /*amp */ {AC(amp2),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*amp */
+   /*amp */ {AC(amp2),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*amp */
    /*amp2*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*amp2*/
-   /*astr*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*astr*/
+   /*astr*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*astr*/
    /*bksl*/ {ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),PP(bksl),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    )}, /*bksl*/
    /*bsac*/ {PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PP(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac),PB(bsac)}, /*bsac*/
    /*bol */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),YA(cpp ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YI(bol )}, /*bol */
@@ -80,26 +80,26 @@ token_iterator::evo_t const token_iterator::smc_evos
    /*cmmz*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),AC(cmmz)}, /*cmmz*/
    /*cms */ {AC(cms ),AC(cms ),PS(bksl),AC(cms ),AC(cms ),AC(cms ),AC(cms ),YI(bol ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),ER(    ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms ),AC(cms )}, /*cms */
    /*cpp */ {AC(cpp ),AC(cpp ),PS(bksl),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),YI(bol ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),ER(    ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp ),AC(cpp )}, /*cpp */
-   /*crt */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*crt */
+   /*crt */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*crt */
    /*crt2*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*crt2*/
    /*dot */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(dot2),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(mns ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*dot */
    /*dot2*/ {ER(    ),ER(    ),PS(bksl),ER(    ),ER(    ),ER(    ),AC(dot3),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    ),ER(    )}, /*dot2*/
    /*dot3*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(mns ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*dot3*/
-   /*eql */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(eql2),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*eql */
-   /*eql2*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*eql2*/
-   /*excl*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*excl*/
-   /*fwsl*/ {YA(amp ),AC(cmm ),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),AC(cms ),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*fwsl*/
-   /*gt  */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*gt  */
+   /*eql */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*eql */
+   /*excl*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*excl*/
+   /*fwsl*/ {YA(amp ),AC(cmm ),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),AC(cms ),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*fwsl*/
+   /*gt  */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*gt  */
    /*id  */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(id  ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),AC(id  ),AC(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*id  */
-   /*lt  */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*lt  */
-   /*mns */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(num ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),AC(mns2),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*mns */
+   /*lt  */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*lt  */
+   /*mns */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(num ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),AC(mns2),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*mns */
    /*mns2*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(num ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*mns2*/
    /*num */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(num ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),AC(nums),AC(nume),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*num */
    /*nume*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(nums),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),AC(nums),AC(nums),AC(nums),YA(perc),YA(pip ),AC(nums),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*nume*/
    /*nums*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(nums),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),AC(nums),AC(nums),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*nums*/
-   /*perc*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*perc*/
-   /*pip */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*pip */
-   /*pls */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(num ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),AC(pls2),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*pls */
+   /*opeq*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*opeq*/
+   /*perc*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*perc*/
+   /*pip */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*pip */
+   /*pls */ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),AC(num ),AC(num ),YI(bol ),AC(opeq),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),AC(pls2),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*pls */
    /*pls2*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(num ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*pls2*/
    /*punc*/ {YA(amp ),YA(astr),PS(bksl),YA(crt ),YA(cln ),YA(num ),YA(dot ),YI(bol ),YA(eql ),YA(excl),YA(fwsl),YA(gt  ),ER(    ),YA(lt  ),YA(id  ),YA(id  ),YA(mns ),YA(perc),YA(pip ),YA(pls ),ER(    ),YA(punc),YA(sl  ),YA(cl  ),YA(tild),YA(whsp)}, /*punc*/
    /*sl  */ {AC(sl  ),AC(sl  ),AC(bsac),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sl  ),AC(sle ),AC(sl  ),AC(sl  ),AC(sl  )}, /*sl  */
@@ -141,7 +141,6 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
    /* dot2 */ OF(error),
    /* dot3 */ OF(ellipsis),
    /* eql  */ OF(assign),
-   /* eql2 */ OF(op_rel_equal),
    /* excl */ OF(op_log_not),
    /* fwsl */ OF(op_div),
    /* gt   */ OF(op_rel_gt),
@@ -152,6 +151,7 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
    /* num  */ OF(number),
    /* nume */ OF(number),
    /* nums */ OF(number),
+   /* opeq */ OS(get_compound_assignm_token_type),
    /* perc */ OF(op_mod),
    /* pip  */ OF(op_bit_or),
    /* pls  */ OF(plus),
@@ -276,6 +276,11 @@ void token_iterator::get_comment_token_type() {
 }
 
 
+void token_iterator::get_compound_assignm_token_type() {
+   // TODO
+}
+
+
 void token_iterator::get_cpreproc_token_type() {
    // TODO
 }
@@ -283,15 +288,15 @@ void token_iterator::get_cpreproc_token_type() {
 
 void token_iterator::get_punctuation_token_type() {
    switch (static_cast<char>(m_tkNext.m_s[0])) {
-      case '(': m_tkNext.m_tt = token_type::parenl;
-      case ')': m_tkNext.m_tt = token_type::parenr;
-      case ',': m_tkNext.m_tt = token_type::comma;
-      case ';': m_tkNext.m_tt = token_type::semicolon;
-      case '?': m_tkNext.m_tt = token_type::qmark;
-      case '[': m_tkNext.m_tt = token_type::bracketl;
-      case ']': m_tkNext.m_tt = token_type::bracketr;
-      case '{': m_tkNext.m_tt = token_type::bracel;
-      case '}': m_tkNext.m_tt = token_type::bracer;
+      case '(': m_tkNext.m_tt = token_type::parenl;    break;
+      case ')': m_tkNext.m_tt = token_type::parenr;    break;
+      case ',': m_tkNext.m_tt = token_type::comma;     break;
+      case ';': m_tkNext.m_tt = token_type::semicolon; break;
+      case '?': m_tkNext.m_tt = token_type::qmark;     break;
+      case '[': m_tkNext.m_tt = token_type::bracketl;  break;
+      case ']': m_tkNext.m_tt = token_type::bracketr;  break;
+      case '{': m_tkNext.m_tt = token_type::bracel;    break;
+      case '}': m_tkNext.m_tt = token_type::bracer;    break;
    }
 }
 

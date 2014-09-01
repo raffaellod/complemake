@@ -84,7 +84,6 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    dot2, //! Two dots.
    dot3, //! Three dots.
    eql,  //! Equal sign.
-   eql2, //! Two equal signs.
    excl, //! Exclamation point.
    fwsl, //! Single forward slash.
    gt,   //! Greater-than sign.
@@ -95,6 +94,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    num,  //! Number.
    nume, //! Number followed by ‘e’ or ‘E’ (could be suffix or exponent).
    nums, //! Suffix following a number, or exponent of a number.
+   opeq, //! Operator followed by an equal sign.
    perc, //! Percent sign.
    pip,  //! Pipe/vertical bar.
    pls,  //! Plus sign.
@@ -319,6 +319,9 @@ private:
 
    //! Determines the output token type for the current comment token.
    void get_comment_token_type();
+
+   //! Determines the output token type for the current compound assignment operator token.
+   void get_compound_assignm_token_type();
 
    //! Determines the output token type for the current C preprocessor token.
    void get_cpreproc_token_type();
