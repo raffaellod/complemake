@@ -87,8 +87,10 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    excl, //! Exclamation point.
    fwsl, //! Single forward slash.
    gt,   //! Greater-than sign.
+   gt2,  //! TwoGreater-than signs.
    id,   //! Identifier.
    lt,   //! Less-than sign.
+   lt2,  //! Two less-than signs.
    mns,  //! Minus sign.
    mns2, //! Two minus signs.
    num,  //! Number.
@@ -97,6 +99,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
    opeq, //! Operator followed by an equal sign.
    perc, //! Percent sign.
    pip,  //! Pipe/vertical bar.
+   pip2, //! Two pipes/vertical bars.
    pls,  //! Plus sign.
    pls2, //! Two plus signs.
    punc, //! Other punctuation.
@@ -168,6 +171,8 @@ ABC_ENUM_AUTO_VALUES(token_type,
    op_log_not,
    op_log_or,
    op_log_xor,
+   op_lsh,
+   op_lsh_assign,
    op_mod,
    op_mod_assign,
    op_mult_assign,
@@ -177,6 +182,8 @@ ABC_ENUM_AUTO_VALUES(token_type,
    op_rel_gteq,
    op_rel_lt,
    op_rel_lteq,
+   op_rsh,
+   op_rsh_assign,
    parenl,
    parenr,
    plus,
