@@ -198,8 +198,8 @@ token_iterator & token_iterator::operator++() {
       char32_t ch(*m_itAllCurr++);
       // Determine the type of the current character.
       char_type cht;
-      if (static_cast<size_t>(ch) < ABC_COUNTOF(smc_chtMap)) {
-         cht = smc_chtMap[static_cast<uint8_t>(ch)];
+      if (static_cast<std::size_t>(ch) < ABC_COUNTOF(smc_chtMap)) {
+         cht = smc_chtMap[static_cast<std::uint8_t>(ch)];
       } else {
          cht = char_type::ltr;
       }
