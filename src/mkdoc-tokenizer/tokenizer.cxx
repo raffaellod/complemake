@@ -184,12 +184,17 @@ token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
    m_stateCurr(tokenizer_state::bol) {
+
+   ABC_TRACE_FUNC(this);
+
    // Find the first token.
    operator++();
 }
 
 
 token_iterator & token_iterator::operator++() {
+   ABC_TRACE_FUNC(this);
+
    auto ftwErr(io::text::stderr());
 
    tokenizer_state statePushed;
@@ -262,6 +267,8 @@ token_iterator & token_iterator::operator++() {
 
 
 void token_iterator::finalize_next_token() {
+   ABC_TRACE_FUNC(this);
+
    // Determine the output token type for the current final state.
    output_token_t const & ot(smc_ttStateOutputs[m_stateCurr.base()]);
    if (ot.pfnSpecialCase) {
@@ -278,6 +285,8 @@ void token_iterator::finalize_next_token() {
 
 
 void token_iterator::get_comment_token_type() {
+   ABC_TRACE_FUNC(this);
+
    // Check for “/*!” and “//!”.
    if (m_tkNext.m_s[2] == '!') {
       // Special documentation comment.
@@ -289,6 +298,8 @@ void token_iterator::get_comment_token_type() {
 
 
 void token_iterator::get_compound_assignm_token_type() {
+   ABC_TRACE_FUNC(this);
+
    char ch0(static_cast<char>(m_tkNext.m_s[0]));
    switch (ch0) {
       case '!': m_tkNext.m_tt = token_type::op_rel_noteq;      break;
@@ -316,11 +327,15 @@ void token_iterator::get_compound_assignm_token_type() {
 
 
 void token_iterator::get_cpreproc_token_type() {
+   ABC_TRACE_FUNC(this);
+
    // TODO
 }
 
 
 void token_iterator::get_punctuation_token_type() {
+   ABC_TRACE_FUNC(this);
+
    switch (static_cast<char>(m_tkNext.m_s[0])) {
       case '(': m_tkNext.m_tt = token_type::parenl;    break;
       case ')': m_tkNext.m_tt = token_type::parenr;    break;
