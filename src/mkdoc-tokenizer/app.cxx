@@ -44,7 +44,7 @@ public:
       dmstr sAll;
       io::text::open_reader(dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
       for (token_iterator it(std::move(sAll)); it != token_iterator_end(); ++it) {
-         token const & tk(*it);
+         token const & tk = *it;
          ftwErr->print(ABC_SL("\033[35;1mToken:\033[0m (type: {}): “{}”\n"), tk.m_tt, tk.m_s);
       }
 

@@ -184,7 +184,6 @@ token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
    m_stateCurr(tokenizer_state::bol) {
-
    ABC_TRACE_FUNC(this);
 
    // Find the first token.
@@ -198,9 +197,9 @@ token_iterator & token_iterator::operator++() {
    auto ftwErr(io::text::stderr());
 
    tokenizer_state statePushed;
-   bool bYield(false);
+   bool bYield = false;
    while (m_itAllCurr != m_sAll.cend() && !bYield) {
-      char32_t ch(*m_itAllCurr++);
+      char32_t ch = *m_itAllCurr++;
       // Determine the type of the current character.
       char_type cht;
       if (static_cast<std::size_t>(ch) < ABC_COUNTOF(smc_chtMap)) {
@@ -209,7 +208,7 @@ token_iterator & token_iterator::operator++() {
          cht = char_type::ltr;
       }
 
-      evo_t const & evo(smc_evos[m_stateCurr.base()][cht.base()]);
+      evo_t const & evo = smc_evos[m_stateCurr.base()][cht.base()];
       /*ftwErr->print(
          ABC_SL("evolution: (state: {}, char_type: {} ‘{}’) -> (state: {}, action: {})\n"),
          m_stateCurr, cht, ch, tokenizer_state(evo.stateNext), tokenizer_action(evo.actionNext)
@@ -270,7 +269,7 @@ void token_iterator::finalize_next_token() {
    ABC_TRACE_FUNC(this);
 
    // Determine the output token type for the current final state.
-   output_token_t const & ot(smc_ttStateOutputs[m_stateCurr.base()]);
+   output_token_t const & ot = smc_ttStateOutputs[m_stateCurr.base()];
    if (ot.pfnSpecialCase) {
       // Default the token type to catch bugs in the special-case functions.
       m_tkNext.m_tt = token_type::error;
