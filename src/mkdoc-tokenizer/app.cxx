@@ -25,17 +25,12 @@ using namespace abc;
 #include "tokenizer.hxx"
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // mkdoc_tokenizer_app
 
-
-class mkdoc_tokenizer_app :
-   public app {
+class mkdoc_tokenizer_app : public app {
 public:
-
-   /*! See app::main().
-   */
+   //! See app::main().
    virtual int main(mvector<istr const> const & vsArgs) {
       ABC_TRACE_FUNC(this, vsArgs);
 
