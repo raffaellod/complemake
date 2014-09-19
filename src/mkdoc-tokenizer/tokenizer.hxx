@@ -23,14 +23,11 @@ You should have received a copy of the GNU General Public License along with Aba
 using namespace abc;
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // mkdoc_tokenizer_app
 
-
 /*! Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
-all evolutions for ‘A’ will always apply to ‘B’.
-*/
+all evolutions for ‘A’ will always apply to ‘B’. */
 ABC_ENUM_AUTO_VALUES(char_type,
    amp,   //! Ampersand.
    aster, //! Asterisk/star.
@@ -199,11 +196,9 @@ ABC_ENUM_AUTO_VALUES(token_type,
    whitesp
 );
 
-
 //! Token.
 class token {
 public:
-
    /*! Constructor.
 
    s
@@ -224,7 +219,6 @@ public:
       m_tt(std::move(tk.m_tt)) {
    }
 
-
    /*! Assignment operator.
 
    tk
@@ -238,22 +232,17 @@ public:
       return *this;
    }
 
-
 public:
-
    //! Token text.
    dmstr m_s;
    //! Token type.
    token_type m_tt;
 };
 
-
 //! Iterates over the C++ tokens in a string.
 class token_iterator {
-
-   friend token_iterator const & token_iterator_end();
-
 private:
+   friend token_iterator const & token_iterator_end();
 
    //! Tokenizer evolution.
    struct evo_t {
@@ -267,16 +256,13 @@ private:
       token_type ttFixed;
    };
 
-
 public:
-
    /*! Constructor.
 
    sAll
       String to tokenize.
    */
    explicit token_iterator(mstr && sAll);
-
 
    /*! Dereferencing operator.
 
@@ -287,14 +273,12 @@ public:
       return m_tkCurr;
    }
 
-
    /*! Pre-increment operator.
 
    return
       *this.
    */
    token_iterator & operator++();
-
 
    /*! Equality relational operator.
 
@@ -307,7 +291,6 @@ public:
       return m_tkCurr.m_tt == token_type::end && it.m_tkCurr.m_tt == token_type::end;
    }
 
-
    /*! Inequality relational operator.
 
    it
@@ -319,9 +302,7 @@ public:
       return !operator==(it);
    }
 
-
 private:
-
    /*! Constructor. Used internally to generate token_iterator constants.
 
    tt
@@ -346,9 +327,7 @@ private:
    //! Determines the output token type for the current punctuation token.
    void get_punctuation_token_type();
 
-
 private:
-
    //! String to tokenize.
    dmstr m_sAll;
    //! Iterator to the current character in m_sAll.
@@ -358,8 +337,7 @@ private:
    //! Current token.
    token m_tkCurr;
    /*! Next token, potentially written by a different thread while the client’s thread consumes
-   m_tkCurr.
-   */
+   m_tkCurr. */
    token m_tkNext;
    //! Mapping from character values to character types.
    static char_type::enum_type const smc_chtMap[];
@@ -370,7 +348,6 @@ private:
    //! Iterator in final state.
    static token_iterator const smc_itEnd;
 };
-
 
 //! Returns an “end” iterator.
 inline token_iterator const & token_iterator_end() {

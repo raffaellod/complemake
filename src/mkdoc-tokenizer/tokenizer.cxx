@@ -23,10 +23,8 @@ using namespace abc;
 #include "tokenizer.hxx"
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // token_iterator
-
 
 char_type::enum_type const token_iterator::smc_chtMap[128] = {
 #define T char_type::
@@ -179,7 +177,6 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
 
 token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
 
-
 /*explicit*/ token_iterator::token_iterator(mstr && sAll) :
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
@@ -189,7 +186,6 @@ token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
    // Find the first token.
    operator++();
 }
-
 
 token_iterator & token_iterator::operator++() {
    ABC_TRACE_FUNC(this);
@@ -264,7 +260,6 @@ token_iterator & token_iterator::operator++() {
    return *this;
 }
 
-
 void token_iterator::finalize_next_token() {
    ABC_TRACE_FUNC(this);
 
@@ -282,7 +277,6 @@ void token_iterator::finalize_next_token() {
    m_tkCurr = std::move(m_tkNext);
 }
 
-
 void token_iterator::get_comment_token_type() {
    ABC_TRACE_FUNC(this);
 
@@ -294,7 +288,6 @@ void token_iterator::get_comment_token_type() {
       m_tkNext.m_tt = token_type::comment;
    }
 }
-
 
 void token_iterator::get_compound_assignm_token_type() {
    ABC_TRACE_FUNC(this);
@@ -324,13 +317,11 @@ void token_iterator::get_compound_assignm_token_type() {
    }
 }
 
-
 void token_iterator::get_cpreproc_token_type() {
    ABC_TRACE_FUNC(this);
 
    // TODO
 }
-
 
 void token_iterator::get_punctuation_token_type() {
    ABC_TRACE_FUNC(this);
