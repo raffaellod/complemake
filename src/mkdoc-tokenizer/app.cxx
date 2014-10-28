@@ -20,7 +20,6 @@ You should have received a copy of the GNU General Public License along with Aba
 #include <abaclade.hxx>
 #include <abaclade/app.hxx>
 #include <abaclade/io/text/file.hxx>
-using namespace abc;
 
 #include "tokenizer.hxx"
 
@@ -28,16 +27,16 @@ using namespace abc;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // mkdoc_tokenizer_app
 
-class mkdoc_tokenizer_app : public app {
+class mkdoc_tokenizer_app : public abc::app {
 public:
    //! See app::main().
-   virtual int main(mvector<istr const> const & vsArgs) {
+   virtual int main(abc::mvector<abc::istr const> const & vsArgs) {
       ABC_TRACE_FUNC(this, vsArgs);
 
-      auto ftwErr(io::text::stderr());
+      auto ftwErr(abc::io::text::stderr());
 
-      dmstr sAll;
-      io::text::open_reader(dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
+      abc::dmstr sAll;
+      abc::io::text::open_reader(abc::dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
       for (token_iterator it(std::move(sAll)); it != token_iterator_end(); ++it) {
          token const & tk = *it;
          ftwErr->print(ABC_SL("\033[35;1mToken:\033[0m (type: {}): “{}”\n"), tk.m_tt, tk.m_s);

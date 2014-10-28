@@ -18,7 +18,6 @@ You should have received a copy of the GNU General Public License along with Aba
 --------------------------------------------------------------------------------------------------*/
 
 #include <abaclade.hxx>
-using namespace abc;
 
 #include "tokenizer.hxx"
 
@@ -177,7 +176,7 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
 
 token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
 
-/*explicit*/ token_iterator::token_iterator(mstr && sAll) :
+/*explicit*/ token_iterator::token_iterator(abc::mstr && sAll) :
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
    m_stateCurr(tokenizer_state::bol) {
@@ -190,7 +189,7 @@ token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
 token_iterator & token_iterator::operator++() {
    ABC_TRACE_FUNC(this);
 
-   auto ftwErr(io::text::stderr());
+   auto ftwErr(abc::io::text::stderr());
 
    tokenizer_state statePushed;
    bool bYield = false;

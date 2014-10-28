@@ -26,7 +26,6 @@ You should have received a copy of the GNU General Public License along with Aba
 #endif
 #include <abaclade/app.hxx>
 #include <abaclade/io/text/file.hxx>
-using namespace abc;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +215,7 @@ public:
    explicit token(token_type tt) :
       m_tt(tt) {
    }
-   explicit token(mstr && s) :
+   explicit token(abc::mstr && s) :
       m_s(std::move(s)),
       m_tt(token_type::error) {
    }
@@ -240,7 +239,7 @@ public:
 
 public:
    //! Token text.
-   dmstr m_s;
+   abc::dmstr m_s;
    //! Token type.
    token_type m_tt;
 };
@@ -268,7 +267,7 @@ public:
    sAll
       String to tokenize.
    */
-   explicit token_iterator(mstr && sAll);
+   explicit token_iterator(abc::mstr && sAll);
 
    /*! Dereferencing operator.
 
@@ -335,9 +334,9 @@ private:
 
 private:
    //! String to tokenize.
-   dmstr m_sAll;
+   abc::dmstr m_sAll;
    //! Iterator to the current character in m_sAll.
-   dmstr::const_iterator m_itAllCurr;
+   abc::dmstr::const_iterator m_itAllCurr;
    //! Current state of the tokenizer.
    tokenizer_state m_stateCurr;
    //! Current token.
