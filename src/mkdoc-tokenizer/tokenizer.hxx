@@ -29,7 +29,7 @@ You should have received a copy of the GNU General Public License along with Aba
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// mkdoc_tokenizer_app
+// Globals
 
 /*! Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
 all evolutions for ‘A’ will always apply to ‘B’. */
@@ -201,6 +201,9 @@ ABC_ENUM_AUTO_VALUES(token_type,
    whitesp
 );
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// token
+
 //! Token.
 class token {
 public:
@@ -243,6 +246,9 @@ public:
    //! Token type.
    token_type m_tt;
 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// token_iterator
 
 //! Iterates over the C++ tokens in a string.
 class token_iterator {
@@ -358,6 +364,8 @@ private:
 inline token_iterator const & token_iterator_end() {
    return token_iterator::smc_itEnd;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #endif //_TOKENIZER_HXX
 
