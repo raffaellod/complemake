@@ -17,7 +17,13 @@ You should have received a copy of the GNU General Public License along with Aba
 <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------------------------*/
 
+#ifndef _TOKENIZER_HXX
+#define _TOKENIZER_HXX
+
 #include <abaclade.hxx>
+#ifdef ABC_CXX_PRAGMA_ONCE
+   #pragma once
+#endif
 #include <abaclade/app.hxx>
 #include <abaclade/io/text/file.hxx>
 using namespace abc;
@@ -353,4 +359,6 @@ private:
 inline token_iterator const & token_iterator_end() {
    return token_iterator::smc_itEnd;
 }
+
+#endif //_TOKENIZER_HXX
 
