@@ -17,35 +17,25 @@ You should have received a copy of the GNU General Public License along with Aba
 <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------------------------*/
 
-#include <abaclade.hxx>
-#include <abaclade/app.hxx>
-#include <abaclade/io/text/file.hxx>
+#ifndef _PARSER_HXX
+#define _PARSER_HXX
 
+#include <abaclade.hxx>
+#ifdef ABC_CXX_PRAGMA_ONCE
+   #pragma once
+#endif
 #include "tokenizer.hxx"
-#include "parser.hxx"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// mkdoc_tokenizer_app
+// parser
 
-class mkdoc_tokenizer_app : public abc::app {
+//! Consumer of tokens.
+class parser {
 public:
-   //! See app::main().
-   virtual int main(abc::mvector<abc::istr const> const & vsArgs) {
-      ABC_TRACE_FUNC(this, vsArgs);
-
-      auto ftwErr(abc::io::text::stderr());
-
-      abc::dmstr sAll;
-      abc::io::text::open_reader(abc::dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
-      for (token_iterator it(std::move(sAll)); it != token_iterator_end(); ++it) {
-         token const & tk = *it;
-         ftwErr->print(ABC_SL("\033[35;1mToken:\033[0m (type: {}): “{}”\n"), tk.m_tt, tk.m_s);
-      }
-
-      return 0;
-   }
 };
 
-ABC_APP_CLASS(mkdoc_tokenizer_app)
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#endif //_PARSER_HXX
 
