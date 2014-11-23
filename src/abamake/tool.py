@@ -903,4 +903,3 @@ class MsLinker(Linker):
       # TODO: see if the linker can be 32- or 64-bit specific, and if so ensure that it matches st.
 
       return True
-

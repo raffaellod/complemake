@@ -467,4 +467,3 @@ class MetadataStore(object):
       self._m_dictCurrTargetSnapshots = {}
       self._m_dictSignatures = {}
       self._m_bDirty = False
-

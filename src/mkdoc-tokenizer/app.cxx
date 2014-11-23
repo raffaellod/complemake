@@ -48,4 +48,3 @@ public:
 };
 
 ABC_APP_CLASS(mkdoc_tokenizer_app)
-

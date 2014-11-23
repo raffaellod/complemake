@@ -273,4 +273,3 @@ class FilteredLogger(Logger):
       # Skip blacklisted lines.
       if s not in self._m_setExclusions:
          Logger._write(self, s)
-

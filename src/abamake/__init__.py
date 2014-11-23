@@ -549,4 +549,3 @@ class Make(object):
       # Restore the dependents and mark this subtree as validated.
       del listDependents[len(listDependents) - 1]
       setValidatedSubtrees.add(tgtSubRoot)
-

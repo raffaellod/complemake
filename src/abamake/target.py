@@ -1156,4 +1156,3 @@ class UnitTestBuildTarget(ExecutableTargetBase):
       <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with
       auto-detect that can change to True using the current logic in add_dependency().
    """)
-

@@ -814,4 +814,3 @@ class JobController(object):
          # caused this call.
          self._m_setScheduledBuilds.discard(tgtBlocked)
          self._unschedule_builds_blocked_by(tgtBlocked)
-
