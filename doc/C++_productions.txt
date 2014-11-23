@@ -902,4 +902,3 @@ pp-tokens:
    pp-tokens preprocessing-token
 new-line:
    the new-line character
-
