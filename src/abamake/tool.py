@@ -567,7 +567,6 @@ class GxxCompiler(CxxCompiler):
          '-Wextra',                # Enable extra warnings not enabled by -Wall.
          '-pedantic',              # Issue all the warnings demanded by strict ISO C++.
          '-Wconversion',           # Warn for implicit conversions that may alter a value.
-         '-Winline',               # Warn if a function declared as inline cannot be inlined.
          '-Wlogical-op',           # Warn about suspicious uses of logical operators in expressions.
          '-Wmissing-declarations', # Warn if a global function is defined without a previous
                                    # declaration.
