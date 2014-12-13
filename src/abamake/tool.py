@@ -778,10 +778,10 @@ class Linker(Tool):
 
 
 ####################################################################################################
-# GnuLinker
+# GxxGnuLdLinker
 
 @Tool.default_file_name('g++', bSupportGnuPrefix = True)
-class GnuLinker(Linker):
+class GxxGnuLdLinker(Linker):
    """G++-driven GNU object code linker (LD)."""
 
    # Mapping table between abstract (*FLAG_*) flags
