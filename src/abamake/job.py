@@ -56,7 +56,6 @@ import abamake
 import abamake.target
 
 
-
 ####################################################################################################
 # Job
 
@@ -66,7 +65,6 @@ class Job(object):
    """
 
    __slots__ = ()
-
 
    def get_quiet_command(self):
       """Returns a command summary for Make to print out in quiet mode.
@@ -80,7 +78,6 @@ class Job(object):
          'Job.get_quiet_command() must be overridden in ' + type(self).__name__
       )
 
-
    def get_verbose_command(self):
       """Returns a command-line for Make to print out in verbose mode.
 
@@ -92,7 +89,6 @@ class Job(object):
          'Job.get_verbose_command() must be overridden in ' + type(self).__name__
       )
 
-
    def poll(self):
       """Returns the execution status of the job. If the job is never started (e.g. due to “dry run”
       mode), the return value will be 0.
@@ -103,13 +99,10 @@ class Job(object):
 
       raise NotImplementedError('Job.poll() must be overridden in ' + type(self).__name__)
 
-
    def start(self):
       """Starts the job."""
 
       pass
-
-
 
 ####################################################################################################
 # NoopJob
@@ -126,7 +119,6 @@ class NoopJob(Job):
       # Command to print out in verbose mode.
       '_m_sVerboseCmd',
    )
-
 
    def __init__(self, iRet, iterQuietCmd = ('NOOP',), sVerboseCmd = '[internal:noop]'):
       """Constructor.
@@ -145,36 +137,29 @@ class NoopJob(Job):
       self._m_iRet = iRet
       self._m_sVerboseCmd = sVerboseCmd
 
-
    def get_quiet_command(self):
       """See Job.get_quiet_command()."""
 
       return self._m_iterQuietCmd
-
 
    def get_verbose_command(self):
       """See Job.get_verbose_command()."""
 
       return self._m_sVerboseCmd
 
-
    def poll(self):
       """See Job.poll()."""
 
       return self._m_iRet
 
-
-
 ####################################################################################################
 # SkippedBuildJob
 
 class SkippedBuildJob(NoopJob):
-
    def __init__(self):
       """See NoopJob.__init__()."""
 
       NoopJob.__init__(self, 0, ('SKIP',), sVerboseCmd = '[internal:skipped-build]')
-
 
 
 ####################################################################################################
@@ -207,7 +192,6 @@ class ExternalCmdJob(Job):
       # Thread that reads from the job process’ stdout.
       '_m_thrStdOutReader',
    )
-
 
    def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """See Job.__init__().
@@ -248,18 +232,15 @@ class ExternalCmdJob(Job):
       if stdout != subprocess.PIPE:
          raise ValueError('invalid value for dictPopenArgs[\'stdout\']')
 
-
    def get_quiet_command(self):
       """See Job.get_quiet_command()."""
 
       return self._m_iterQuietCmd
 
-
    def get_verbose_command(self):
       """See Job.get_verbose_command()."""
 
       return ' '.join(self._m_dictPopenArgs['args'])
-
 
    def poll(self):
       """See Job.poll()."""
@@ -275,7 +256,6 @@ class ExternalCmdJob(Job):
          iRet = 0
       return iRet
 
-
    def start(self):
       """See Job.start()."""
 
@@ -288,14 +268,12 @@ class ExternalCmdJob(Job):
          self._m_thrStdOutReader = threading.Thread(target = self._stdout_reader_thread)
          self._m_thrStdOutReader.start()
 
-
    def _get_stderr_file_path(self):
       return self._m_sStdErrFilePath
 
    stderr_file_path = property(_get_stderr_file_path, doc = """
       Path to the file to which the error output of the process is saved.
    """)
-
 
    def _stderr_line_read(self, sLine):
       """Internal method invoked for each stderr line read.
@@ -308,7 +286,6 @@ class ExternalCmdJob(Job):
 
       log = self._m_log
       log(None, '{}', sLine)
-
 
    def _stderr_reader_thread(self):
       """Reads from the job process’ stderr."""
@@ -333,7 +310,6 @@ class ExternalCmdJob(Job):
             self._stderr_line_read(sLine.rstrip('\r\n'))
             fileStdErr.write(sLine)
 
-
    def _stdout_chunk_read(self, byChunk):
       """Internal method invoked for each stdout chunk read.
 
@@ -344,7 +320,6 @@ class ExternalCmdJob(Job):
       """
 
       pass
-
 
    def _stdout_reader_thread(self):
       """Reads from the job process’ stdout."""
@@ -361,8 +336,6 @@ class ExternalCmdJob(Job):
             # EOF.
             break
          self._stdout_chunk_read(by)
-
-
 
 ####################################################################################################
 # ExternalCmdCapturingJob
@@ -383,7 +356,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       # See ExternalCmdCapturingJob.stdout_file_path.
       '_m_sStdOutFilePath',
    )
-
 
    def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath, sStdOutFilePath):
       """See ExternalCmdJob.__init__().
@@ -406,7 +378,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       self._m_fileStdOut = None
       self._m_sStdOutFilePath = sStdOutFilePath
 
-
    def poll(self):
       """See Job.poll(). Overridden to make sure we close _m_fileStdOut as soon as the process
       terminates.
@@ -420,7 +391,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          self._m_fileStdOut = None
       return iRet
 
-
    def start(self):
       """See ExternalCmdCapturingJob.start()."""
 
@@ -432,12 +402,10 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
       ExternalCmdJob.start(self)
 
-
    def _get_stdout(self):
       return self._m_byStdOut
 
    stdout = property(_get_stdout, doc = """Collected output of the process.""")
-
 
    def _get_stdout_file_path(self):
       return self._m_sStdOutFilePath
@@ -445,7 +413,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
    stdout_file_path = property(_get_stdout_file_path, doc = """
       Path to the file to which the output of the process is saved.
    """)
-
 
    def _stdout_chunk_read(self, byChunk):
       """See ExternalCmdJob._stdout_chunk_read(). Overridden to accumulate stdout in a member
@@ -455,8 +422,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
       self._m_byStdOut += byChunk
       self._m_fileStdOut.write(byChunk)
-
-
 
 ####################################################################################################
 # AbacladeUnitTestJob
@@ -479,7 +444,6 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
       # Count of test assertions performed for the current test case.
       '_m_cTotalTestAssertions',
    )
-
 
    def _stderr_line_read(self, sLine):
       """See ExternalCmdCapturingJob._stderr_line_read(). Overridden to interpret information sent
@@ -520,8 +484,6 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
          # self._m_iterQuietCmd[1] is the unit test name.
          self._m_log(None, '{}: {}', self._m_iterQuietCmd[1], sLine)
 
-
-
 ####################################################################################################
 # JobController
 
@@ -545,7 +507,6 @@ class JobController(object):
    # Scheduled target builds.
    _m_setScheduledBuilds = None
 
-
    def __init__(self, mk):
       """Constructor.
 
@@ -557,7 +518,6 @@ class JobController(object):
       self._m_dictRunningJobs = {}
       self.running_jobs_max = multiprocessing.cpu_count()
       self._m_setScheduledBuilds = set()
-
 
    def build_scheduled_targets(self):
       """Builds any targets scheduled for build by JobController.schedule_build().
@@ -649,7 +609,6 @@ class JobController(object):
 
       return cFailedBuildsTotal
 
-
    def _collect_completed_jobs(self, cJobsToComplete):
       """Called by JobController.build_scheduled_targets(), returns when (at least) the requested
       number of jobs completes and the respective targets’ Target.build_complete() have been called.
@@ -729,7 +688,6 @@ class JobController(object):
             # TODO: proper event-based waiting.
             time.sleep(0.1)
 
-
    def _get_dry_run(self):
       return self._m_bDryRun
 
@@ -741,7 +699,6 @@ class JobController(object):
       executed.
    """)
 
-
    def _get_force_build(self):
       return self._m_bForceBuild
 
@@ -751,7 +708,6 @@ class JobController(object):
    force_build = property(_get_force_build, _set_force_build, doc = """
       If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
    """)
-
 
    def _get_force_test(self):
       return self._m_bForceTest
@@ -763,7 +719,6 @@ class JobController(object):
       If True, all test targets are executed unconditionally; if False, test targets are only
       executed if triggered by their dependencies.
    """)
-
 
    def _get_keep_going(self):
       return self._m_bKeepGoing
@@ -777,11 +732,9 @@ class JobController(object):
       running jobs complete.
    """)
 
-
    # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors
    # in the system.
    running_jobs_max = None
-
 
    def schedule_build(self, tgt):
       """Schedules the build of the specified target and all its dependencies. Any targets that have
@@ -798,7 +751,6 @@ class JobController(object):
          # Recursively schedule the build of the dependencies of this target, if Target themselves.
          for dep in tgt.get_dependencies(bTargetsOnly = True):
             self.schedule_build(dep)
-
 
    def _unschedule_builds_blocked_by(self, tgt):
       """Recursively removes the target builds blocked by the specified target from the set of

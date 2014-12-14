@@ -28,7 +28,6 @@ import xml.dom.minidom
 import abamake.target
 
 
-
 ####################################################################################################
 # FileSignature
 
@@ -42,12 +41,10 @@ class FileSignature(object):
    # Format string used to convert a datetime instance to/from a string.
    _smc_sDateTimeFormat = '%Y-%m-%dT%H:%M:%S.%f'
 
-
    def __init__(self):
       """Constructor."""
 
       self._m_dtMTime = None
-
 
    @classmethod
    def generate(cls, sFilePath):
@@ -62,7 +59,6 @@ class FileSignature(object):
       self = cls()
       self._m_dtMTime = datetime.fromtimestamp(os.path.getmtime(sFilePath))
       return self
-
 
    @classmethod
    def parse(cls, eltFile):
@@ -80,7 +76,6 @@ class FileSignature(object):
             self._m_dtMTime = datetime.strptime(sValue, self._smc_sDateTimeFormat)
       return self
 
-
    def to_xml(self, doc, sEltName):
       """Serializes the signature as an XML element.
 
@@ -95,8 +90,6 @@ class FileSignature(object):
       eltFile = doc.createElement(sEltName)
       eltFile.setAttribute('mtime', self._m_dtMTime.strftime(self._smc_sDateTimeFormat))
       return eltFile
-
-
 
 ####################################################################################################
 # TargetSnapshot
@@ -114,7 +107,6 @@ class TargetSnapshot(object):
       # Target.
       '_m_tgt',
    )
-
 
    def __init__(self, mds, tgt, eltTarget = None):
       """Constructor.
@@ -154,7 +146,6 @@ class TargetSnapshot(object):
          self._m_dictOutputSigs = {}
          if isinstance(tgt, abamake.target.FileTarget):
             mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs)
-
 
    def equals_stored(self, tssStored, log):
       """Compares self (current snapshot) with the stored snapshot for the same target, logging any
@@ -217,7 +208,6 @@ class TargetSnapshot(object):
       log(log.HIGH, 'metadata: {}: up-to-date', tgt)
       return True
 
-
    def to_xml(self, doc):
       """Serializes the snapshot as an XML element.
 
@@ -246,7 +236,6 @@ class TargetSnapshot(object):
 
       return eltTarget
 
-
    def update(self, mds):
       """Updates the snapshot.
 
@@ -259,7 +248,6 @@ class TargetSnapshot(object):
          mds.get_signatures(
             self._m_tgt.get_generated_files(), self._m_dictOutputSigs, bForceCacheUpdate = True
          )
-
 
 ####################################################################################################
 # MetadataStore
@@ -279,7 +267,6 @@ class MetadataStore(object):
    _m_dictSignatures = None
    # Target snapshots as stored in the metadata file (abamake.target.Target -> TargetSnapshot).
    _m_dictStoredTargetSnapshots = None
-
 
    def __init__(self, mk, sFilePath):
       """Constructor. Reads metadata from the specified file.
@@ -329,7 +316,6 @@ class MetadataStore(object):
                      )
          log(log.HIGH, 'metadata: store loaded: {}', sFilePath)
 
-
    def get_signatures(self, iterFilePaths, dictOut, bForceCacheUpdate = False):
       """Retrieves the signatures for the specified file paths and stores them in the provided
       dictionary.
@@ -372,7 +358,6 @@ class MetadataStore(object):
          # Return this signature.
          dictOut[sFilePath] = fs
 
-
    def _get_curr_target_snapshot(self, tgt):
       """Returns a current snapshot for the specified target, creating one first it none such
       exists.
@@ -390,7 +375,6 @@ class MetadataStore(object):
          self._m_dictCurrTargetSnapshots[tgt] = tssCurr
 
       return tssCurr
-
 
    def has_target_snapshot_changed(self, tgt):
       """Checks if the specified target needs to be rebuilt: compares the current signature of its
@@ -419,7 +403,6 @@ class MetadataStore(object):
       # Compare current and stored snapshots.
       return not tssCurr.equals_stored(tssStored, log)
 
-
    def update_target_snapshot(self, tgt):
       """Updates the snapshot for the specified target.
 
@@ -434,7 +417,6 @@ class MetadataStore(object):
       tssCurr.update(self)
       self._m_dictStoredTargetSnapshots[tgt] = tssCurr
       self._m_bDirty = True
-
 
    def write(self):
       """Stores metadata to the file from which it was loaded."""

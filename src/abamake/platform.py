@@ -35,7 +35,6 @@ tpl[0].close()
 del tpl
 
 
-
 ####################################################################################################
 # SystemTypeError
 
@@ -44,8 +43,6 @@ class SystemTypeError(Exception):
 
    pass
 
-
-
 ####################################################################################################
 # SystemTypeTupleError
 
@@ -53,8 +50,6 @@ class SystemTypeTupleError(ValueError, SystemTypeError):
    """Raised when an invalid system type tuple is encountered."""
 
    pass
-
-
 
 ####################################################################################################
 # SystemType
@@ -74,7 +69,6 @@ class SystemType(object):
    # See SystemType.vendor.
    _m_sVendor = None
 
-
    def __init__(self, sMachine, sVendor, sKernel, sOS):
       """Constructor.
 
@@ -93,7 +87,6 @@ class SystemType(object):
       self._m_sOS = sOS
       self._m_sVendor = sVendor
 
-
    def __eq__(self, other):
       return \
          self._none_or_equal(self._m_sKernel,  other._m_sKernel ) and \
@@ -101,21 +94,17 @@ class SystemType(object):
          self._none_or_equal(self._m_sOS,      other._m_sOS     ) and \
          self._none_or_equal(self._m_sVendor,  other._m_sVendor )
 
-
    def __hash__(self):
       # Hashes like a tuple.
       return hash((self._m_sMachine, self._m_sVendor, self._m_sKernel, self._m_sOS))
-
 
    def __len__(self):
       return \
          int(bool(self._m_sMachine)) + int(bool(self._m_sVendor)) + \
          int(bool(self._m_sOS     )) + int(bool(self._m_sKernel))
 
-
    def __ne__(self, other):
       return not self.__eq__(self, other)
-
 
    def __str__(self):
       sVendor = self._m_sVendor or 'unknown'
@@ -128,7 +117,6 @@ class SystemType(object):
       if self._m_sMachine:
          return '{}'.format(self._m_sMachine)
       return 'unknown'
-
 
    @staticmethod
    def detect_host():
@@ -160,7 +148,6 @@ class SystemType(object):
 
       raise SystemTypeError('unsupported system type')
 
-
    def increasingly_inaccurate_aliases(self):
       """Generates increasingly inaccurate aliases for the system type.
 
@@ -184,7 +171,6 @@ class SystemType(object):
          yield SystemType(self._m_sMachine, None, None, None)
       yield SystemType(None, None, None, None)
 
-
    def _get_kernel(self):
       return self._m_sKernel
 
@@ -192,14 +178,12 @@ class SystemType(object):
       Kernel on which the OS runs. Mostly used for the GNU operating system.
    """)
 
-
    def _get_machine(self):
       return self._m_sMachine
 
    machine = property(_get_machine, doc = """
       Machine type; often this is the processor’s architecture. Examples: 'i386', 'sparc'.
    """)
-
 
    @staticmethod
    def _none_or_equal(o1, o2):
@@ -215,7 +199,6 @@ class SystemType(object):
 
       return not o1 or not o2 or o1 == o2
 
-
    def _get_os(self):
       return self._m_sOS
 
@@ -223,7 +206,6 @@ class SystemType(object):
       Operating system running on the system, or type of object file format for embedded systems.
       Examples: 'solaris2.5', 'irix6.3', 'elf', 'coff'.
    """)
-
 
    @staticmethod
    def parse_tuple(sTuple):
@@ -267,13 +249,10 @@ class SystemType(object):
             return SystemType(*listTuple)
       raise SystemTypeTupleError('invalid system type tuple: “{}”'.format(sTuple))
 
-
    def _get_vendor(self):
       return self._m_sVendor
 
    vendor = property(_get_vendor, doc = """Vendor. Examples: 'unknown'. 'pc', 'sun'.""")
-
-
 
 ####################################################################################################
 # Platform
@@ -287,7 +266,6 @@ class Platform(object):
    # System type (more specific than the platform type).
    _m_st = None
 
-
    def __init__(self, st):
       """Constructor.
 
@@ -297,7 +275,6 @@ class Platform(object):
 
       self._m_dictTools = {}
       self._m_st = st
-
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
       """Modifies an environment dictionary (similar to os.environ) so that it allows to load
@@ -315,7 +292,6 @@ class Platform(object):
          'Platform.add_dir_to_dynlib_env_path() must be overridden in ' + type(self).__name__
       )
 
-
    def adjust_popen_args_for_script(self, dictPopenArgs):
       """Adjusts a dictionary of arguments to be used to run a program with subprocess.Popen in a
       way that allows to execute non-programs (e.g. scripts), by changing the command into a shell
@@ -330,7 +306,6 @@ class Platform(object):
 
       pass
 
-
    def configure_tool(self, tool):
       """Configures the specified tool for this platform.
 
@@ -339,7 +314,6 @@ class Platform(object):
       """
 
       pass
-
 
    @classmethod
    def detect_host(cls):
@@ -351,7 +325,6 @@ class Platform(object):
       """
 
       return cls.from_system_type(SystemType.detect_host())
-
 
    @classmethod
    def from_system_type(cls, st):
@@ -374,7 +347,6 @@ class Platform(object):
          raise Exception('unable to detect platform for system type {}'.format(st))
       return clsBestMatch(st)
 
-
    def dynlib_file_name(self, sName):
       """Generates a file name for a dynamic library from the specified name.
 
@@ -388,12 +360,10 @@ class Platform(object):
          'Platform.dynlib_file_name() must be overridden in ' + type(self).__name__
       )
 
-
    # If True, dynamic libraries need import libraries (i.e. statically-linked runtime-patchable
    # data) for the linker to be able to generate executables that link to them; if False, dynlibs
    # can be linked to directly.
    dynlibs_need_implibs = False
-
 
    def exe_file_name(self, sName):
       """Generates an executable file name from the specified name.
@@ -407,7 +377,6 @@ class Platform(object):
       raise NotImplementedError(
          'Platform.exe_file_name() must be overridden in ' + type(self).__name__
       )
-
 
    def get_tool(self, clsTool):
       """Returns a subclass of the specified Tool subclass modeling the implementation of the
@@ -429,7 +398,6 @@ class Platform(object):
          self._m_dictTools[clsTool] = clsToolImpl
       return clsToolImpl
 
-
    @classmethod
    def _match_system_type(cls, st):
       """Returns a confidence index of how much the platform models the specified system type.
@@ -443,8 +411,6 @@ class Platform(object):
       """
 
       return 0
-
-
 
 ####################################################################################################
 # GnuPlatform
@@ -462,7 +428,6 @@ class GnuPlatform(Platform):
       dictEnv['LD_LIBRARY_PATH'] = sLibPath
       return dictEnv
 
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
@@ -470,18 +435,15 @@ class GnuPlatform(Platform):
          tool.add_input_lib('dl')
          tool.add_input_lib('pthread')
 
-
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
 
       return 'lib{}.so'.format(sName)
 
-
    def exe_file_name(self, sName):
       """See Platform.exe_file_name()."""
 
       return '{}'.format(sName)
-
 
    @classmethod
    def _match_system_type(cls, st):
@@ -491,8 +453,6 @@ class GnuPlatform(Platform):
          return 1
       else:
          return 0
-
-
 
 ####################################################################################################
 # WinPlatform
@@ -510,7 +470,6 @@ class WinPlatform(Platform):
       dictEnv['PATH'] = sLibPath
       return dictEnv
 
-
    def adjust_popen_args_for_script(self, dictPopenArgs):
       """See Platform.adjust_popen_args_for_script()."""
 
@@ -520,7 +479,6 @@ class WinPlatform(Platform):
          # script.
          dictPopenArgs['shell'] = True
 
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
@@ -528,23 +486,18 @@ class WinPlatform(Platform):
          tool.add_input_lib('kernel32')
          tool.add_input_lib('user32')
 
-
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
 
       return '{}.dll'.format(sName)
 
-
    # See Platform.dynlibs_need_implibs.
    dynlibs_need_implibs = True
-
 
    def exe_file_name(self, sName):
       """See Platform.exe_file_name()."""
 
       return '{}.exe'.format(sName)
-
-
 
 ####################################################################################################
 # Win32Platform
@@ -560,8 +513,6 @@ class Win32Platform(WinPlatform):
          return 2
       else:
          return 0
-
-
 
 ####################################################################################################
 # Win64Platform

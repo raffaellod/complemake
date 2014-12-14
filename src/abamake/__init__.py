@@ -79,7 +79,6 @@ import abamake.metadata as metadata
 import abamake.platform as platform
 import abamake.target as target
 
-
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
 
 
@@ -108,7 +107,6 @@ def derived_classes(clsBase):
             setYielded.add(clsDeriv)
             listClassesToScan.append(clsDeriv)
 
-
 def makedirs(sPath):
    """Implementation of os.makedirs(exists_ok = True) for both Python 2.7 and 3.x.
 
@@ -122,8 +120,6 @@ def makedirs(sPath):
       if not os.path.isdir(sPath):
          raise
 
-
-
 ####################################################################################################
 # MakefileError
 
@@ -131,8 +127,6 @@ class MakefileError(Exception):
    """Indicates a syntactical or semantical error in a makefile."""
 
    pass
-
-
 
 ####################################################################################################
 # DependencyCycleError
@@ -143,7 +137,6 @@ class DependencyCycleError(MakefileError):
    """
 
    _m_iterTargets = None
-
 
    def __init__(self, sMessage, iterTargets, *iterArgs):
       """See MakefileError.__init__().
@@ -161,15 +154,12 @@ class DependencyCycleError(MakefileError):
 
       self._m_iterTargets = iterTargets
 
-
    def __str__(self):
       # Show the regular exception description line followed by the targets in the cycle, one per
       # line.
       s = MakefileError.__str__(self) + '\n' + \
           '\n'.join('  ' + str(tgt) for tgt in self._m_iterTargets)
       return s
-
-
 
 ####################################################################################################
 # MakefileSyntaxError
@@ -179,8 +169,6 @@ class MakefileSyntaxError(MakefileError):
 
    pass
 
-
-
 ####################################################################################################
 # TargetReferenceError
 
@@ -188,8 +176,6 @@ class TargetReferenceError(MakefileError):
    """Raised when a reference to a target can’t be resolved."""
 
    pass
-
-
 
 ####################################################################################################
 # Make
@@ -228,7 +214,6 @@ class Make(object):
    # an exception.
    _RAISE_IF_NOT_FOUND = object()
 
-
    def __init__(self):
       """Constructor."""
 
@@ -237,7 +222,6 @@ class Make(object):
       self._m_log = logging.Logger(logging.LogGenerator())
       self._m_dictNamedTargets = {}
       self._m_setTargets = set()
-
 
    def add_file_target(self, tgt, sFilePath):
       """Records a file target, making sure no duplicates are added.
@@ -252,7 +236,6 @@ class Make(object):
          raise KeyError('duplicate target file path: {}'.format(sFilePath))
       self._m_dictFileTargets[sFilePath] = tgt
 
-
    def add_named_target(self, tgt, sName):
       """Records a named target, making sure no duplicates are added.
 
@@ -266,7 +249,6 @@ class Make(object):
          raise KeyError('duplicate target name: {}'.format(sName))
       self._m_dictNamedTargets[sName] = tgt
 
-
    def add_target(self, tgt):
       """Records a target.
 
@@ -275,7 +257,6 @@ class Make(object):
       """
 
       self._m_setTargets.add(tgt)
-
 
    def get_file_target(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a file target given its file path, raising an exception if no such target exists
@@ -295,7 +276,6 @@ class Make(object):
          raise TargetReferenceError('unknown target: {}'.format(sFilePath))
       return tgt
 
-
    def get_named_target(self, sName, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a target given its name as specified in the makefile, raising an exception if no
       such target exists and no fallback value was provided.
@@ -314,7 +294,6 @@ class Make(object):
          raise TargetReferenceError('undefined target: {}'.format(sName))
       return tgt
 
-
    @staticmethod
    def _is_node_whitespace(nd):
       """Returns True if a node is whitespace or a comment.
@@ -331,24 +310,20 @@ class Make(object):
          return True
       return False
 
-
    def _get_job_controller(self):
       return self._m_jc
 
    job_controller = property(_get_job_controller, doc = """Job scheduler/controller.""")
-
 
    def _get_log(self):
       return self._m_log
 
    log = property(_get_log, doc = """Output log.""")
 
-
    def _get_metadata(self):
       return self._m_mds
 
    metadata = property(_get_metadata, doc = """Metadata store.""")
-
 
    def _get_named_targets(self):
       return self._m_dictNamedTargets.values()
@@ -356,7 +331,6 @@ class Make(object):
    named_targets = property(_get_named_targets, doc = """
       Targets explicitly declared in the parsed makefile.
    """)
-
 
    def _get_output_dir(self):
       return self._m_sOutputDir
@@ -367,7 +341,6 @@ class Make(object):
    output_dir = property(_get_output_dir, _set_output_dir, doc = """
       Output base directory that will be used for both intermediate and final build results.
    """)
-
 
    def parse(self, sFilePath):
       """Parses an Abamakefile.
@@ -386,7 +359,6 @@ class Make(object):
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
-
 
    def _parse_collect_targets(self, eltParent, listTargetsAndNodes, bTopLevel = True):
       """Recursively parses and collects all the targets defined in the specified XML element.
@@ -431,7 +403,6 @@ class Make(object):
                   'expected target definition XML element, found: {}'.format(elt.nodeName)
                )
 
-
    def _parse_doc(self, doc):
       """Parses a DOM representation of an Abamakefile.
 
@@ -466,7 +437,6 @@ class Make(object):
                      '{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName)
                   )
 
-
    def _get_target_platform(self):
       if not self._m_platformTarget:
          self._m_platformTarget = platform.Platform.detect_host()
@@ -475,7 +445,6 @@ class Make(object):
    target_platform = property(_get_target_platform, doc = """
       Platform under which the generated outputs will execute.
    """)
-
 
    def print_target_graphs(self):
       """Prints to stdout a graph with all the targets’ dependencies and one with their reverse
@@ -496,7 +465,6 @@ class Make(object):
          tgt.dump_dependents('  ')
       print('')
 
-
    def validate_dependency_graph(self):
       """Ensures that no cycles exist in the targets dependency graph.
 
@@ -513,7 +481,6 @@ class Make(object):
       for tgt in self._m_setTargets:
          if tgt not in setValidatedSubtrees:
             self._validate_dependency_subtree(tgt, listDependents, setValidatedSubtrees)
-
 
    def _validate_dependency_subtree(self, tgtSubRoot, listDependents, setValidatedSubtrees):
       """Recursion step for Make.validate_dependency_graph(). Validates a dependency graph subtree

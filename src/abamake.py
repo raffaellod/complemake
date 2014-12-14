@@ -30,12 +30,10 @@
 #                                command line is passed to this executable as its arguments.
 #    vsjitdebugger.exe -p {pid}  Attaches the debugger from the command line.
 
-
 import os
 import sys
 
 import abamake
-
 
 
 ####################################################################################################
@@ -71,7 +69,6 @@ def helptext(sInvalidArg):
                           times.
    """))
    sys.exit(1 if sInvalidArg else 0)
-
 
 def main(iterArgs):
    """Implementation of __main__.
@@ -192,7 +189,6 @@ def main(iterArgs):
    cFailedBuilds = mk.job_controller.build_scheduled_targets()
    mk.log.test_summary()
    return 0 if cFailedBuilds == 0 else 1
-
 
 if __name__ == '__main__':
    sys.exit(main(sys.argv))

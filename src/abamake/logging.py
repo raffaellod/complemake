@@ -26,7 +26,6 @@ if sys.hexversion < 0x03000000:
    import io
 
 
-
 ####################################################################################################
 # LogGenerator
 
@@ -46,7 +45,6 @@ class LogGenerator(object):
    # Total count of test cases executed.
    _m_cTotalTestCases = None
 
-
    def __init__(self):
       """Constructor."""
 
@@ -62,7 +60,6 @@ class LogGenerator(object):
       self._m_cTotalTestCases = 0
       self.verbosity = Logger.QUIET
 
-
    def add_testcase_result(self, sTitle, cTotalAssertions, cFailedAssertions):
       """Implementation of Logger.add_testcase_result()."""
 
@@ -74,7 +71,6 @@ class LogGenerator(object):
       self._m_cTotalTestCases += 1
       if cFailedAssertions:
          self._m_cFailedTestCases += 1
-
 
    def _test_summary_counts(self, cTotal, cFailed):
       """Generates a total/passed/failed summary line.
@@ -94,11 +90,9 @@ class LogGenerator(object):
          cFailed,  cFailed * 100      // cTotal,
       )
 
-
    # Selects a verbosity level (abamake.logging.Logger.*), affecting what is displayed about the
    # operations executed.
    verbosity = None
-
 
    def write(self, s):
       """Implementation of Logger._write()."""
@@ -109,7 +103,6 @@ class LogGenerator(object):
       # Lock stderr and write to it.
       with self._m_lockStdErr as lock:
          self._m_fileStdErr.write(s)
-
 
    def write_test_summary(self):
       """Implementation of Logger.test_summary()."""
@@ -124,8 +117,6 @@ class LogGenerator(object):
          ))
       else:
          self.write('Test cases: no tests performed')
-
-
 
 ####################################################################################################
 # Logger
@@ -146,7 +137,6 @@ class Logger(object):
    # Like MED, and also show all the files that are being checked for changes.
    HIGH = 4
 
-
    def __init__(self, lg):
       """Constructor.
 
@@ -159,7 +149,6 @@ class Logger(object):
          self._m_lg = lg
       else:
          self._m_lg = lg._m_lg
-
 
    def __call__(self, iLevel, sFormat, *iterArgs, **dictKwArgs):
       """Logs a formatted string. A new-line character will be automatically appended because due
@@ -182,7 +171,6 @@ class Logger(object):
             sFormat = unicode(sFormat)
          self._write(sFormat.format(*iterArgs, **dictKwArgs))
 
-
    def add_testcase_result(self, sTitle, cTotalAssertions, cFailedAssertions):
       """Stores the result of a test case for later display as part of the test summary.
 
@@ -196,7 +184,6 @@ class Logger(object):
 
       self._m_lg.add_testcase_result(sTitle, cTotalAssertions, cFailedAssertions)
 
-
    def qm_tool_name(self, sToolName):
       """Returns a “prettier” string for the specified tool, to be displayed in quiet mode.
 
@@ -209,12 +196,10 @@ class Logger(object):
       # TODO: support coloring in case stderr is a TTY.
       return '{:<8}'.format(sToolName)
 
-
    def test_summary(self):
       """Generates and logs a summary of success/failures for the tests performed."""
 
       self._m_lg.write_test_summary()
-
 
    def _get_verbosity(self):
       return self._m_lg.verbosity
@@ -227,7 +212,6 @@ class Logger(object):
       operations executed.
    """)
 
-
    def _write(self, s):
       """Unconditionally logs a string.
 
@@ -236,8 +220,6 @@ class Logger(object):
       """
 
       self._m_lg.write(s)
-
-
 
 ####################################################################################################
 # FilteredLogger
@@ -248,14 +230,12 @@ class FilteredLogger(Logger):
    # Set of lines to skip.
    _m_setExclusions = None
 
-
    def __init__(self, lg):
       """See Logger.__init__()."""
 
       Logger.__init__(self, lg)
 
       self._m_setExclusions = set()
-
 
    def add_exclusion(self, s):
       """Adds a line to the list of lines that should be omitted from the log.
@@ -265,7 +245,6 @@ class FilteredLogger(Logger):
       """
 
       self._m_setExclusions.add(s)
-
 
    def _write(self, s):
       """See Logger._write()."""
