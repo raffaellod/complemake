@@ -348,7 +348,7 @@ class Tool(object):
       abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
       implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
 
-      If the a executable file path is specified, this method will just find an implementation class
+      If an executable file path is specified, this method will just find an implementation class
       for it, instead of checking whether each class’s tool is installed.
 
       abamake.platform.SystemType st
