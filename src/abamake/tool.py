@@ -806,6 +806,64 @@ class Linker(Tool):
             listArgs.append(sFormat.format(lib = sLib))
 
 ####################################################################################################
+# ClangGnuLdLinker
+
+@Tool.default_file_name('clang++')
+class ClangGnuLdLinker(Linker):
+   """Clang-driven GNU object code linker (LD)."""
+
+   # Mapping table between abstract (*FLAG_*) flags
+   _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT    : '-o{path}',
+      Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '-L{dir}',
+      Linker.LDFLAG_ADD_LIB_FORMAT    : '-l{lib}',
+      Linker.LDFLAG_DYNLIB            : '-shared',
+   }
+
+   def _create_job_add_flags(self, listArgs):
+      """See Linker._create_job_add_flags()."""
+
+      Linker._create_job_add_flags(self, listArgs)
+
+      listArgs.extend([
+         '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
+      ])
+      listArgs.extend([
+         '-ggdb',           # Generate debug info compatible with GDB.
+      ])
+
+      # TODO: add support for os.environ['LDFLAGS'] ?
+
+   @classmethod
+   def _exe_matches_tool_and_system_type(cls, st, sFilePath):
+      """See Linker._exe_matches_tool_and_system_type()."""
+
+      sOut = Tool._get_cmd_output((sFilePath, '-Wl,--version'))
+      if not sOut:
+         return False
+
+      # Verify that Clang is really wrapping GNU ld.
+      match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return False
+
+      # Verify that this linker driver supports the specified system type.
+      sOut = Tool._get_cmd_output((sFilePath, '-v'))
+      if not sOut:
+         return False
+
+      match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
+      if not match:
+         return False
+      try:
+         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
+      except abamake.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return False
+      # This is not a strict equality test.
+      return st == stSupported
+
+####################################################################################################
 # GxxGnuLdLinker
 
 @Tool.default_file_name('g++', bSupportGnuPrefix = True)
@@ -847,7 +905,7 @@ class GxxGnuLdLinker(Linker):
       if not match:
          return False
 
-      # Verify that this compiler supports the specified system type.
+      # Verify that this linker driver supports the specified system type.
       sOut = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut:
          return False
