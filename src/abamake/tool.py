@@ -497,6 +497,83 @@ class CxxCompiler(Tool):
    object_suffix = None
 
 ####################################################################################################
+# ClangxxCompiler
+
+@Tool.default_file_name('clang++')
+class ClangxxCompiler(CxxCompiler):
+   """Clang C++ compiler."""
+
+   # Mapping table between abstract (*FLAG_*) flags
+   _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT            : '-o{path}',
+      CxxCompiler.CFLAG_ADD_INCLUDE_DIR_FORMAT: '-I{dir}',
+      CxxCompiler.CFLAG_DEFINE_FORMAT         : '-D{name}={expansion}',
+      CxxCompiler.CFLAG_DYNLIB                : '-fPIC',
+      CxxCompiler.CFLAG_PREPROCESS_ONLY       : '-E',
+   }
+
+   # See CxxCompiler.object_suffix.
+   def _create_job_add_flags(self, listArgs):
+      """See CxxCompiler._create_job_add_flags()."""
+
+      listArgs.extend([
+         '-c',                     # Compile without linking.
+         '-std=c++11',             # Select C++11 language standard.
+         '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
+      ])
+
+      CxxCompiler._create_job_add_flags(self, listArgs)
+
+      listArgs.extend([
+         '-ggdb',                  # Generate debug info compatible with GDB.
+         '-O0',                    # Disable code optimization.
+         '-DDEBUG=1',              # Enable debug code.
+      ])
+      listArgs.extend([
+         '-Wall',                  # Enable more warnings.
+         '-Wextra',                # Enable extra warnings not enabled by -Wall.
+         '-pedantic',              # Issue all the warnings demanded by strict ISO C++.
+         '-Wconversion',           # Warn for implicit conversions that may alter a value.
+         '-Wmissing-declarations', # Warn if a global function is defined without a previous
+                                   # declaration.
+         '-Wpacked',               # Warn if a struct has “packed” attribute but that has no effect
+                                   # on its layout or size.
+         '-Wshadow',               # Warn when a local symbol shadows another symbol.
+         '-Wsign-conversion',      # Warn for implicit conversions that may change the sign of an
+                                   # integer value.
+         '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
+      ])
+
+      # TODO: add support for os.environ['CFLAGS'] and other vars ?
+
+   @classmethod
+   def _exe_matches_tool_and_system_type(cls, st, sFilePath):
+      """See CxxCompiler._exe_matches_tool_and_system_type()."""
+
+      sOut = Tool._get_cmd_output((sFilePath, '-v'))
+      if not sOut:
+         return False
+
+      # Verify that it’s indeed Clang.
+      match = re.search(r'^clang version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE)
+      if not match:
+         return False
+
+      # Verify that this compiler supports the specified system type.
+      match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
+      if not match:
+         return False
+      try:
+         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
+      except abamake.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return False
+      # This is not a strict equality test.
+      return st == stSupported
+
+   object_suffix = '.o'
+
+####################################################################################################
 # GxxCompiler
 
 @Tool.default_file_name('g++', bSupportGnuPrefix = True)
