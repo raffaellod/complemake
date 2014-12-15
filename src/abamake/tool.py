@@ -81,9 +81,6 @@ class Tool(object):
    _m_setAbstractFlags = None
    # Default file name for the tool.
    _smc_sDefaultFileName = None
-   # If True, the tool’s executable file name may contain the GNU cross-compiler prefix for the
-   # system type it supports. If False, the supported system type is not indicated by the file name.
-   _smc_bFileNameSupportsGnuCrossPrefix = False
    # Associates SystemTypes to paths to this a tool’s executable (SystemType => str).
    _sm_dictFilePaths = None
    # Files to be processed by the tool.
@@ -239,51 +236,14 @@ class Tool(object):
 
       str sFileName
          Tool’s executable file name.
-      bool bSupportGnuPrefix
-         If True, Tool.get_impl_for_system_type() will try to apply a GNU cross-compiler prefix for
-         the system type it needs a tool for. If False, the file name will be taken as-is.
       """
 
-      def __init__(self, sFileName, bSupportGnuPrefix = False):
+      def __init__(self, sFileName):
          self._m_sFileName = sFileName
-         self._m_bSupportGnuPrefix = bSupportGnuPrefix
 
       def __call__(self, cls):
          cls._smc_sDefaultFileName = self._m_sFileName
-         cls._smc_bFileNameSupportsGnuCrossPrefix = self._m_bSupportGnuPrefix
          return cls
-
-   @classmethod
-   def _detect_for_system_type(cls, st):
-      """Returns the file name or path to an installed version of the tool targeting the specified
-      system type, if installed.
-
-      The default implementation uses the information provided with the Tool.default_file_name()
-      decorator.
-
-      abamake.platform.SystemType st
-         System type.
-      str return
-         The file name or path to a version of the tool supporting st, or None otherwise.
-      """
-
-      if cls._smc_bFileNameSupportsGnuCrossPrefix:
-         for stAlias in st.increasingly_inaccurate_aliases():
-            if stAlias:
-               # Use the system type tuple as prefix.
-               sFileName = str(stAlias) + '-'
-            else:
-               # No prefix.
-               sFileName = ''
-            sFileName += cls._smc_sDefaultFileName
-            # Try executing the program, and verify that it matches the system type.
-            if cls._exe_matches_tool_and_system_type(st, sFileName):
-               return sFileName
-      else:
-         sFileName = cls._smc_sDefaultFileName
-         if cls._exe_matches_tool_and_system_type(st, sFileName):
-            return sFileName
-      return None
 
    @classmethod
    def _exe_matches_tool_and_system_type(cls, st, sFilePath):
@@ -368,9 +328,9 @@ class Tool(object):
             # Implicit cached file name: always a match.
             return clsDeriv
          else:
-            # No implicit or explicit file name: attempt to detect it first.
-            sFileName = clsDeriv._detect_for_system_type(st)
-            if sFileName:
+            # No implicit or explicit file name: attempt to detect it.
+            sFileName = clsDeriv._smc_sDefaultFileName
+            if clsDeriv._exe_matches_tool_and_system_type(st, sFileName):
                # Match: cache the file name/path.
                cls._add_exe_to_system_type_cache(st, sFileName)
                return clsDeriv
@@ -576,7 +536,7 @@ class ClangxxCompiler(CxxCompiler):
 ####################################################################################################
 # GxxCompiler
 
-@Tool.default_file_name('g++', bSupportGnuPrefix = True)
+@Tool.default_file_name('g++')
 class GxxCompiler(CxxCompiler):
    """GNU C++ compiler (G++)."""
 
@@ -866,7 +826,7 @@ class ClangGnuLdLinker(Linker):
 ####################################################################################################
 # GxxGnuLdLinker
 
-@Tool.default_file_name('g++', bSupportGnuPrefix = True)
+@Tool.default_file_name('g++')
 class GxxGnuLdLinker(Linker):
    """G++-driven GNU object code linker (LD)."""
 
