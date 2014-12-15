@@ -66,6 +66,8 @@ class SystemType(object):
    _m_sMachine = None
    # See SystemType.os.
    _m_sOS = None
+   # See SystemType.parsed_source.
+   _m_sParsedSource = None
    # See SystemType.vendor.
    _m_sVendor = None
 
@@ -85,6 +87,7 @@ class SystemType(object):
       self._m_sKernel = sKernel
       self._m_sMachine = sMachine
       self._m_sOS = sOS
+      self._m_sParsedSource = None
       self._m_sVendor = sVendor
 
    def __eq__(self, other):
@@ -225,12 +228,13 @@ class SystemType(object):
       # Break the tuple down.
       listTuple = sTuple.split('-')
       cTupleParts = len(listTuple)
+      stRet = None
       if cTupleParts == 1:
          # The tuple contains “machine” only.
-         return SystemType(listTuple[0])
-      if cTupleParts == 2:
+         stRet = SystemType(listTuple[0])
+      elif cTupleParts == 2:
          # The tuple contains “machine” and “os”.
-         return SystemType(listTuple[0], None, None, listTuple[1])
+         stRet = SystemType(listTuple[0], None, None, listTuple[1])
       else:
          # The tuple contains “machine”, “vendor” and/or “kernel”, and “os”.
          # Suppress placeholders in the “vendor” field.
@@ -238,16 +242,28 @@ class SystemType(object):
             listTuple[1] = None
          if cTupleParts == 3:
             # Assume that GNU always requires a kernel to be part of the tuple.
+            # TODO: find a way to avoid this? It could become a long list of “special cases”.
             if listTuple[2] == 'gnu':
                # The tuple contains “machine”, “kernel” and “os”.
-               return SystemType(listTuple[0], None, listTuple[1], listTuple[2])
+               stRet = SystemType(listTuple[0], None, listTuple[1], listTuple[2])
             else:
                # The tuple contains “machine”, “vendor” and “os”.
-               return SystemType(listTuple[0], listTuple[1], None, listTuple[2])
-         if cTupleParts == 4:
+               stRet = SystemType(listTuple[0], listTuple[1], None, listTuple[2])
+         elif cTupleParts == 4:
             # The tuple contains “machine”, “vendor”, “kernel” and “os”.
-            return SystemType(*listTuple)
-      raise SystemTypeTupleError('invalid system type tuple: “{}”'.format(sTuple))
+            stRet = SystemType(*listTuple)
+      if not stRet:
+         raise SystemTypeTupleError('invalid system type tuple: “{}”'.format(sTuple))
+      # Assign the SystemType the string it was parsed from.
+      stRet._m_sParsedSource = sTuple
+      return stRet
+
+   def _get_parsed_source(self):
+      return self._m_sParsedSource
+
+   parsed_source = property(_get_parsed_source, doc = """
+      String from which the Platform object was parsed. Example: 'x86_64-pc-linux-gnu'.
+   """)
 
    def _get_vendor(self):
       return self._m_sVendor
