@@ -303,28 +303,19 @@ class Tool(object):
       return dictFilePaths and dictFilePaths.get(st)
 
    @classmethod
-   def get_impl_for_system_type(cls, st, sFilePath = None):
+   def get_impl_for_system_type(cls, st):
       """Detects if a tool of the type of this class (e.g. a C++ compiler for
       abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
       implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
 
-      If an executable file path is specified, this method will just find an implementation class
-      for it, instead of checking whether each class’s tool is installed.
-
       abamake.platform.SystemType st
          System type for which the tool is needed.
-      str sFilePath
-         Path to the tool’s executable file, or None if the tool should be detected automatically.
       type return
          Matching abamake.tool.Tool subclass for the tool found or specified.
       """
 
       for clsDeriv in abamake.derived_classes(cls):
-         if sFilePath:
-            # Explicit file path: only a match if it’s the correct tool and it supports st.
-            if clsDeriv._exe_matches_tool_and_system_type(st, sFilePath):
-               return clsDeriv
-         elif cls._get_exe_from_system_type_cache(st):
+         if cls._get_exe_from_system_type_cache(st):
             # Implicit cached file name: always a match.
             return clsDeriv
          else:
