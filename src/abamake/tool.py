@@ -919,7 +919,7 @@ class MsLinker(Linker):
 
    @classmethod
    def _exe_matches_tool_and_system_type(cls, st, sFilePath):
-      """See CxxCompiler._exe_matches_tool_and_system_type()."""
+      """See Linker._exe_matches_tool_and_system_type()."""
 
       sOut = Tool._get_cmd_output((sFilePath, '/?'))
       if not sOut:
