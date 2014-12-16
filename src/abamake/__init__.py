@@ -220,7 +220,9 @@ class Make(object):
       self._m_dictFileTargets = {}
       self._m_jc = job.JobController(self)
       self._m_log = logging.Logger(logging.LogGenerator())
+      self._m_mds = None
       self._m_dictNamedTargets = {}
+      self._m_platformTarget = None
       self._m_setTargets = set()
 
    def add_file_target(self, tgt, sFilePath):
