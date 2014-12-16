@@ -107,7 +107,7 @@ class SystemType(object):
          int(bool(self._m_sOS     )) + int(bool(self._m_sKernel))
 
    def __ne__(self, other):
-      return not self.__eq__(self, other)
+      return not self.__eq__(other)
 
    def __str__(self):
       sVendor = self._m_sVendor or 'unknown'
