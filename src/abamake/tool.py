@@ -483,7 +483,7 @@ class ClangxxCompiler(CxxCompiler):
 
       sFileName = 'clang++'
 
-      sOut = Tool._get_cmd_output((sFileName, '-v'))
+      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v'))
       if not sOut:
          return None
 
@@ -780,30 +780,14 @@ class ClangGnuLdLinker(Linker):
 
       sFileName = 'clang++'
 
-      sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
+      # This will fail if Clang can’t find a LD binary for the target system type.
+      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-Wl,--version'))
       if not sOut:
          return None
 
       # Verify that Clang is really wrapping GNU ld.
       match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
       if not match:
-         return None
-
-      # Verify that this linker driver supports the specified system type.
-      sOut = Tool._get_cmd_output((sFileName, '-v'))
-      if not sOut:
-         return None
-
-      match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
-      if not match:
-         return None
-      try:
-         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
-      except abamake.platform.SystemTypeTupleError:
-         # If the tuple can’t be parsed, assume it’s not supported.
-         return None
-      # This is not a strict equality test.
-      if st != stSupported:
          return None
 
       return sFileName
