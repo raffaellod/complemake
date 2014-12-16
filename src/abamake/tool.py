@@ -564,31 +564,31 @@ class GxxCompiler(CxxCompiler):
    def _exe_matches_tool_and_system_type(cls, st):
       """See CxxCompiler._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'g++'
+      for sFileName in str(st) + '-g++', 'g++':
+         sOut = Tool._get_cmd_output((sFileName, '--version'))
+         if not sOut:
+            continue
 
-      sOut = Tool._get_cmd_output((sFileName, '--version'))
-      if not sOut:
-         return None
+         # Verify that it’s indeed G++.
+         match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+         if not match:
+            continue
 
-      # Verify that it’s indeed G++.
-      match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
-      if not match:
-         return None
+         # Verify that this compiler supports the specified system type.
+         sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+         if not sOut:
+            continue
+         try:
+            stSupported = abamake.platform.SystemType.parse_tuple(sOut)
+         except abamake.platform.SystemTypeTupleError:
+            # If the tuple can’t be parsed, assume it’s not supported.
+            continue
+         # This is not a strict equality test.
+         if st != stSupported:
+            continue
 
-      # Verify that this compiler supports the specified system type.
-      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-      if not sOut:
-         return None
-      try:
-         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-      except abamake.platform.SystemTypeTupleError:
-         # If the tuple can’t be parsed, assume it’s not supported.
-         return None
-      # This is not a strict equality test.
-      if st != stSupported:
-         return None
-
-      return sFileName
+         return sFileName
+      return None
 
    object_suffix = '.o'
 
@@ -824,31 +824,31 @@ class GxxGnuLdLinker(Linker):
    def _exe_matches_tool_and_system_type(cls, st):
       """See Linker._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'g++'
+      for sFileName in str(st) + '-g++', 'g++':
+         sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
+         if not sOut:
+            continue
 
-      sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
-      if not sOut:
-         return None
+         # Verify that G++ is really wrapping GNU ld.
+         match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+         if not match:
+            continue
 
-      # Verify that G++ is really wrapping GNU ld.
-      match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
-      if not match:
-         return None
+         # Verify that this linker driver supports the specified system type.
+         sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+         if not sOut:
+            continue
+         try:
+            stSupported = abamake.platform.SystemType.parse_tuple(sOut)
+         except abamake.platform.SystemTypeTupleError:
+            # If the tuple can’t be parsed, assume it’s not supported.
+            continue
+         # This is not a strict equality test.
+         if st != stSupported:
+            continue
 
-      # Verify that this linker driver supports the specified system type.
-      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-      if not sOut:
-         return None
-      try:
-         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-      except abamake.platform.SystemTypeTupleError:
-         # If the tuple can’t be parsed, assume it’s not supported.
-         return None
-      # This is not a strict equality test.
-      if st != stSupported:
-         return None
-
-      return sFileName
+         return sFileName
+      return None
 
 ####################################################################################################
 # MsLinker
