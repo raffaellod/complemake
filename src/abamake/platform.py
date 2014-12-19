@@ -138,7 +138,7 @@ class SystemType(object):
             return SystemType('x86_64', None, None, 'win64')
       elif sOS == 'Darwin':
          # TODO: don’t assume Vendor == Apple.
-         return SystemType(sMachine, 'apple', None, 'darwin')
+         return SystemType(sMachine, 'apple', None, 'darwin' + sRelease)
       elif sOS in ('FreeBSD', 'Linux'):
          if sOS == 'Linux':
             sKernel = 'linux'
@@ -429,7 +429,7 @@ class DarwinPlatform(Platform):
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
 
-      raise NotImplementedError('TODO')
+      return 'lib{}.dylib'.format(sName)
 
 
    def exe_file_name(self, sName):
@@ -442,7 +442,7 @@ class DarwinPlatform(Platform):
    def _match_system_type(cls, st):
       """See Platform._match_system_type()."""
 
-      if st.os == 'darwin':
+      if st.os.startswith('darwin'):
          return 1
       else:
          return 0
