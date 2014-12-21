@@ -97,11 +97,11 @@ def main(iterArgs):
    args = argparser.parse_args()
 
    mk = abamake.Make()
-   mk.job_controller.dry_run          = args.dry_run
-   mk.job_controller.force_build      = args.force_build
-   mk.job_controller.force_test       = args.force_test
-   mk.job_controller.running_jobs_max = args.jobs
-   mk.job_controller.keep_going       = args.keep_going
+#   mk.job_controller.dry_run          = args.dry_run
+#   mk.job_controller.force_build      = args.force_build
+#   mk.job_controller.force_test       = args.force_test
+#   mk.job_controller.running_jobs_max = args.jobs
+#   mk.job_controller.keep_going       = args.keep_going
    mk.log.verbosity                   += args.verbose
 
    # Check for a makefile.
@@ -141,12 +141,11 @@ def main(iterArgs):
    else:
       iterTargets = mk.named_targets
 
-   # Build all selected targets: first schedule the jobs building them, then run them.
-   for tgt in iterTargets:
-      mk.job_controller.schedule_build(tgt)
-   cFailedBuilds = mk.job_controller.build_scheduled_targets()
+   # Build the selected targets.
+   bAllSucceeded = mk.build_targets(iterTargets)
+
    mk.log.test_summary()
-   return 0 if cFailedBuilds == 0 else 1
+   return 0 if bAllSucceeded else 1
 
 if __name__ == '__main__':
    sys.exit(main(sys.argv))

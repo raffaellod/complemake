@@ -157,19 +157,23 @@ class UnitTestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
 class Target(Dependency):
    """Abstract build target."""
 
-   # Unfinished dependency builds that block building this target.
-   _m_cBuildBlocks = None
+   # Count of targets whose build is blocking this target’s build.
+   _m_cBlockingDependencies = 0
+   # Weak references to targets whose build is blocked by this target’s build.
+   _m_setBlockedDependents = None
+   # If True, the target is being built.
+   _m_bBuilding = False
    # Dependencies (abamake.target.Dependency instances) for this target. Cannot be a set, because in
-   # some cases (e.g. linker inputs) we need to keep the order.
+   # some cases (e.g. linker inputs) we need to keep it in order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDependencies = None
-   # Targets (abamake.target.Target instances) dependent on this target.
-   _m_setDependents = None
    # Weak ref to the owning make instance.
    _m_mk = None
-   # Mapping between Target subclasses and XML element names. To add to this mapping, decorate a
-   # derived class with @Target.xml_element('xml-element-name').
-   _sm_dictSubclassElementNames = {}
+   # Mapping between Target subclasses and Abamakefile type IDs (XML element names). To add to this
+   # mapping, decorate a derived class with @Target.makefile_type_id('xml-element-name').
+   _sm_dictTypeIds = {}
+   # If True, the target has been built or at least verified to be up-to-date.
+   _m_bUpToDate = False
 
    def __init__(self, mk):
       """Constructor. Automatically registers the target with the specified Make instance.
@@ -180,10 +184,12 @@ class Target(Dependency):
 
       Dependency.__init__(self)
 
-      self._m_cBuildBlocks = 0
+      self._m_setBlockedDependents = set()
+      self._m_cBlockingDependencies = 0
+      self._m_bBuilding = False
       self._m_listDependencies = []
-      self._m_setDependents = set()
       self._m_mk = weakref.ref(mk)
+      self._m_bUpToDate = False
       mk.add_target(self)
 
    def add_dependency(self, dep):
@@ -195,44 +201,126 @@ class Target(Dependency):
 
       if dep not in self._m_listDependencies:
          self._m_listDependencies.append(dep)
-         # If the dependency is a target built by the same makefile, add a reverse dependency link
-         # (dependent) and increment the block count for this target.
-         if isinstance(dep, Target):
-            # Use weak references to avoid creating reference loops.
-            dep._m_setDependents.add(weakref.ref(self))
-            self._m_cBuildBlocks += 1
 
-   def build(self):
-      """Instantiates a job that will build the output.
+   def _build_tool_should_run(self):
+      """Checks if the target build tool needs to be run to freshen the target.
 
-      abamake.job.Job return
-         Scheduled job, or None if there’s nothing to be built. Some minor processing may still
-         occur synchronously to the main thread in Target.build_complete().
+      bool return
+         True if the build tool needs to be run, or False if the target is up-to-date.
       """
 
-      raise NotImplementedError('Target.build() must be overridden in ' + type(self).__name__)
+      return self._m_mk().metadata.has_target_snapshot_changed(self)
 
-   def build_complete(self, job, iRet):
-      """Invoked by the JobController when the job executed to build this target completes, either
-      in success or in failure.
+   def _build_tool_run(self):
+      """Enqueues any jobs necessary to unconditionally build the target."""
 
-      abamake.job.Job job
-         Job instance, or None if the job was not started (due to e.g. “dry run” mode).
-      int iRet
-         Return value of the job’s execution. If job is None, this will be 0 (success).
-      int return
-         New return value. Used to report errors in the output of the build job.
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: queuing build tool job(s)', self)
+      # Instantiate the appropriate tool, and have it schedule any applicable jobs.
+      job = self._get_tool().create_jobs(mk, self, self._on_build_tool_run_complete)
+      mk.job_runner.enqueue(job)
+
+   def _on_build_started(self):
+      """Invoked after the target’s build is started."""
+
+      log = self._m_mk().log
+      # Regenerate any out-of-date dependency targets.
+      listDependencyTargets = tuple(filter(
+         lambda dep: isinstance(dep, Target), self._m_listDependencies
+      ))
+      log(log.HIGH, 'build[{}]: updating {} dependency targets', self, len(listDependencyTargets))
+      if listDependencyTargets:
+         self._m_cBlockingDependencies = len(listDependencyTargets)
+         for tgtDependency in listDependencyTargets:
+            tgtDependency.start_build(self)
+      else:
+         # No dependencies are blocking, continue with the build.
+         self._on_dependencies_updated()
+
+   def _on_dependency_updated(self):
+      """Invoked when the build of a dependency completes successfully."""
+
+      log = self._m_mk().log
+      self._m_cBlockingDependencies -= 1
+      log(
+         log.HIGH, 'build[{}]: 1 dependency updated, {} remaining',
+         self, self._m_cBlockingDependencies
+      )
+      if self._m_cBlockingDependencies == 0:
+         # All dependencies up-to-date, continue with the build.
+         self._on_dependencies_updated()
+
+   def _on_dependencies_updated(self):
+      """Invoked after all the target’s dependencies have been updated."""
+
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: all dependencies up-to-date', self)
+      # Now that the dependencies are up-to-date, check if any were rebuilt, causing this Target to
+      # need to be rebuilt as well.
+      if self._build_tool_should_run():
+         self._build_tool_run()
+      else:
+         # There’s nothing to do, so just continue to the next stage.
+         self._on_build_tool_complete()
+
+   def _on_build_tool_run_complete(self):
+      """Invoked after the job that builds the target has completed its execution."""
+
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: updating metadata', self)
+      # TODO: skip this if in dry-run mode.
+      # If the job was successfully executed, the target’s metadata can be updated.
+      mk.metadata.update_target_snapshot(self)
+      self._on_build_tool_complete()
+
+   def _on_build_tool_complete(self):
+      """Invoked after the tool stage of the build has completed, regardless of whether a tool was
+      really run.
       """
 
-      if iRet == 0:
-         # Release all dependent targets.
-         for tgt in self._m_setDependents:
-            # These are weak references.
-            tgt()._m_cBuildBlocks -= 1
-         # If a job was really run (not None), update the target snapshot.
-         if job:
-            self._m_mk().metadata.update_target_snapshot(self)
-      return iRet
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: skipping metadata update', self)
+      self._on_metadata_updated()
+
+   def _on_metadata_updated(self):
+      """Invoked after the metadata for the target has been updated."""
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: unblocking dependents', self)
+      # The target is built at this point, so its dependents can be unblocked.
+      self._m_bUpToDate = True
+      self._m_bBuilding = False
+      for tgtDependent in self._m_setBlockedDependents:
+         tgtDependent()._on_dependency_updated()
+      self._m_setBlockedDependents = None
+      log(log.HIGH, 'build[{}]: end', self)
+
+   def start_build(self, tgtDependent = None):
+      """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
+      them to complete.
+
+      abamake.target.Target tgtDependent
+         Target that will need to be unblocked when the build of this target completes. If self is
+         already up-to-date, tgtDependent will be unblocked immediately.
+      """
+
+      log = self._m_mk().log
+      if self._m_bUpToDate:
+         log(log.HIGH, 'build[{}]: skipping', self)
+         # Nothing to do, but make sure we unblock the dependent target that called this method.
+         if tgtDependent:
+            tgtDependent._on_dependency_updated()
+      else:
+         log(log.HIGH, 'build[{}]: begin', self)
+         if tgtDependent:
+            # Add the dependent target to those we’ll unblock when this build completes.
+            self._m_setBlockedDependents.add(weakref.ref(tgtDependent))
+         if not self._m_bBuilding:
+            self._m_bBuilding = True
+            self._on_build_started()
 
    def dump_dependencies(self, sIndent = ''):
       """TODO: comment."""
@@ -241,15 +329,6 @@ class Target(Dependency):
          print(sIndent + str(dep))
          if isinstance(dep, Target):
             dep.dump_dependencies(sIndent + '  ')
-
-   def dump_dependents(self, sIndent = ''):
-      """TODO: comment."""
-
-      for wdep in self._m_setDependents:
-         dep = wdep()
-         print(sIndent + str(dep))
-         if isinstance(dep, Target):
-            dep.dump_dependents(sIndent + '  ')
 
    def get_dependencies(self, bTargetsOnly = False):
       """Iterates over the dependencies (abamake.target.Dependency instances) for this target.
@@ -265,17 +344,6 @@ class Target(Dependency):
          if not bTargetsOnly or isinstance(dep, Target):
             yield dep
 
-   def get_dependents(self):
-      """Iterates over the targets (abamake.target.Target instances) dependent on this target.
-
-      abamake.target.Target yield
-         Dependent on this target.
-      """
-
-      for wtgt in self._m_setDependents:
-         # Resolve this weak references.
-         yield wtgt()
-
    def _get_tool(self):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
@@ -286,26 +354,7 @@ class Target(Dependency):
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
-   def is_build_blocked(self):
-      """Returns True if the build of this target is blocked, i.e. it requires one ore more
-      dependencies to be built first.
-
-      bool return
-         True if this target can’t be build yet, or False if it can.
-      """
-
-      return self._m_cBuildBlocks > 0
-
-   def is_build_needed(self):
-      """Checks if the target should be (re)built or if it’s up-to-date.
-
-      bool return
-         True if a build is needed, or False otherwise.
-      """
-
-      return self._m_mk().metadata.has_target_snapshot_changed(self)
-
-   def parse_makefile_child(self, elt):
+   def parse_makefile_element_child(self, elt):
       """Validates and processes the specified child element of the target’s XML element.
 
       xml.dom.Element elt
@@ -317,32 +366,13 @@ class Target(Dependency):
       # Default implementation: expect no child elements.
       return False
 
-   def remove_dependency(self, dep):
-      """Removes a target dependency.
-
-      abamake.target.Dependency dep
-         Dependency.
-      """
-
-      self._m_listDependencies.remove(dep)
-      # If the dependency is a target built by the same makefile, remove the reverse dependency link
-      # (dependent) and decrement the block count for this target.
-      if isinstance(dep, Target):
-         # Can’t just use dep._m_setDependents.remove(self) because the set contains weak
-         # references, so self would not be found.
-         for depRev in dep._m_setDependents:
-            if depRev() is self:
-               dep._m_setDependents.remove(depRev)
-               break
-         self._m_cBuildBlocks -= 1
-
    @classmethod
    def select_subclass(cls, eltTarget):
       """Returns the Target-derived class that should be instantiated to model the specified XML
       element.
 
       Subclasses declare their association to an XML element name by using the class decorator
-      @Target.xml_element('xml-element-name').
+      @Target.makefile_type_id('xml-element-name').
 
       xml.dom.Element eltTarget
          Element to parse.
@@ -350,18 +380,18 @@ class Target(Dependency):
          Model class for eltTarget.
       """
 
-      return cls._sm_dictSubclassElementNames.get(eltTarget.nodeName)
+      return cls._sm_dictTypeIds.get(eltTarget.nodeName)
 
    def validate(self):
       """Checks that the target doesn’t have invalid settings that were undetectable by
-      Target.parse_makefile_child().
+      Target.parse_makefile_element_child().
       """
 
       pass
 
-   class xml_element(object):
+   class makefile_type_id(object):
       """Decorator to teach Target.select_subclass() the association of the decorated class with an
-      XML element name.
+      Abamakefile type IDs (XML element name).
 
       str sNodeName
          Name of the element to associate with the decorated class.
@@ -371,7 +401,7 @@ class Target(Dependency):
          self._m_sNodeName = sNodeName
 
       def __call__(self, clsDerived):
-         Target._sm_dictSubclassElementNames[self._m_sNodeName] = clsDerived
+         Target._sm_dictTypeIds[self._m_sNodeName] = clsDerived
          return clsDerived
 
 ####################################################################################################
@@ -457,12 +487,6 @@ class ProcessedSourceTarget(FileTarget):
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
-   def build(self):
-      """See FileTarget.build()."""
-
-      # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      return self._get_tool().create_job(self._m_mk(), self)
-
 ####################################################################################################
 # CxxPreprocessedTarget
 
@@ -497,6 +521,29 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       # TODO: add file-specific flags.
       cxx.add_flags(abamake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
+
+   def _on_build_started(self):
+      """See ProcessedSourceTarget._on_build_started(). Overridden to start a job to collect
+      implicit dependencies (those expressed in the source file via #include statements).
+      """
+
+      # TODO: refactor code shared with CxxObjectTarget._on_build_started().
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: gathering dependencies', self)
+      # TODO: gather implicit dependencies by preprocessing the source, passing
+      # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
+      self._on_implicit_dependencies_gathered()
+
+   def _on_implicit_dependencies_gathered(self):
+      """Invoked after the target’s implicit dependencies have been gathered."""
+
+      # TODO: refactor code shared with CxxObjectTarget._on_implicit_dependencies_gathered().
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: dependencies gathered', self)
+      # Resume with the ProcessedSourceTarget build step we hijacked.
+      ProcessedSourceTarget._on_build_started(self)
 
 ####################################################################################################
 # ObjectTarget
@@ -543,39 +590,34 @@ class CxxObjectTarget(ObjectTarget):
       # TODO: add file-specific flags.
       return cxx
 
+   def _on_build_started(self):
+      """See ObjectTarget._on_build_started(). Overridden to start a job to collect implicit
+      dependencies (those expressed in the source file via #include statements).
+      """
+
+      # TODO: refactor code shared with CxxPreprocessedTarget._on_build_started().
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: gathering dependencies', self)
+      # TODO: gather implicit dependencies by preprocessing the source, passing
+      # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
+      self._on_implicit_dependencies_gathered()
+
+   def _on_implicit_dependencies_gathered(self):
+      """Invoked after the target’s implicit dependencies have been gathered."""
+
+      # TODO: refactor code shared with CxxPreprocessedTarget._on_implicit_dependencies_gathered().
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: dependencies gathered', self)
+      # Resume with the ObjectTarget build step we hijacked.
+      ObjectTarget._on_build_started(self)
+
 ####################################################################################################
-# ExecutableTargetBase
+# BinaryTarget
 
-class ExecutableTargetBase(FileTarget):
-   """Base class for executable program target classes."""
-
-   def build(self):
-      """See FileTarget.build()."""
-
-      mk = self._m_mk()
-      lnk = self._get_tool()
-
-      # Scan this target’s dependencies for linker inputs.
-      bOutputLibPathAdded = False
-      # At this point all the dependencies are available, so add them as inputs.
-      for dep in self._m_listDependencies:
-         if isinstance(dep, ForeignLibDependency):
-            # Strings go directly to the linker’s command line, assuming that they are external
-            # libraries to link to.
-            lnk.add_input_lib(dep.name)
-         elif isinstance(dep, ObjectTarget):
-            lnk.add_input(dep.file_path)
-         elif isinstance(dep, DynLibTarget):
-            lnk.add_input_lib(dep.name)
-            # Since we’re linking to a library built by this makefile, make sure to add the output
-            # “lib” directory to the library search path.
-            if not bOutputLibPathAdded:
-               lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
-               bOutputLibPathAdded = True
-
-      # TODO: add other external dependencies.
-
-      return lnk.create_job(mk, self)
+class BinaryTarget(FileTarget):
+   """Base class for binary (executable) target classes."""
 
    def configure_compiler(self, tool):
       """Configures the specified Tool instance to generate code suitable for linking in this
@@ -602,10 +644,30 @@ class ExecutableTargetBase(FileTarget):
       # Let the platform configure the linker.
       mk.target_platform.configure_tool(lnk)
 
+      # Scan this target’s dependencies for linker inputs.
+      bOutputLibPathAdded = False
+      # At this point all the dependencies are available, so add them as inputs.
+      for dep in self._m_listDependencies:
+         if isinstance(dep, ForeignLibDependency):
+            # Strings go directly to the linker’s command line, assuming that they are external
+            # libraries to link to.
+            lnk.add_input_lib(dep.name)
+         elif isinstance(dep, ObjectTarget):
+            lnk.add_input(dep.file_path)
+         elif isinstance(dep, DynLibTarget):
+            lnk.add_input_lib(dep.name)
+            # Since we’re linking to a library built by this makefile, make sure to add the output
+            # “lib” directory to the library search path.
+            if not bOutputLibPathAdded:
+               lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
+               bOutputLibPathAdded = True
+
+      # TODO: add other external dependencies.
+
       return lnk
 
-   def parse_makefile_child(self, elt):
-      """See FileTarget.parse_makefile_child()."""
+   def parse_makefile_element_child(self, elt):
+      """See FileTarget.parse_makefile_element_child()."""
 
       mk = self._m_mk()
       if elt.nodeName == 'source':
@@ -629,7 +691,7 @@ class ExecutableTargetBase(FileTarget):
          if not dep:
             dep = ForeignLibDependency(sName)
          self.add_dependency(dep)
-      elif elt.nodeName == 'unittest':
+      elif elt.nodeName in ('exeunittest', 'toolunittest'):
          # A unit test must be built after the target it’s supposed to test.
          sName = elt.getAttribute('name')
          tgtUnitTest = mk.get_named_target(sName, None)
@@ -639,17 +701,17 @@ class ExecutableTargetBase(FileTarget):
             )
          tgtUnitTest.add_dependency(self)
       else:
-         return FileTarget.parse_makefile_child(self, elt)
+         return FileTarget.parse_makefile_element_child(self, elt)
       return True
 
 ####################################################################################################
-# NamedExecutableTarget
+# NamedBinaryTarget
 
-class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
-   """Base for named executable program target classes."""
+class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
+   """Base for named binary (executable) target classes."""
 
    def __init__(self, mk, sName, sFilePath):
-      """See NamedTargetMixIn.__init__() and ExecutableTargetBase.__init__().
+      """See NamedTargetMixIn.__init__() and BinaryTarget.__init__().
 
       abamake.Make mk
          Make instance.
@@ -660,19 +722,19 @@ class NamedExecutableTarget(NamedTargetMixIn, ExecutableTargetBase):
       """
 
       NamedTargetMixIn.__init__(self, mk, sName)
-      ExecutableTargetBase.__init__(self, mk, sFilePath)
+      BinaryTarget.__init__(self, mk, sFilePath)
 
 ####################################################################################################
 # ExecutableTarget
 
-@Target.xml_element('exe')
-class ExecutableTarget(NamedExecutableTarget):
+@Target.makefile_type_id('exe')
+class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
    """
 
    def __init__(self, mk, sName):
-      """See NamedExecutableTarget.__init__().
+      """See NamedBinaryTarget.__init__().
 
       abamake.Make mk
          Make instance.
@@ -680,21 +742,21 @@ class ExecutableTarget(NamedExecutableTarget):
          Target name.
       """
 
-      NamedExecutableTarget.__init__(self, mk, sName, os.path.join(
+      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
       ))
 
 ####################################################################################################
 # DynLibTarget
 
-@Target.xml_element('dynlib')
-class DynLibTarget(NamedExecutableTarget):
+@Target.makefile_type_id('dynlib')
+class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
    """
 
    def __init__(self, mk, sName):
-      """See NamedExecutableTarget.__init__().
+      """See NamedBinaryTarget.__init__().
 
       abamake.Make mk
          Make instance.
@@ -702,12 +764,12 @@ class DynLibTarget(NamedExecutableTarget):
          Target name.
       """
 
-      NamedExecutableTarget.__init__(self, mk, sName, os.path.join(
+      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(sName)
       ))
 
    def configure_compiler(self, tool):
-      """See NamedExecutableTarget.configure_compiler()."""
+      """See NamedBinaryTarget.configure_compiler()."""
 
       if isinstance(tool, abamake.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
@@ -719,20 +781,20 @@ class DynLibTarget(NamedExecutableTarget):
          )
 
    def _get_tool(self):
-      """See NamedExecutableTarget._get_tool(). Overridden to tell the linker to generate a dynamic
+      """See NamedBinaryTarget._get_tool(). Overridden to tell the linker to generate a dynamic
       library.
       """
 
-      lnk = NamedExecutableTarget._get_tool(self)
+      lnk = NamedBinaryTarget._get_tool(self)
 
       lnk.add_flags(abamake.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
 ####################################################################################################
-# UnitTestTarget
+# ToolUnitTestTarget
 
-@Target.xml_element('unittest')
-class UnitTestTarget(NamedTargetMixIn, Target):
+@Target.makefile_type_id('toolunittest')
+class ToolUnitTestTarget(NamedTargetMixIn, Target):
    """Target that executes a unit test."""
 
    # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
@@ -740,9 +802,6 @@ class UnitTestTarget(NamedTargetMixIn, Target):
    _m_bBinaryCompare = None
    # Filter (regex) to apply to the comparison operands.
    _m_reFilter = None
-   # UnitTestBuildTarget instance that builds the unit test executable invoked as part of this
-   # target.
-   _m_tgtUnitTestBuild = None
 
    def __init__(self, mk, sName):
       """See NamedTargetMixIn.__init__() and Target.__init__().
@@ -756,125 +815,71 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       NamedTargetMixIn.__init__(self, mk, sName)
       Target.__init__(self, mk)
 
-   def add_dependency(self, dep):
-      """See Target.add_dependency(). Overridden to re-route dependencies to the build target, if
-      any.
+   def _build_tool_run(self):
+      """See Target._build_tool_run()."""
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: no job to run for a ToolUnitTestTarget', self)
+      self._on_build_tool_run_complete()
+
+   def _on_build_tool_run_complete(self):
+      """See Target._on_build_tool_run_complete(). Overridden to perform any comparisons defined for
+      the unit test.
       """
 
-      if self._m_tgtUnitTestBuild:
-         # Forward the dependency to the build target.
-         self._m_tgtUnitTestBuild.add_dependency(dep)
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: validating tool output', self)
+      # Extract and transform the contents of the two dependencies to compare, and generate a
+      # display name for them.
+      listCmpNames = []
+      listCmpOperands = []
+      for dep in self._m_listDependencies:
+         if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
+            # Add as comparison operand the contents of this dependency file.
+            listCmpNames.append(dep.file_path)
+            with open(dep.file_path, 'rb') as fileComparand:
+               listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
+
+      # At this point we expect 0 <= len(listCmpOperands) <= 2, but we’ll check that a few more
+      # lines below.
+      if isinstance(listCmpOperands[0], str):
+         sCmpV = 'internal:text-compare'
+         sCmpQ = 'CMPTXT'
       else:
-         # Our dependency.
-         Target.add_dependency(self, dep)
-
-   def build(self):
-      """See Target.build(). It executes the unit test built by the build target, if any."""
-
-      tgtUnitTestBuild = self._m_tgtUnitTestBuild
-      if tgtUnitTestBuild:
-         # One of the dependencies is a unit test to execute.
-
-         mk = self._m_mk()
-
-         # Prepare the command line.
-         for dep in self._m_listDependencies:
-            if isinstance(dep, UnitTestExecScriptDependency):
-               # We also have a “script” to drive the unit test.
-               listArgs = [dep.file_path]
-               # TODO: support more arguments, once they’re recognized by parse_makefile_child().
-               break
-         else:
-            listArgs = []
-         listArgs.append(tgtUnitTestBuild.file_path)
-
-         # Prepare the arguments for Popen.
-         dictPopenArgs = {
-            'args': listArgs,
-            'env' : tgtUnitTestBuild.get_exec_environ(),
-         }
-         # If we’re using a script to run this unit test, tweak the Popen invocation to run a
-         # possibly non-executable file.
-         if len(listArgs) > 1:
-            mk.target_platform.adjust_popen_args_for_script(dictPopenArgs)
-
-         # If the build target uses abc::testing, run it with the special abc::testing end-point
-         # job, AbacladeUnitTestJob.
-         if tgtUnitTestBuild.uses_abc_testing:
-            clsJob = abamake.job.AbacladeUnitTestJob
-         else:
-            clsJob = abamake.job.ExternalCmdCapturingJob
-         # This will store stdout and stderr of the program to file, and will buffer stdout in
-         # memory so we can use it in build_complete() if we need to, without a disk access.
-         return clsJob(
-            ('TEST', self._m_sName), dictPopenArgs,
-            mk.log, tgtUnitTestBuild.build_log_path, tgtUnitTestBuild.file_path + '.out'
-         )
+         sCmpV = 'internal:binary-compare'
+         sCmpQ = 'CMPBIN'
+      if log.verbosity >= log.LOW:
+         log(log.LOW, '[{}] {} {}', sCmpV, *listCmpNames)
       else:
-         # No unit test to execute; we’ll compare the two files (static or generated by building a
-         # dependency of self) in build_complete().
-         return None
+         log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
 
-   def build_complete(self, job, iRet):
-      """See Target.build_complete(). Performs any comparisons defined as part of the unit test."""
+      # Compare the targets.
+      # TODO: make this asynchronously, passing self._on_tool_output_validated as the on_complete
+      # handler for a new job, instead of doing this and the last line.
+      bEqual = (listCmpOperands[0] == listCmpOperands[1])
+      if not bEqual:
+         log(log.QUIET, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
+         # TODO: report build failure.
+         return
+      # This comparison counts as an additional test case with a single assertion.
+      log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
+
+      self._on_tool_output_validated()
+
+   def _on_tool_output_validated(self):
+      """Invoked after the unit test’s output has been validated."""
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: tool output validated', self)
+      # Resume with the Target build step we hijacked.
+      Target._on_build_tool_run_complete(self)
+
+   def parse_makefile_element_child(self, elt):
+      """See Target.parse_makefile_element_child()."""
 
       mk = self._m_mk()
-      # Only go ahead in case of success of the job, or if any of the target’s inputs has changed,
-      # and we did build the files to compare (not in “dry run” mode).
-      if iRet == 0 and (
-         job or mk.metadata.has_target_snapshot_changed(self) or mk.job_controller.force_test
-      ) and not mk.job_controller.dry_run:
-         # Extract and transform the contents of the two dependencies to compare, and generate a
-         # display name for them.
-         listCmpNames = []
-         listCmpOperands = []
-         for dep in self._m_listDependencies:
-            if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
-               # Add as comparison operand the contents of this dependency file.
-               listCmpNames.append(dep.file_path)
-               with open(dep.file_path, 'rb') as fileComparand:
-                  listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
-
-         # At this point we expect 0 <= len(listCmpOperands) <= 2, but we’ll check that a few more
-         # lines below.
-         if listCmpOperands:
-            if self._m_tgtUnitTestBuild:
-               # We have a build target and at least another comparison operand, so the job that
-               # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
-               # comparison operand.
-               listCmpNames.append(job.stdout_file_path)
-               listCmpOperands.append(self._transform_comparison_operand(job.stdout))
-
-            log = mk.log
-            if isinstance(listCmpOperands[0], str):
-               sCmpV = 'internal:text-compare'
-               sCmpQ = 'CMPTXT'
-            else:
-               sCmpV = 'internal:binary-compare'
-               sCmpQ = 'CMPBIN'
-            if log.verbosity >= log.LOW:
-               log(log.LOW, '[{}] {} {}', sCmpV, *listCmpNames)
-            else:
-               log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
-
-            # Compare the targets.
-            bEqual = (listCmpOperands[0] == listCmpOperands[1])
-            if not bEqual:
-               log(None, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
-               iRet = 1
-            # This comparison counts as an additional test case with a single assertion.
-            log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
-
-         if not job:
-            job = True
-
-      return Target.build_complete(self, job, iRet)
-
-   def parse_makefile_child(self, elt):
-      """See Target.parse_makefile_child()."""
-
-      mk = self._m_mk()
-      if elt.nodeName == 'unittest':
+      if elt.nodeName in ('exeunittest', 'toolunittest'):
          raise abamake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
       elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
          # Due to specifying a non-default tool, this <source> does not generate an object file or
@@ -913,45 +918,6 @@ class UnitTestTarget(NamedTargetMixIn, Target):
          # TODO: support more attributes, such as command-line args for the script.
          # Note that we don’t invoke our add_dependency() override.
          Target.add_dependency(self, dep)
-      elif not Target.parse_makefile_child(self, elt):
-         # This child element may indicate that this target requires a separate build target to
-         # create the unit test executable.
-         #
-         # If we still don’t have an associated build target, instantiate one and transfer to it any
-         # dependencies not added by previous calls to this method (we can tell by their type), then
-         # allow it to process this child element.
-         # If the build target can handle it, then self will have correctly changed into a build +
-         # run pair with its build target.
-         # If the build target doesn’t know what to do with it, we’ll forward its False return
-         # value, which means that Abamake will terminate and the erroneous creation of a separate
-         # build target won’t have any ill effects.
-         tgtUnitTestBuild = self._m_tgtUnitTestBuild
-         if not tgtUnitTestBuild:
-            # Create the build target.
-            tgtUnitTestBuild = UnitTestBuildTarget(mk, self._m_sName)
-
-            # Transfer any dependencies we don’t handle.
-            i = 0
-            listDeps = self._m_listDependencies
-            while i < len(listDeps):
-               dep = listDeps[i]
-               if isinstance(dep, (
-                  CxxPreprocessedTarget, OutputRerefenceDependency, UnitTestExecScriptDependency,
-               )):
-                  # Keep this dependency and move on to the next one.
-                  i += 1
-               else:
-                  # Transfer this dependency to the build target.
-                  tgtUnitTestBuild.add_dependency(dep)
-                  self.remove_dependency(dep)
-
-            # Add the build target as a dependency.
-            # Note that we don’t invoke our add_dependency() override.
-            Target.add_dependency(self, tgtUnitTestBuild)
-            self._m_tgtUnitTestBuild = tgtUnitTestBuild
-
-         # Let the build target decide whether this child element is valid or not.
-         return tgtUnitTestBuild.parse_makefile_child(elt)
       return True
 
    def _transform_comparison_operand(self, oCmpOp):
@@ -967,6 +933,8 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       object return
          Transformed comparison operand.
       """
+
+      # TODO: refactor code shared with ExecutableUnitTestTarget._transform_comparison_operand().
 
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply different transformations.
@@ -988,36 +956,36 @@ class UnitTestTarget(NamedTargetMixIn, Target):
       for dep in self._m_listDependencies:
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             cStaticCmpOperands += 1
-         elif isinstance(dep, UnitTestBuildTarget):
-            # The output of the build target will be one of the two comparison operands.
-            assert dep is self._m_tgtUnitTestBuild
-
-      if self._m_tgtUnitTestBuild:
-         if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
-            # Expected a file against which to compare the unit test’s output.
-            raise abamake.MakefileError(
-               '{}: can’t compare the unit test output against more than one file'.format(self)
-            )
-      else:
-         if cStaticCmpOperands != 0 and cStaticCmpOperands != 2:
-            # Expected two files to compare.
-            raise abamake.MakefileError(
-               '{}: need exactly two files/outputs to compare'.format(self)
-            )
+      if cStaticCmpOperands != 2:
+         raise abamake.MakefileError(
+            '{}: need exactly two files/outputs to compare'.format(self)
+         )
 
 ####################################################################################################
-# UnitTestBuildTarget
+# ExecutableUnitTestTarget
 
-class UnitTestBuildTarget(ExecutableTargetBase):
+@Target.makefile_type_id('exeunittest')
+class ExecutableUnitTestTarget(NamedBinaryTarget):
    """Builds an executable unit test. The output file will be placed in the “bin/unittest” directory
    relative to the output base directory.
    """
 
-   # See UnitTestBuildTarget.uses_abc_testing.
+   # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
+   # treated as strings.
+   _m_bBinaryCompare = None
+   # Filter (regex) to apply to the comparison operands.
+   _m_reFilter = None
+   # True if the unit test executable uses abc::testing to execute test cases and report their
+   # results, making it compatible with being run via AbacladeUnitTestJob, or False if it’s a
+   # monolithic single test, executed via ExternalCmdCapturingJob.
+   #
+   # TODO: make this a three-state, with True/False meaning explicit declaration, for example by
+   # <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with auto-
+   # detect that can change to True using the current logic in add_dependency().
    _m_bUsesAbacladeTesting = None
 
    def __init__(self, mk, sName):
-      """See ExecutableTargetBase.__init__().
+      """See NamedBinaryTarget.__init__().
 
       abamake.Make mk
          Make instance.
@@ -1025,12 +993,12 @@ class UnitTestBuildTarget(ExecutableTargetBase):
          Target name.
       """
 
-      ExecutableTargetBase.__init__(self, mk, os.path.join(
+      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'bin', 'unittest', mk.target_platform.exe_file_name(sName)
       ))
 
    def add_dependency(self, dep):
-      """See Target.add_dependency(). Overridden to detect if the unit test is linked to
+      """See NamedBinaryTarget.add_dependency(). Overridden to detect if the unit test is linked to
       abaclade-testing, making it compatible with being run via AbacladeUnitTestJob.
       """
 
@@ -1039,7 +1007,7 @@ class UnitTestBuildTarget(ExecutableTargetBase):
          if dep.name == 'abaclade-testing':
             self._m_bUsesAbacladeTesting = True
 
-      Target.add_dependency(self, dep)
+      NamedBinaryTarget.add_dependency(self, dep)
 
    def get_exec_environ(self):
       """Generates an os.environ-like dictionary containing any variables necessary to execute the
@@ -1059,15 +1027,165 @@ class UnitTestBuildTarget(ExecutableTargetBase):
          )
       return dictEnv
 
-   def _get_uses_abc_testing(self):
-      return self._m_bUsesAbacladeTesting
+   def _on_build_tool_run_complete(self):
+      """See NamedBinaryTarget._on_build_tool_run_complete(). Overridden to execute the freshly-
+      built unit test.
+      """
 
-   uses_abc_testing = property(_get_uses_abc_testing, doc = """
-      True if the unit test executable uses abc::testing to execute test cases and report their
-      results, making it compatible with being run via AbacladeUnitTestJob, or False if it’s a
-      monolithic single test, executed via ExternalCmdCapturingJob.
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: executing unit test', self)
 
-      TODO: make this a three-state, with True/False meaning explicit declaration, for example by
-      <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with
-      auto-detect that can change to True using the current logic in add_dependency().
-   """)
+      # Prepare the command line.
+      for dep in self._m_listDependencies:
+         if isinstance(dep, UnitTestExecScriptDependency):
+            # We also have a “script” to drive the unit test.
+            listArgs = [dep.file_path]
+            # TODO: support more arguments once parse_makefile_element_child() can recognize them.
+            break
+      else:
+         listArgs = []
+      listArgs.append(self.file_path)
+
+      # Prepare the arguments for Popen.
+      dictPopenArgs = {
+         'args': listArgs,
+         'env' : self.get_exec_environ(),
+      }
+      # If we’re using a script to run this unit test, tweak the Popen invocation to run a possibly
+      # non-executable file.
+      if len(listArgs) > 1:
+         mk.target_platform.adjust_popen_args_for_script(dictPopenArgs)
+
+      # If the build target uses abc::testing, run it with the special abc::testing job,
+      # AbacladeUnitTestJob.
+      if self._m_bUsesAbacladeTesting:
+         clsJob = abamake.job.AbacladeUnitTestJob
+      else:
+         clsJob = abamake.job.ExternalCmdCapturingJob
+      # This will store stdout and stderr of the program to file, and will buffer stdout in
+      # memory so we can use it in _on_build_tool_run_complete() if we need to, without disk access.
+      job = clsJob(
+         self._on_test_run_complete, ('TEST', self._m_sName), dictPopenArgs,
+         mk.log, self.build_log_path, self.file_path + '.out'
+      )
+      mk.job_runner.enqueue(job)
+
+   def _on_test_run_complete(self):
+      """Invoked after the unit test has been run."""
+
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: updating dependencies', self)
+
+      # Extract and transform the contents of the two dependencies to compare, and generate a
+      # display name for them.
+      listCmpNames = []
+      listCmpOperands = []
+      for dep in self._m_listDependencies:
+         if isinstance(dep, OutputRerefenceDependency):
+            # Add as comparison operand the contents of this dependency file.
+            listCmpNames.append(dep.file_path)
+            with open(dep.file_path, 'rb') as fileComparand:
+               listCmpOperands.append(self._transform_comparison_operand(fileComparand.read()))
+
+      # At this point we expect 0 <= len(listCmpOperands) <= 2, but we’ll check that a few more
+      # lines below.
+      if listCmpOperands:
+         # We have a build target and at least another comparison operand, so the job that
+         # just completed must be of type ExternalPipedCommandJob, and we’ll add its output as
+         # comparison operand.
+         listCmpNames.append(job.stdout_file_path)
+         listCmpOperands.append(self._transform_comparison_operand(job.stdout))
+
+         if isinstance(listCmpOperands[0], str):
+            sCmpV = 'internal:text-compare'
+            sCmpQ = 'CMPTXT'
+         else:
+            sCmpV = 'internal:binary-compare'
+            sCmpQ = 'CMPBIN'
+         if log.verbosity >= log.LOW:
+            log(log.LOW, '[{}] {} {}', sCmpV, *listCmpNames)
+         else:
+            log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
+
+         # Compare the targets.
+         bEqual = (listCmpOperands[0] == listCmpOperands[1])
+         if not bEqual:
+            log(log.QUIET, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
+            iRet = 1
+         # This comparison counts as an additional test case with a single assertion.
+         log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
+         if iRet != 0:
+            # TODO: report build failure.
+            return
+
+      NamedBinaryTarget._on_build_tool_complete(self)
+
+   def parse_makefile_element_child(self, elt):
+      """See NamedBinaryTarget.parse_makefile_element_child()."""
+
+      mk = self._m_mk()
+      if elt.nodeName in ('exeunittest', 'toolunittest'):
+         raise abamake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
+      elif elt.nodeName == 'expected-output':
+         dep = OutputRerefenceDependency(elt.getAttribute('path'))
+         # Note that we don’t invoke our add_dependency() override.
+         NamedBinaryTarget.add_dependency(self, dep)
+      elif elt.nodeName == 'output-transform':
+         sFilter = elt.getAttribute('filter')
+         if sFilter:
+            self._m_reFilter = re.compile(sFilter, re.DOTALL)
+         else:
+            raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
+      elif elt.nodeName == 'script':
+         dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
+         # TODO: support <script name="…"> to refer to a program built by the same makefile.
+         # TODO: support more attributes, such as command-line args for the script.
+         # Note that we don’t invoke our add_dependency() override.
+         NamedBinaryTarget.add_dependency(self, dep)
+      else:
+         return NamedBinaryTarget.parse_makefile_element_child(self, elt)
+      return True
+
+   def _transform_comparison_operand(self, oCmpOp):
+      """Transforms a comparison operand according to any <output-transform> rules specified in the
+      makefile, and returns the result.
+
+      Some transformations require that the operand is a string; this method will convert a bytes
+      instance into a str in a way that mimic what an io.TextIOBase object would do. This allows to
+      automatically adjust to performing text-based comparisons (as opposed to bytes-based).
+
+      object oCmpOp
+         str or bytes instance to transform.
+      object return
+         Transformed comparison operand.
+      """
+
+      # TODO: refactor code shared with ToolUnitTestTarget._transform_comparison_operand().
+
+      # Apply the only supported filter.
+      # TODO: use an interface/specialization to apply different transformations.
+      if self._m_reFilter:
+         # This transformation requires that the operand is a string, so convert oCmpOp into one.
+         if not isinstance(oCmpOp, str):
+            oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
+         oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
+
+      return oCmpOp
+
+   def validate(self):
+      """See NamedBinaryTarget.validate()."""
+
+      NamedBinaryTarget.validate(self)
+
+      # Count how many non-output (static) comparison operands have been specified for this target.
+      cStaticCmpOperands = 0
+      for dep in self._m_listDependencies:
+         if isinstance(dep, OutputRerefenceDependency):
+            cStaticCmpOperands += 1
+      if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
+         # Expected a file against which to compare the unit test’s output.
+         raise abamake.MakefileError(
+            '{}: can’t compare the unit test output against more than one file'.format(self)
+         )

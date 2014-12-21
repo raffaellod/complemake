@@ -181,22 +181,22 @@ class TargetReferenceError(MakefileError):
 # Make
 
 class Make(object):
-   """Parses an Abamakefile (.abamk) and exposes a JobController instance that can be used to
+   """Parses an Abamakefile (.abamk) and exposes a abamake.job.Runner instance that can be used to
    schedule target builds and run them.
 
    Example usage:
 
       mk = abamake.Make()
       mk.parse('project.abamk')
-      mk.job_controller.schedule_build(mk.get_named_target('projectbin'))
-      mk.job_controller.build_scheduled_targets()
+      mk.get_named_target('projectbin').start_build()
+      mk.job_runner.run()
    """
 
    # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have
    # a file path assigned (file path -> Target).
    _m_dictFileTargets = None
-   # See Make.job_controller.
-   _m_jc = None
+   # See Make.job_runner.
+   _m_jr = None
    # See Make.log.
    _m_log = None
    # See Make.metadata.
@@ -218,7 +218,7 @@ class Make(object):
       """Constructor."""
 
       self._m_dictFileTargets = {}
-      self._m_jc = job.JobController(self)
+      self._m_jr = job.Runner(self)
       self._m_log = logging.Logger(logging.LogGenerator())
       self._m_mds = None
       self._m_dictNamedTargets = {}
@@ -259,6 +259,24 @@ class Make(object):
       """
 
       self._m_setTargets.add(tgt)
+
+   def build_targets(self, iterTargets):
+      """Builds the specified targets, as well as their dependencies, as needed.
+
+      iterable(abamake.target.Target*) iterTargets
+         Targets to be built.
+      bool return
+         True if all the targets were built successfuly, or False otherwise.
+      """
+
+      # Begin building the selected targets.
+      for tgt in iterTargets:
+         tgt.start_build()
+      # Keep running until all queued jobs have completed.
+      cFailedBuilds = self._m_jr.run()
+      # Write any new metadata.
+      self._m_mds.write()
+      return cFailedBuilds == 0
 
    def get_file_target(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a file target given its file path, raising an exception if no such target exists
@@ -312,10 +330,10 @@ class Make(object):
          return True
       return False
 
-   def _get_job_controller(self):
-      return self._m_jc
+   def _get_job_runner(self):
+      return self._m_jr
 
-   job_controller = property(_get_job_controller, doc = """Job scheduler/controller.""")
+   job_runner = property(_get_job_runner, doc = """Job runner.""")
 
    def _get_log(self):
       return self._m_log
@@ -372,8 +390,8 @@ class Make(object):
          any additional targets parsed.
       bool bTopLevel
          If True, this method will raise exceptions in case of non-target XML nodes; otherwise it
-         assumes that a later invocation of Target.parse_makefile_child() will validate the contents
-         of eltParent.
+         assumes that a later invocation of Target.parse_makefile_element_child() will validate the
+         contents of eltParent.
       """
 
       for elt in eltParent.childNodes:
@@ -416,10 +434,10 @@ class Make(object):
 
       # Do a first scan of the document to instantiate all the defined targets and associated with
       # their respective XML elements. By instantiating all targets upfront we allow for
-      # Target.parse_makefile_child() to always find a referenced target even it it was defined
-      # after the target on which parse_makefile_child() is called, and to determine on-the-fly
-      # whether a referenced <dynlib> is a target we should build or if we should expect to find it
-      # somewhere else.
+      # Target.parse_makefile_element_child() to always find a referenced target even it it was
+      # defined after the target on which parse_makefile_element_child() is called, and to determine
+      # on-the-fly whether a referenced <dynlib> is a target we should build or if we should expect
+      # to find it somewhere else.
       listTargetsAndNodes = []
       self._parse_collect_targets(doc.documentElement, listTargetsAndNodes)
 
@@ -432,9 +450,9 @@ class Make(object):
                   raise MakefileSyntaxError(
                      '{}: expected XML element, found: {}'.format(tgt, nd.nodeName)
                   )
-               if not tgt.parse_makefile_child(nd):
-                  # Target.parse_makefile_child() returns False when it doesn’t know how to handle
-                  # the specified child element.
+               if not tgt.parse_makefile_element_child(nd):
+                  # Target.parse_makefile_element_child() returns False when it doesn’t know how to
+                  # handle the specified child element.
                   raise MakefileSyntaxError(
                      '{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName)
                   )
@@ -458,13 +476,6 @@ class Make(object):
       for tgt in self._m_dictNamedTargets.values():
          print(str(tgt))
          tgt.dump_dependencies('  ')
-      print('')
-
-      print('Reverse dependencies')
-      print('--------------------')
-      for tgt in self._m_dictNamedTargets.values():
-         print(str(tgt))
-         tgt.dump_dependents('  ')
       print('')
 
    def validate_dependency_graph(self):
@@ -491,7 +502,7 @@ class Make(object):
 
       abamake.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
-      set listDependents
+      list listDependents
          Ancestors of tgtSubRoot. An ordered set with fast push/pop would be faster, since we
          performs a lot of lookups in it.
       set setValidatedSubtrees
@@ -509,8 +520,7 @@ class Make(object):
                # will yield all the nodes (targets) in the cycle. Note that listDependents does
                # include tgtSubRoot.
                raise DependencyCycleError(
-                  'dependency graph validation failed, cycle detected:',
-                  listDependents[i:]
+                  'dependency graph validation failed, cycle detected:', listDependents[i:]
                )
          if tgtDependency not in setValidatedSubtrees:
             # Recurse to verify that this dependency’s subtree doesn’t contain cycles.

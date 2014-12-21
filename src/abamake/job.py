@@ -46,6 +46,7 @@ TODO: link to documentation for abc::testing support in Abamake.
 import io
 import multiprocessing
 import os
+import struct
 import subprocess
 import sys
 import threading
@@ -60,11 +61,21 @@ import abamake.target
 # Job
 
 class Job(object):
-   """Job to be executed by a JobController instance. See [DOC:6821 Abamake ‒ Execution of external
-   commands] for an overview on external command execution in Abamake.
+   """Job to be executed by a abamake.job.Runner instance. See [DOC:6821 Abamake ‒ Execution of
+   external commands] for an overview on external command execution in Abamake.
    """
 
-   __slots__ = ()
+   # Function to call when the job completes.
+   _m_fnOnComplete = None
+
+   def __init__(self, fnOnComplete):
+      """Constructor.
+
+      callable fnOnComplete
+         Function to be called when the job completes.
+      """
+
+      self._m_fnOnComplete = fnOnComplete
 
    def get_quiet_command(self):
       """Returns a command summary for Make to print out in quiet mode.
@@ -89,83 +100,58 @@ class Job(object):
          'Job.get_verbose_command() must be overridden in ' + type(self).__name__
       )
 
-   def poll(self):
-      """Returns the execution status of the job. If the job is never started (e.g. due to “dry run”
-      mode), the return value will be 0.
+   def on_complete(self):
+      """Invokes the on_complete handler."""
+
+      self._m_fnOnComplete()
+
+####################################################################################################
+# SynchronousJob
+
+class SynchronousJob(Job):
+   """TODO: comment."""
+
+   def run(self):
+      # The default implementation is a no-op and always returns success.
+      return 0
+
+####################################################################################################
+# AsynchronousJob
+
+class AsynchronousJob(Job):
+   """TODO: comment."""
+
+   # Weak reference to the abamake.job.Runner that called start().
+   _m_runner = None
+
+   def __init__(self, fnOnComplete):
+      """See Job.__init__()."""
+
+      Job.__init__(self, fnOnComplete)
+
+      self._m_runner = None
+
+   def join(self):
+      """Waits for any outstanding processes or threads related to the job, returning the job’s
+      exit code.
 
       int return
-         Exit code of the job, or None if the job is still running, or 0 if the job was not started.
+         Return code of the job.
       """
 
-      raise NotImplementedError('Job.poll() must be overridden in ' + type(self).__name__)
+      # The default implementation has nothing to wait for and always returns success.
+      return 0
 
-   def start(self):
-      """Starts the job."""
+   def start(self, runner):
+      """Starts processes and threads required to run the job."""
 
-      pass
-
-####################################################################################################
-# NoopJob
-
-class NoopJob(Job):
-   """No-op job. Used to avoid special-case logic to handle targets that don’t need to be (re)built.
-   """
-
-   __slots__ = (
-      # Command summary to print out in quiet mode.
-      '_m_iterQuietCmd',
-      # Value that poll() will return.
-      '_m_iRet',
-      # Command to print out in verbose mode.
-      '_m_sVerboseCmd',
-   )
-
-   def __init__(self, iRet, iterQuietCmd = ('NOOP',), sVerboseCmd = '[internal:noop]'):
-      """Constructor.
-
-      int iRet
-         Value that poll() will return.
-      iterable(str, str*) iterQuietCmd
-         “Quiet mode” command; see return value of Job.get_quiet_command().
-      str sVerboseCmd
-         “Verbose mode” command; see return value of Job.get_verbose_command().
-      """
-
-      Job.__init__(self)
-
-      self._m_iterQuietCmd = iterQuietCmd
-      self._m_iRet = iRet
-      self._m_sVerboseCmd = sVerboseCmd
-
-   def get_quiet_command(self):
-      """See Job.get_quiet_command()."""
-
-      return self._m_iterQuietCmd
-
-   def get_verbose_command(self):
-      """See Job.get_verbose_command()."""
-
-      return self._m_sVerboseCmd
-
-   def poll(self):
-      """See Job.poll()."""
-
-      return self._m_iRet
-
-####################################################################################################
-# SkippedBuildJob
-
-class SkippedBuildJob(NoopJob):
-   def __init__(self):
-      """See NoopJob.__init__()."""
-
-      NoopJob.__init__(self, 0, ('SKIP',), sVerboseCmd = '[internal:skipped-build]')
-
+      self._m_runner = weakref.ref(runner)
+      # The default implementation doesn’t start anything.
 
 ####################################################################################################
 # ExternalCmdJob
 
-class ExternalCmdJob(Job):
+class ExternalCmdJob(AsynchronousJob):
    """Invokes an external program, capturing stdout and stderr.
 
    The standard output is made available to subclasses via the overridable _stdout_chunk_read(). The
@@ -176,26 +162,26 @@ class ExternalCmdJob(Job):
    this can be overridden in a subclass.
    """
 
-   __slots__ = (
-      # Logger instance.
-      '_m_log',
-      # Controlled Popen instance.
-      '_m_popen',
-      # Arguments to be passed to Popen’s constructor.
-      '_m_dictPopenArgs',
-      # Command summary to print out in quiet mode.
-      '_m_iterQuietCmd',
-      # See ExternalCmdJob.stderr_file_path.
-      '_m_sStdErrFilePath',
-      # Thread that reads from the job process’ stderr.
-      '_m_thrStdErrReader',
-      # Thread that reads from the job process’ stdout.
-      '_m_thrStdOutReader',
-   )
+   # Logger instance.
+   _m_log = None
+   # Controlled Popen instance.
+   _m_popen = None
+   # Arguments to be passed to Popen’s constructor.
+   _m_dictPopenArgs = None
+   # Command summary to print out in quiet mode.
+   _m_iterQuietCmd = None
+   # See ExternalCmdJob.stderr_file_path.
+   _m_sStdErrFilePath = None
+   # Thread that reads from the job process’ stderr.
+   _m_thrStdErrReader = None
+   # Thread that reads from the job process’ stdout.
+   _m_thrStdOutReader = None
 
-   def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
-      """See Job.__init__().
+   def __init__(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
+      """See AsynchronousJob.__init__().
 
+      callable fnOnComplete
+         Function to be called when the job completes.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
@@ -211,7 +197,7 @@ class ExternalCmdJob(Job):
          Path to the file where the stderr of the process will be saved.
       """
 
-      Job.__init__(self)
+      AsynchronousJob.__init__(self, fnOnComplete)
 
       self._m_log = log
       self._m_popen = None
@@ -233,34 +219,33 @@ class ExternalCmdJob(Job):
          raise ValueError('invalid value for dictPopenArgs[\'stdout\']')
 
    def get_quiet_command(self):
-      """See Job.get_quiet_command()."""
+      """See AsynchronousJob.get_quiet_command()."""
 
       return self._m_iterQuietCmd
 
    def get_verbose_command(self):
-      """See Job.get_verbose_command()."""
+      """See AsynchronousJob.get_verbose_command()."""
 
       return ' '.join(self._m_dictPopenArgs['args'])
 
-   def poll(self):
-      """See Job.poll()."""
+   def join(self):
+      """See AsynchronousJob.join()."""
 
       if self._m_popen:
-         iRet = self._m_popen.poll()
-         if iRet is not None:
-            # The process terminated, so wait for the I/O threads to do the same.
-            self._m_thrStdErrReader.join()
-            if self._m_thrStdOutReader:
-               self._m_thrStdOutReader.join()
+         iRet = self._m_popen.wait()
+         self._m_thrStdErrReader.join()
+         if self._m_thrStdOutReader:
+            self._m_thrStdOutReader.join()
+         return iRet
       else:
-         iRet = 0
-      return iRet
+         return None
 
-   def start(self):
-      """See Job.start()."""
+   def start(self, runner):
+      """See AsynchronousJob.start()."""
+
+      AsynchronousJob.start(self, runner)
 
       self._m_popen = subprocess.Popen(**self._m_dictPopenArgs)
-
       # Start the I/O threads.
       self._m_thrStdErrReader = threading.Thread(target = self._stderr_reader_thread)
       self._m_thrStdErrReader.start()
@@ -333,7 +318,8 @@ class ExternalCmdJob(Job):
       while True:
          by = fileStdOutRaw.read(io.DEFAULT_BUFFER_SIZE)
          if not by:
-            # EOF.
+            # EOF; tell the runner that this job is finished.
+            self._m_runner().job_complete(self)
             break
          self._stdout_chunk_read(by)
 
@@ -348,18 +334,20 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
    thread when the process terminates.
    """
 
-   __slots__ = (
-      # See ExternalCmdCapturingJob.stdout.
-      '_m_byStdOut',
-      # Collects the job process’ output on disk.
-      '_m_fileStdOut',
-      # See ExternalCmdCapturingJob.stdout_file_path.
-      '_m_sStdOutFilePath',
-   )
+   # See ExternalCmdCapturingJob.stdout.
+   _m_byStdOut = None
+   # Collects the job process’ output on disk.
+   _m_fileStdOut = None
+   # See ExternalCmdCapturingJob.stdout_file_path.
+   _m_sStdOutFilePath = None
 
-   def __init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath, sStdOutFilePath):
+   def __init__(
+      self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath, sStdOutFilePath
+   ):
       """See ExternalCmdJob.__init__().
 
+      callable fnOnComplete
+         Function to be called when the job completes.
       iterable(str, str*) iterQuietCmd
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
@@ -372,26 +360,24 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          Path to the file where the stdout of the process will be saved.
       """
 
-      ExternalCmdJob.__init__(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
+      ExternalCmdJob.__init__(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
 
       self._m_byStdOut = None
       self._m_fileStdOut = None
       self._m_sStdOutFilePath = sStdOutFilePath
 
-   def poll(self):
-      """See Job.poll(). Overridden to make sure we close _m_fileStdOut as soon as the process
-      terminates.
-      """
+   def join(self):
+      """See ExternalCmdJob.join(). Overridden to make sure we close _m_fileStdOut."""
 
-      iRet = ExternalCmdJob.poll(self)
+      iRet = ExternalCmdJob.join(self)
 
-      if self._m_popen and iRet is not None:
+      if self._m_popen:
          # Note that at this point, _stdout_chunk_read() won’t be called again.
          self._m_fileStdOut.close()
          self._m_fileStdOut = None
       return iRet
 
-   def start(self):
+   def start(self, runner):
       """See ExternalCmdCapturingJob.start()."""
 
       # Make sure that the directory in which we’ll write stdout exists.
@@ -400,7 +386,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       self._m_byStdOut = b''
       self._m_fileStdOut = open(self._m_sStdOutFilePath, 'wb')
 
-      ExternalCmdJob.start(self)
+      return ExternalCmdJob.start(self, runner)
 
    def _get_stdout(self):
       return self._m_byStdOut
@@ -432,18 +418,16 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
    parse and log.
    """
 
-   __slots__ = (
-      # Title of the test case being currently executed.
-      '_m_sCurrTestCase',
-      # Count of failed assertions for the current test case.
-      '_m_cFailedTestAssertions',
-      # Collects the job process’ output on disk.
-      '_m_fileStdOut',
-      # See ExternalCmdCapturingJob.stdout_file_path.
-      '_m_sStdOutFilePath',
-      # Count of test assertions performed for the current test case.
-      '_m_cTotalTestAssertions',
-   )
+   # Title of the test case being currently executed.
+   _m_sCurrTestCase = None
+   # Count of failed assertions for the current test case.
+   _m_cFailedTestAssertions = None
+   # Collects the job process’ output on disk.
+   _m_fileStdOut = None
+   # See ExternalCmdCapturingJob.stdout_file_path.
+   _m_sStdOutFilePath = None
+   # Count of test assertions performed for the current test case.
+   _m_cTotalTestAssertions = None
 
    def _stderr_line_read(self, sLine):
       """See ExternalCmdCapturingJob._stderr_line_read(). Overridden to interpret information sent
@@ -485,27 +469,26 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
          self._m_log(None, '{}: {}', self._m_iterQuietCmd[1], sLine)
 
 ####################################################################################################
-# JobController
+# Runner
 
-class JobController(object):
-   """Schedules any jobs necessary to build targets in an Abamakefile (.abamk), running them with
-   the selected degree of parallelism.
-   """
+class Runner(object):
 
-   # See JobController.dry_run.
-   _m_bDryRun = False
-   # See JobController.force_build.
-   _m_bForceBuild = False
-   # See JobController.force_test.
-   _m_bForceTest = False
-   # See JobController.keep_going.
-   _m_bKeepGoing = False
+   # Type of a message written to/read from the job status queue.
+   _smc_structJobsStatusQueueMessage = struct.Struct('P')
+   # Pipe end used by the main thread to get status updates from process-controlling threads.
+   _m_fdJobsStatusQueueRead = None
+   # Pipe end used by process-controlling threads to communicate with the main thread.
+   _m_fdJobsStatusQueueWrite = None
+   # Lock that must be acquired prior to writing to _m_fdJobsStatusQueueWrite.
+   _m_lockJobsStatusQueueWrite = None
    # Weak reference to the owning abamake.Make instance.
    _m_mk = None
-   # Running jobs for each target build (Job -> Target).
+   # Maximum number of concurrent jobs, also known as degree of parallelism.
+   _m_cbMaxRunningJobs = 4
+   # Maps the ID of running jobs with the corresponding Job instances.
    _m_dictRunningJobs = None
-   # Scheduled target builds.
-   _m_setScheduledBuilds = None
+   # Jobs queued to be run.
+   _m_setQueuedJobs = None
 
    def __init__(self, mk):
       """Constructor.
@@ -516,253 +499,105 @@ class JobController(object):
 
       self._m_mk = weakref.ref(mk)
       self._m_dictRunningJobs = {}
-      self.running_jobs_max = multiprocessing.cpu_count()
-      self._m_setScheduledBuilds = set()
+      self._m_fdJobsStatusQueueRead = None
+      self._m_fdJobsStatusQueueWrite = None
+      self._m_lockJobsStatusQueueWrite = threading.Lock()
+      self._m_setQueuedJobs = set()
 
-   def build_scheduled_targets(self):
-      """Builds any targets scheduled for build by JobController.schedule_build().
+   def enqueue(self, job):
+      """TODO: comment."""
 
-      It allows for incremental builds by invoking Target.is_build_needed() before proceeding to
-      build a target; it also supports unconditional builds as determined by the
-      JobController.force_build setting, as well as no-op builds depending on the setting of
-      JobController.dry_run.
+      if isinstance(job, SynchronousJob):
+         # Run the job immediately.
+         self._run_synchronous_job(job)
+      else:
+         # If there’s a free job slot, start the job now, otherwise queue it for later.
+         if len(self._m_dictRunningJobs) < self._m_cbMaxRunningJobs:
+            self._start_asynchronous_job(job)
+         else:
+            self._m_setQueuedJobs.add(job)
 
-      It repeatedly scans the scheduled targets set for targets that are ready to be built, then
-      goes ahead to start the jobs to build them. At the same time, it enforces the limit on the
-      degree of parallelism (see JobControl.running_jobs_max), by waiting for a job slot to free up
-      before attempting to start a new job.
-
-      int return
-         Count of builds that completed in failure.
-      """
+   def run(self):
+      """Processes the job queue."""
 
       log = self._m_mk().log
-      cFailedBuildsTotal = 0
+      self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
+      bProcessQueue = True
       try:
-         while self._m_setScheduledBuilds:
-            # Make sure any completed jobs are collected.
-            cFailedBuilds = self._collect_completed_jobs(0)
-            # Make sure we have at least one free job slot.
-            while len(self._m_dictRunningJobs) == self.running_jobs_max:
-               # Wait for one or more jobs slots to free up.
-               cFailedBuilds += self._collect_completed_jobs(1)
+         while self._m_dictRunningJobs:
+            # Blocking read.
+            log(log.MEDIUM, 'run: waiting for a job to complete')
+            idJob = self._read_jobs_status_queue()
 
-            cFailedBuildsTotal += cFailedBuilds
-            # Quit starting jobs in case of failed errors – unless overridden by the user.
-            if cFailedBuilds > 0 and not self._m_bKeepGoing:
-               break
-
-            # Find a target that is ready to be built.
-            for tgt in self._m_setScheduledBuilds:
-               if not tgt.is_build_blocked():
-                  # Check if this target needs to be built.
-                  bBuild = tgt.is_build_needed()
-                  if bBuild:
-                     log(log.MEDIUM, 'controller: {}: rebuilding due to detected changes', tgt)
-                  elif self._m_bForceBuild:
-                     log(log.MEDIUM, 'controller: {}: up-to-date, but rebuild forced', tgt)
-                     bBuild = True
-                  elif self._m_bForceTest and isinstance(tgt, abamake.target.UnitTestTarget):
-                     log(log.MEDIUM, 'controller: {}: up-to-date, but re-testing forced', tgt)
-                     bBuild = True
-                  else:
-                     log(log.MEDIUM, 'controller: {}: up-to-date', tgt)
-
-                  if bBuild:
-                     # Obtain a job to build this target.
-                     job = tgt.build()
-                     if not job:
-                        # tgt’s Target.build() didn’t create a job; probably it only performs post-
-                        # build steps.
-                        bBuild = False
-
-                  if bBuild:
-                     # We have a job, run it.
-                     if log.verbosity >= log.LOW:
-                        log(log.LOW, '{}', job.get_verbose_command())
-                     else:
-                        iterCmd = job.get_quiet_command()
-                        log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
-                     if not self._m_bDryRun:
-                        # Execute the build job.
-                        job.start()
-                  else:
-                     # Even if we’re not building anything, this class’ algorithm still requires a
-                     # placeholder job: start a no-op job with an exit code of 0 (success).
-                     job = SkippedBuildJob()
-
-                  # Move the target from scheduled builds to running jobs.
-                  self._m_dictRunningJobs[job] = tgt
-                  self._m_setScheduledBuilds.remove(tgt)
-                  # We used up the job slot freed above; get back to the outer while loop, where we
-                  # will wait for another slot to free up.
-                  break
-
-         # There are no more scheduled builds, just wait for the running ones to complete.
-         cFailedBuildsTotal += self._collect_completed_jobs(len(self._m_dictRunningJobs))
-      finally:
-         if not self._m_bDryRun:
-            # Write any new metadata.
-            mds = self._m_mk().metadata
-            if mds:
-               mds.write()
-
-      return cFailedBuildsTotal
-
-   def _collect_completed_jobs(self, cJobsToComplete):
-      """Called by JobController.build_scheduled_targets(), returns when (at least) the requested
-      number of jobs completes and the respective targets’ Target.build_complete() have been called.
-      If cJobsToComplete == 0, it only invokes Target.build_complete() for targets whose jobs have
-      completed, but it does not wait for any jobs to complete.
-
-      The call to Target.build_complete(), among other things, releases any dependent targets; any
-      dependencies with no other blocks will be built by JobController.build_scheduled_targets().
-
-      When a build terminates in failure and JobController.keep_going is True, the corresponding
-      target and all its dependencies are removed from the scheduled targets with a (recursive) call
-      to JobController._unschedule_builds_blocked_by(), to prevent
-      JobController.build_scheduled_targets() from getting stuck waiting for targets that will never
-      be released.
-
-      int cJobsToComplete
-         Count of jobs to wait for.
-      int return
-         Count of builds that completed in failure.
-      """
-
-      log = self._m_mk().log
-      mds = self._m_mk().metadata
-      # This loop alternates poll loop and sleeping.
-      cCompletedBuilds = 0
-      cFailedBuilds = 0
-      # The termination condition is in the middle.
-      while True:
-         # This loop restarts the for loop, since we modify self._m_dictRunningJobs. The termination
-         # condition is a break statement.
-         while True:
-            # Give the running jobs some lovin’ by polling.
-            # TODO: with event-based waiting we should know exactly which event was triggered (i.e.
-            # what it is that needs attention), so we won’t need to iterate (_m_dictRunningJobs will
-            # need a different key though).
-            for job in self._m_dictRunningJobs.keys():
-               iRet = job.poll()
-               if iRet is not None:
-                  # Remove the target build from the running jobs.
-                  tgt = self._m_dictRunningJobs.pop(job)
-                  # If we decided not to run the job requested by the target (due to e.g. “dry run”
-                  # mode), pass None instead, so Target.build_complete() doesn’t need to know how to
-                  # tell the difference.
-                  if self._m_bDryRun or isinstance(job, SkippedBuildJob):
-                     job = None
-                  # Target.build_complete() can change a success into a failure.
-                  iRet = tgt.build_complete(job, iRet)
-
-                  # Keep track of completed/failed builds.
-                  cCompletedBuilds += 1
-                  if iRet != 0:
-                     if self._m_bKeepGoing:
-                        # Unschedule any dependent builds, so we can continue ignoring this failure
-                        # as long as we have scheduled builds that don’t depend on it.
-                        self._unschedule_builds_blocked_by(tgt)
-                     cFailedBuilds += 1
-                     if job:
-                        log(
-                           None, 'make: {}: build failed (code: {}), command was: {}',
-                           tgt, iRet, job.get_verbose_command()
-                        )
-                     else:
-                        log(None, 'make: {}: build failed (code: {})', tgt, iRet)
-
-                  # Since we modified self._m_dictRunningJobs, we have to stop iterating over it.
-                  # Iteration will be restarted by the inner while loop.
-                  break
+            # idJob is the ID of the job that just reported to have terminated; remove it from the
+            # running jobs, wait on its threads/processes, and let it run its on_complete handler.
+            job = self._m_dictRunningJobs.pop(idJob)
+            iRet = job.join()
+            if iRet == 0:
+               job.on_complete()
             else:
-               # The for loop completed without interruptions, which means that no job slots were
-               # freed, so break out of the inner while loop into the outer one to wait.
-               break
-         # If we freed up the requested count of slots, there’s nothing left to do.
-         if cCompletedBuilds >= cJobsToComplete:
-            return cFailedBuilds
-         if not self._m_bDryRun:
-            # Wait a small amount of time.
-            # TODO: proper event-based waiting.
-            time.sleep(0.1)
+               log(
+                  log.QUIET, 'run: job failed ({}); command was: {}',
+                  iRet, job.get_verbose_command()
+               )
+               # If not configured to keep running after a failure, stop processing the queue, and
+               # only continue the loop until all outstanding jobs complete.
+               # TODO: implement keep_running by making this line conditional to it.
+               bProcessQueue = False
+            # Release the Job instance.
+            del job
 
-   def _get_dry_run(self):
-      return self._m_bDryRun
+            # If there’s another job in the queue (which may have been just added by the on_complete
+            # handler), start it now.
+            if bProcessQueue and self._m_setQueuedJobs:
+               log(log.MEDIUM, 'run: starting queued job')
+               self._start_asynchronous_job(self._m_setQueuedJobs.pop())
+      finally:
+         os.close(self._m_fdJobsStatusQueueRead)
+         os.close(self._m_fdJobsStatusQueueWrite)
+         self._m_fdJobsStatusQueueRead = None
+         self._m_fdJobsStatusQueueWrite = None
 
-   def _set_dry_run(self, bDryRun):
-      self._m_bDryRun = bDryRun
+   def _read_jobs_status_queue(self):
+      """Blocks to read from the job status queue, returning the contents of the first read message.
 
-   dry_run = property(_get_dry_run, _set_dry_run, doc = """
-      If True, commands will only be printed, not executed; if False, they will be printed and
-      executed.
-   """)
-
-   def _get_force_build(self):
-      return self._m_bForceBuild
-
-   def _set_force_build(self, bForceBuild):
-      self._m_bForceBuild = bForceBuild
-
-   force_build = property(_get_force_build, _set_force_build, doc = """
-      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
-   """)
-
-   def _get_force_test(self):
-      return self._m_bForceTest
-
-   def _set_force_test(self, bForceTest):
-      self._m_bForceTest = bForceTest
-
-   force_test = property(_get_force_test, _set_force_test, doc = """
-      If True, all test targets are executed unconditionally; if False, test targets are only
-      executed if triggered by their dependencies.
-   """)
-
-   def _get_keep_going(self):
-      return self._m_bKeepGoing
-
-   def _set_keep_going(self, bKeepGoing):
-      self._m_bKeepGoing = bKeepGoing
-
-   keep_going = property(_get_keep_going, _set_keep_going, doc = """
-      If True, scheduled jobs will continue to be run even after a failed job, as long as they don’t
-      depend on a failed job. If False, a failed job causes execution to stop as soon as any other
-      running jobs complete.
-   """)
-
-   # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors
-   # in the system.
-   running_jobs_max = None
-
-   def schedule_build(self, tgt):
-      """Schedules the build of the specified target and all its dependencies. Any targets that have
-      already been scheduled won’t be scheduled a second time.
-
-      abamake.target.Target tgt
-         Target the build of which should be scheduled.
+      int return
+         ID of a Job instance that has completed.
       """
 
-      # Check if we already scheduled this target.
-      if tgt not in self._m_setScheduledBuilds:
-         # Schedule the build of this target.
-         self._m_setScheduledBuilds.add(tgt)
-         # Recursively schedule the build of the dependencies of this target, if Target themselves.
-         for dep in tgt.get_dependencies(bTargetsOnly = True):
-            self.schedule_build(dep)
+      cbNeeded = self._smc_structJobsStatusQueueMessage.size
+      by = os.read(self._m_fdJobsStatusQueueRead, cbNeeded)
+      while len(by) < cbNeeded:
+         by += os.read(self._m_fdJobsStatusQueueRead, cbNeeded - len(by))
+      return self._smc_structJobsStatusQueueMessage.unpack(by)[0]
 
-   def _unschedule_builds_blocked_by(self, tgt):
-      """Recursively removes the target builds blocked by the specified target from the set of
-      scheduled builds.
+   def _run_synchronous_job(self, job):
+      """TODO: comment."""
 
-      abamake.target.Target tgt
-         Target build to be unscheduled.
+      iRet = job.run()
+      if iRet == 0:
+         job.on_complete()
+      else:
+         # TODO: report build failure.
+         pass
+
+   def _start_asynchronous_job(self, job):
+      """TODO: comment."""
+
+      job.start(self)
+      self._m_dictRunningJobs[id(job)] = job
+
+   def job_complete(self, job):
+      """Report that an asynchronous job has completed. This is typically called from a different
+      thread owned by the job itself.
+
+      abamake.job.Job job
+         Job that has completed.
       """
 
-      for tgtBlocked in tgt.get_dependents():
-         # Use set.discard() instead of set.remove() since it may have already been removed due to a
-         # previous unrelated call to this method, e.g. another job failed before the one that
-         # caused this call.
-         self._m_setScheduledBuilds.discard(tgtBlocked)
-         self._unschedule_builds_blocked_by(tgtBlocked)
+      by = self._smc_structJobsStatusQueueMessage.pack(id(job))
+      with self._m_lockJobsStatusQueueWrite as lock:
+         cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
+         while cbWritten < len(by):
+            by = by[cbWritten:]
+            cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)

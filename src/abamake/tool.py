@@ -145,7 +145,7 @@ class Tool(object):
          cls._sm_dictFilePaths = dictFilePaths
       dictFilePaths[st] = sFilePath
 
-   def create_job(self, mk, tgt):
+   def create_jobs(self, mk, tgt, fnOnComplete):
       """Returns a job that, when run, results in the execution of the tool.
 
       The default implementation schedules a job whose command line is composed by calling
@@ -155,6 +155,8 @@ class Tool(object):
          Make instance.
       abamake.target.Target tgt
          Target that this job will build.
+      callable fnOnComplete
+         Function to call after the job completes; it will be provided the return code of the job.
       abamake.job.Job return
          Job scheduled.
       """
@@ -165,7 +167,8 @@ class Tool(object):
       self._create_job_add_flags(listArgs)
 
       if self._m_sOutputFilePath:
-         if not mk.job_controller.dry_run:
+#         if not mk.job_controller.dry_run:
+         if True:
             # Make sure that the output directory exists.
             abamake.makedirs(os.path.dirname(self._m_sOutputFilePath))
          # Get the compiler-specific command-line argument to specify an output file path.
@@ -178,8 +181,10 @@ class Tool(object):
       dictPopenArgs = {
          'args': listArgs,
       }
+      # Forward fnOnComplete directly to Job. More complex Tool subclasses that require
+      # multiple jobs will want to only do so with the last job.
       return self._create_job_instance(
-         self._get_quiet_cmd(), dictPopenArgs, tgt._m_mk().log, tgt.build_log_path
+         fnOnComplete, self._get_quiet_cmd(), dictPopenArgs, mk.log, tgt.build_log_path
       )
 
    def _create_job_add_flags(self, listArgs):
@@ -210,10 +215,12 @@ class Tool(object):
       if self._m_listInputFilePaths:
          listArgs.extend(self._m_listInputFilePaths)
 
-   def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
+   def _create_job_instance(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """Returns an new abamake.job.ExternalCmdJob instance constructed with the provided arguments.
       It allows subclasses to customize the job creation.
 
+      callable fnOnComplete
+         Function to call after the job completes; it will be provided the return code of the job.
       iterable(str, str*) iterQuietCmd
          See iterQuietCmd argument in abamake.job.ExternalCmdJob.__init__().
       dict(str: object) dictPopenArgs
@@ -226,7 +233,9 @@ class Tool(object):
          Newly instantiated job.
       """
 
-      return abamake.job.ExternalCmdJob(iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
+      return abamake.job.ExternalCmdJob(
+         fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
+      )
 
    @classmethod
    def _exe_matches_tool_and_system_type(cls, st):
@@ -481,7 +490,7 @@ class ClangxxCompiler(CxxCompiler):
    def _exe_matches_tool_and_system_type(cls, st):
       """See CxxCompiler._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'clang++'
+      sFileName = 'calang++'
 
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v'))
       if not sOut:
@@ -643,7 +652,7 @@ class MscCompiler(CxxCompiler):
          '/Wall',      # Enable all warnings.
       ])
 
-   def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
+   def _create_job_instance(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """See CxxCompiler._create_job_instance()."""
 
       # cl.exe logs to stdout instead of stderr.
@@ -655,7 +664,7 @@ class MscCompiler(CxxCompiler):
       log.add_exclusion(os.path.basename(self._m_listInputFilePaths[0]))
 
       return CxxCompiler._create_job_instance(
-         self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
+         self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
       )
 
    @classmethod
@@ -778,7 +787,7 @@ class ClangGnuLdLinker(Linker):
    def _exe_matches_tool_and_system_type(cls, st):
       """See Linker._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'clang++'
+      sFileName = 'calang++'
 
       # This will fail if Clang can’t find a LD binary for the target system type.
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-Wl,--version'))
@@ -883,7 +892,7 @@ class MsLinker(Linker):
          '/PDB:' + sPdbFilePath, # Create a program database file (PDB).
       ])
 
-   def _create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
+   def _create_job_instance(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
       """See Linker._create_job_instance()."""
 
       # link.exe logs to stdout instead of stderr.
@@ -896,7 +905,9 @@ class MsLinker(Linker):
          os.path.splitext(self._m_sOutputFilePath)[0]
       ))
 
-      return Linker._create_job_instance(self, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath)
+      return Linker._create_job_instance(
+         self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
+      )
 
    @classmethod
    def _exe_matches_tool_and_system_type(cls, st):
