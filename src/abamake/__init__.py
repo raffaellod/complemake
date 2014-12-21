@@ -188,8 +188,8 @@ class Make(object):
 
       mk = abamake.Make()
       mk.parse('project.abamk')
-      mk.get_named_target('projectbin').start_build()
-      mk.job_runner.run()
+      tgt = mk.get_named_target('projectbin')
+      mk.build((tgt, ))
    """
 
    # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have
