@@ -209,7 +209,8 @@ class Target(Dependency):
          True if the build tool needs to be run, or False if the target is up-to-date.
       """
 
-      return self._m_mk().metadata.has_target_snapshot_changed(self)
+      mk = self._m_mk()
+      return mk.force_build or mk.metadata.has_target_snapshot_changed(self)
 
    def _build_tool_run(self):
       """Enqueues any jobs necessary to unconditionally build the target."""
