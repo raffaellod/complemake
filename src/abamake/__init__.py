@@ -107,6 +107,21 @@ def derived_classes(clsBase):
             setYielded.add(clsDeriv)
             listClassesToScan.append(clsDeriv)
 
+def is_node_whitespace(nd):
+   """Returns True if a node is whitespace or a comment.
+
+   xml.dom.Node nd
+      Node to check.
+   bool return
+      True if nd is a whitespace or comment node, or False otherwise.
+   """
+
+   if nd.nodeType == nd.COMMENT_NODE:
+      return True
+   if nd.nodeType == nd.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
+      return True
+   return False
+
 def makedirs(sPath):
    """Implementation of os.makedirs(exists_ok = True) for both Python 2.7 and 3.x.
 
@@ -358,22 +373,6 @@ class Make(object):
          raise TargetReferenceError('undefined target: {}'.format(sName))
       return tgt
 
-   @staticmethod
-   def _is_node_whitespace(nd):
-      """Returns True if a node is whitespace or a comment.
-
-      xml.dom.Node nd
-         Node to check.
-      bool return
-         True if nd is a whitespace or comment node, or False otherwise.
-      """
-
-      if nd.nodeType == nd.COMMENT_NODE:
-         return True
-      if nd.nodeType == nd.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
-         return True
-      return False
-
    def _get_job_runner(self):
       return self._m_jr
 
@@ -453,7 +452,7 @@ class Make(object):
       for elt in eltParent.childNodes:
          # Skip whitespace/comment nodes (unimportant) and non-top-level-nodes without children
          # (they’re references, not definitions).
-         if not self._is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
+         if not is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
             if elt.nodeType == elt.ELEMENT_NODE:
                # Pick an abamake.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
@@ -501,7 +500,7 @@ class Make(object):
       for tgt, eltTarget in listTargetsAndNodes:
          for nd in eltTarget.childNodes:
             # Skip whitespace/comment nodes.
-            if not self._is_node_whitespace(nd):
+            if not is_node_whitespace(nd):
                if nd.nodeType != nd.ELEMENT_NODE:
                   raise MakefileSyntaxError(
                      '{}: expected XML element, found: {}'.format(tgt, nd.nodeName)
