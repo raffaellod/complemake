@@ -520,7 +520,8 @@ class Runner(object):
    def run(self):
       """Processes the job queue."""
 
-      log = self._m_mk().log
+      mk = self._m_mk()
+      log = mk.log
       self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
       bProcessQueue = True
       try:
@@ -540,10 +541,10 @@ class Runner(object):
                   log.QUIET, 'run: job failed ({}); command was: {}',
                   iRet, job.get_verbose_command()
                )
-               # If not configured to keep running after a failure, stop processing the queue, and
-               # only continue the loop until all outstanding jobs complete.
-               # TODO: implement keep_running by making this line conditional to it.
-               bProcessQueue = False
+               # If not configured to keep going after a failure, stop processing the queue and only
+               # continue the loop until all outstanding jobs complete.
+               if not mk.keep_going:
+                  bProcessQueue = False
             # Release the Job instance.
             del job
 
