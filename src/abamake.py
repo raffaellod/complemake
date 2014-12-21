@@ -97,12 +97,12 @@ def main(iterArgs):
    args = argparser.parse_args()
 
    mk = abamake.Make()
-#   mk.job_controller.dry_run          = args.dry_run
-#   mk.job_controller.force_build      = args.force_build
-#   mk.job_controller.force_test       = args.force_test
+   mk.dry_run          = args.dry_run
+   mk.force_build      = args.force_build
+   mk.force_test       = args.force_test
 #   mk.job_controller.running_jobs_max = args.jobs
-#   mk.job_controller.keep_going       = args.keep_going
-   mk.log.verbosity                   += args.verbose
+   mk.keep_going       = args.keep_going
+   mk.log.verbosity    += args.verbose
 
    # Check for a makefile.
    sMakefilePath = args.makefile

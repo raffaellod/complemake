@@ -192,11 +192,19 @@ class Make(object):
       mk.build((tgt, ))
    """
 
+   # See Make.dry_run.
+   _m_bDryRun = False
    # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have
    # a file path assigned (file path -> Target).
    _m_dictFileTargets = None
+   # See Make.force_build.
+   _m_bForceBuild = False
+   # See Make.force_test.
+   _m_bForceTest = False
    # See Make.job_runner.
    _m_jr = None
+   # See Make.keep_going.
+   _m_bKeepGoing = False
    # See Make.log.
    _m_log = None
    # See Make.metadata.
@@ -217,8 +225,12 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
+      self._m_bDryRun = False
       self._m_dictFileTargets = {}
+      self._m_bForceBuild = False
+      self._m_bForceTest = False
       self._m_jr = job.Runner(self)
+      self._m_bKeepGoing = False
       self._m_log = logging.Logger(logging.LogGenerator())
       self._m_mds = None
       self._m_dictNamedTargets = {}
@@ -278,6 +290,38 @@ class Make(object):
       self._m_mds.write()
       return cFailedBuilds == 0
 
+   def _get_dry_run(self):
+      return self._m_bDryRun
+
+   def _set_dry_run(self, bDryRun):
+      self._m_bDryRun = bDryRun
+
+   dry_run = property(_get_dry_run, _set_dry_run, doc = """
+      If True, commands will only be printed, not executed; if False, they will be printed and
+      executed.
+   """)
+
+   def _get_force_build(self):
+      return self._m_bForceBuild
+
+   def _set_force_build(self, bForceBuild):
+      self._m_bForceBuild = bForceBuild
+
+   force_build = property(_get_force_build, _set_force_build, doc = """
+      If True, targets are rebuilt unconditionally; if False, targets are rebuilt as needed.
+   """)
+
+   def _get_force_test(self):
+      return self._m_bForceTest
+
+   def _set_force_test(self, bForceTest):
+      self._m_bForceTest = bForceTest
+
+   force_test = property(_get_force_test, _set_force_test, doc = """
+      If True, all test targets are executed unconditionally; if False, test targets are only
+      executed if triggered by their dependencies.
+   """)
+
    def get_file_target(self, sFilePath, oFallback = _RAISE_IF_NOT_FOUND):
       """Returns a file target given its file path, raising an exception if no such target exists
       and no fallback value was provided.
@@ -334,6 +378,18 @@ class Make(object):
       return self._m_jr
 
    job_runner = property(_get_job_runner, doc = """Job runner.""")
+
+   def _get_keep_going(self):
+      return self._m_bKeepGoing
+
+   def _set_keep_going(self, bKeepGoing):
+      self._m_bKeepGoing = bKeepGoing
+
+   keep_going = property(_get_keep_going, _set_keep_going, doc = """
+      If True, build jobs will continue to be run even after a failed job, as long as they don’t
+      depend on a failed job. If False, a failed job causes execution to stop as soon as any other
+      running jobs complete.
+   """)
 
    def _get_log(self):
       return self._m_log
