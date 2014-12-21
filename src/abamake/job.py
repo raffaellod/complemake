@@ -574,6 +574,12 @@ class Runner(object):
    def _run_synchronous_job(self, job):
       """TODO: comment."""
 
+      log = self._m_mk().log
+      if log.verbosity >= log.LOW:
+         log(log.LOW, '{}', job.get_verbose_command())
+      else:
+         iterCmd = job.get_quiet_command()
+         log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
       iRet = job.run()
       if iRet == 0:
          job.on_complete()
@@ -584,6 +590,12 @@ class Runner(object):
    def _start_asynchronous_job(self, job):
       """TODO: comment."""
 
+      log = self._m_mk().log
+      if log.verbosity >= log.LOW:
+         log(log.LOW, '{}', job.get_verbose_command())
+      else:
+         iterCmd = job.get_quiet_command()
+         log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
       job.start(self)
       self._m_dictRunningJobs[id(job)] = job
 
