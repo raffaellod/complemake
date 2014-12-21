@@ -1120,7 +1120,7 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
             # TODO: report build failure.
             return
 
-      NamedBinaryTarget._on_build_tool_complete(self)
+      NamedBinaryTarget._on_build_tool_run_complete(self)
 
    def parse_makefile_element_child(self, elt):
       """See NamedBinaryTarget.parse_makefile_element_child()."""
