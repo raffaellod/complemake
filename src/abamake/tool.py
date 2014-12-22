@@ -490,7 +490,7 @@ class ClangxxCompiler(CxxCompiler):
    def _exe_matches_tool_and_system_type(cls, st):
       """See CxxCompiler._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'calang++'
+      sFileName = 'clang++'
 
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v'))
       if not sOut:
@@ -790,7 +790,7 @@ class ClangGnuLdLinker(Linker):
    def _exe_matches_tool_and_system_type(cls, st):
       """See Linker._exe_matches_tool_and_system_type()."""
 
-      sFileName = 'calang++'
+      sFileName = 'clang++'
 
       # This will fail if Clang can’t find a LD binary for the target system type.
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-Wl,--version'))
