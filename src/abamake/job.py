@@ -551,7 +551,8 @@ class Runner(object):
 
       mk = self._m_mk()
       log = mk.log
-      self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
+      with self._m_lockJobsStatusQueueWrite as lock:
+         self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
       self._m_bProcessQueue = True
       try:
          while self._m_dictRunningJobs:
@@ -573,10 +574,11 @@ class Runner(object):
                log(log.MEDIUM, 'run: starting queued job')
                self._start_asynchronous_job(self._m_setQueuedJobs.pop())
       finally:
-         os.close(self._m_fdJobsStatusQueueRead)
-         os.close(self._m_fdJobsStatusQueueWrite)
-         self._m_fdJobsStatusQueueRead = None
-         self._m_fdJobsStatusQueueWrite = None
+         with self._m_lockJobsStatusQueueWrite as lock:
+            os.close(self._m_fdJobsStatusQueueRead)
+            os.close(self._m_fdJobsStatusQueueWrite)
+            self._m_fdJobsStatusQueueRead = None
+            self._m_fdJobsStatusQueueWrite = None
 
    def _read_jobs_status_queue(self):
       """Blocks to read from the job status queue, returning the contents of the first read message.
@@ -615,7 +617,10 @@ class Runner(object):
 
       by = self._smc_structJobsStatusQueueMessage.pack(id(job))
       with self._m_lockJobsStatusQueueWrite as lock:
-         cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
-         while cbWritten < len(by):
-            by = by[cbWritten:]
-            cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
+         # _m_fdJobsStatusQueueWrite may be None if the main thread has already left Runner.run().
+         # In that case, there’s nothing left to do, so just skip what follows.
+         if self._m_fdJobsStatusQueueWrite:
+            cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
+            while cbWritten < len(by):
+               by = by[cbWritten:]
+               cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
