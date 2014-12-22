@@ -472,6 +472,9 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
 # Runner
 
 class Runner(object):
+   """Manages the execution of jobs for Abamake. It contains a queue to which jobs are pushed, and
+   offers a method to process the queue, run().
+   """
 
    # Type of a message written to/read from the job status queue.
    _smc_structJobsStatusQueueMessage = struct.Struct('P')
@@ -547,7 +550,10 @@ class Runner(object):
             self._m_setQueuedJobs.add(job)
 
    def run(self):
-      """Processes the job queue."""
+      """Processes the job queue, starting jobs and waiting for them to complete. This method blocks
+      until the job queue has been processed, which includes jobs added by on_complete handlers of
+      other jobs.
+      """
 
       mk = self._m_mk()
       log = mk.log
