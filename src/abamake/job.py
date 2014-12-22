@@ -483,12 +483,14 @@ class Runner(object):
    _m_lockJobsStatusQueueWrite = None
    # Weak reference to the owning abamake.Make instance.
    _m_mk = None
+   # Changed from True to False when a job fails and keep_going mode is not enabled.
+   _m_bProcessQueue = True
+   # Jobs queued to be run.
+   _m_setQueuedJobs = None
    # Maximum number of concurrent jobs, also known as degree of parallelism.
    _m_cbMaxRunningJobs = 4
    # Maps the ID of running jobs with the corresponding Job instances.
    _m_dictRunningJobs = None
-   # Jobs queued to be run.
-   _m_setQueuedJobs = None
 
    def __init__(self, mk):
       """Constructor.
@@ -498,11 +500,38 @@ class Runner(object):
       """
 
       self._m_mk = weakref.ref(mk)
-      self._m_dictRunningJobs = {}
       self._m_fdJobsStatusQueueRead = None
       self._m_fdJobsStatusQueueWrite = None
       self._m_lockJobsStatusQueueWrite = threading.Lock()
+      self._m_bProcessQueue = True
       self._m_setQueuedJobs = set()
+      self._m_dictRunningJobs = {}
+
+   def _after_job_end(self, job, iRet):
+      """TODO: comment."""
+
+      if iRet == 0:
+         job.on_complete()
+      else:
+         mk = self._m_mk()
+         log = mk.log
+         log(
+            log.QUIET, 'run: job failed ({}); command was: {}',
+            iRet, job.get_verbose_command()
+         )
+         # If not configured to keep going after a failure, stop processing the queue.
+         if not mk.keep_going:
+            self._m_bProcessQueue = False
+
+   def _before_job_start(self, job):
+      """TODO: comment."""
+
+      log = self._m_mk().log
+      if log.verbosity >= log.LOW:
+         log(log.LOW, '{}', job.get_verbose_command())
+      else:
+         iterCmd = job.get_quiet_command()
+         log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
 
    def enqueue(self, job):
       """TODO: comment."""
@@ -523,7 +552,7 @@ class Runner(object):
       mk = self._m_mk()
       log = mk.log
       self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
-      bProcessQueue = True
+      self._m_bProcessQueue = True
       try:
          while self._m_dictRunningJobs:
             # Blocking read.
@@ -534,23 +563,13 @@ class Runner(object):
             # running jobs, wait on its threads/processes, and let it run its on_complete handler.
             job = self._m_dictRunningJobs.pop(idJob)
             iRet = job.join()
-            if iRet == 0:
-               job.on_complete()
-            else:
-               log(
-                  log.QUIET, 'run: job failed ({}); command was: {}',
-                  iRet, job.get_verbose_command()
-               )
-               # If not configured to keep going after a failure, stop processing the queue and only
-               # continue the loop until all outstanding jobs complete.
-               if not mk.keep_going:
-                  bProcessQueue = False
+            self._after_job_end(job, iRet)
             # Release the Job instance.
             del job
 
             # If there’s another job in the queue (which may have been just added by the on_complete
             # handler), start it now.
-            if bProcessQueue and self._m_setQueuedJobs:
+            if self._m_bProcessQueue and self._m_setQueuedJobs:
                log(log.MEDIUM, 'run: starting queued job')
                self._start_asynchronous_job(self._m_setQueuedJobs.pop())
       finally:
@@ -575,28 +594,14 @@ class Runner(object):
    def _run_synchronous_job(self, job):
       """TODO: comment."""
 
-      log = self._m_mk().log
-      if log.verbosity >= log.LOW:
-         log(log.LOW, '{}', job.get_verbose_command())
-      else:
-         iterCmd = job.get_quiet_command()
-         log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
+      self._before_job_start(job)
       iRet = job.run()
-      if iRet == 0:
-         job.on_complete()
-      else:
-         # TODO: report build failure.
-         pass
+      self._after_job_end(job, iRet)
 
    def _start_asynchronous_job(self, job):
       """TODO: comment."""
 
-      log = self._m_mk().log
-      if log.verbosity >= log.LOW:
-         log(log.LOW, '{}', job.get_verbose_command())
-      else:
-         iterCmd = job.get_quiet_command()
-         log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
+      self._before_job_start(job)
       job.start(self)
       self._m_dictRunningJobs[id(job)] = job
 
