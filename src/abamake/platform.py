@@ -423,7 +423,7 @@ class DarwinPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      raise NotImplementedError('TODO')
+      pass
 
 
    def dynlib_file_name(self, sName):
