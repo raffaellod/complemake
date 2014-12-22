@@ -476,7 +476,7 @@ class Runner(object):
    offers a method to process the queue, run().
    """
 
-   # Type of a message written to/read from the job status queue.
+   # Type of a message written to/read from the jobs status queue.
    _smc_structJobsStatusQueueMessage = struct.Struct('P')
    # Pipe end used by the main thread to get status updates from process-controlling threads.
    _m_fdJobsStatusQueueRead = None
@@ -562,13 +562,12 @@ class Runner(object):
       self._m_bProcessQueue = True
       try:
          while self._m_dictRunningJobs:
-            # Blocking read.
             log(log.MEDIUM, 'run: waiting for a job to complete')
-            idJob = self._read_jobs_status_queue()
+            # This is blocking.
+            job = self._wait_for_job_complete()
 
-            # idJob is the ID of the job that just reported to have terminated; remove it from the
-            # running jobs, wait on its threads/processes, and let it run its on_complete handler.
-            job = self._m_dictRunningJobs.pop(idJob)
+            # job reported that it just terminated: wait on its threads/processes, and let it run
+            # its on_complete handler.
             iRet = job.join()
             self._after_job_end(job, iRet)
             # Release the Job instance.
@@ -586,18 +585,23 @@ class Runner(object):
             self._m_fdJobsStatusQueueRead = None
             self._m_fdJobsStatusQueueWrite = None
 
-   def _read_jobs_status_queue(self):
-      """Blocks to read from the job status queue, returning the contents of the first read message.
+   def _wait_for_job_complete(self):
+      """Blocks to read from the jobs status queue, returning the first job that reported having
+      completed.
 
-      int return
-         ID of a Job instance that has completed.
+      abamake.job.Job return
+         Job instance that has completed.
       """
 
+      # Wait for, read and unpack a message on the jobs status queue.
       cbNeeded = self._smc_structJobsStatusQueueMessage.size
       by = os.read(self._m_fdJobsStatusQueueRead, cbNeeded)
       while len(by) < cbNeeded:
          by += os.read(self._m_fdJobsStatusQueueRead, cbNeeded - len(by))
-      return self._smc_structJobsStatusQueueMessage.unpack(by)[0]
+      idJob, = self._smc_structJobsStatusQueueMessage.unpack(by)
+      # idJob is the ID of the job that just reported to have terminated; remove it from the running
+      # jobs and return it.
+      return self._m_dictRunningJobs.pop(idJob)
 
    def _run_synchronous_job(self, job):
       """TODO: comment."""
