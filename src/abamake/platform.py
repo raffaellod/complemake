@@ -419,24 +419,20 @@ class DarwinPlatform(Platform):
 
       raise NotImplementedError('TODO')
 
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
       pass
-
 
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
 
       return 'lib{}.dylib'.format(sName)
 
-
    def exe_file_name(self, sName):
       """See Platform.exe_file_name()."""
 
       return '{}'.format(sName)
-
 
    @classmethod
    def _match_system_type(cls, st):
@@ -446,8 +442,6 @@ class DarwinPlatform(Platform):
          return 1
       else:
          return 0
-
-
 
 ####################################################################################################
 # GnuPlatform
