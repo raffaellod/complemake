@@ -628,9 +628,13 @@ class Runner(object):
 
             # If there’s another job in the queue (which may have been just added by the on_complete
             # handler), start it now.
-            if self._m_bProcessQueue and self._m_setQueuedJobs:
-               log(log.MEDIUM, 'make: starting queued job')
-               self._start_asynchronous_job(self._m_setQueuedJobs.pop())
+            if self._m_bProcessQueue:
+               if self._m_setQueuedJobs:
+                  log(log.MEDIUM, 'make: starting queued job')
+                  self._start_asynchronous_job(self._m_setQueuedJobs.pop())
+            else:
+               # TODO: the build failed, stop all running jobs.
+               pass
       finally:
          with self._m_lockJobsStatusQueueWrite as lock:
             os.close(self._m_fdJobsStatusQueueRead)
