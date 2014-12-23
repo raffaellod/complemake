@@ -167,8 +167,7 @@ class Tool(object):
       self._create_job_add_flags(listArgs)
 
       if self._m_sOutputFilePath:
-#         if not mk.job_controller.dry_run:
-         if True:
+         if not mk.dry_run:
             # Make sure that the output directory exists.
             abamake.makedirs(os.path.dirname(self._m_sOutputFilePath))
          # Get the compiler-specific command-line argument to specify an output file path.
