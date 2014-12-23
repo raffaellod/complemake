@@ -588,17 +588,6 @@ class Runner(object):
    # in the system.
    running_jobs_max = None
 
-   def _get_force_test(self):
-      return self._m_bForceTest
-
-   def _set_force_test(self, bForceTest):
-      self._m_bForceTest = bForceTest
-
-   force_test = property(_get_force_test, _set_force_test, doc = """
-      If True, all test targets are executed unconditionally; if False, test targets are only
-      executed if triggered by their dependencies.
-   """)
-
    def _run_synchronous_job(self, job):
       """TODO: comment."""
 
@@ -630,20 +619,6 @@ class Runner(object):
       # idJob is the ID of the job that just reported to have terminated; remove it from the running
       # jobs and return it.
       return self._m_dictRunningJobs.pop(idJob)
-
-   def _run_synchronous_job(self, job):
-      """TODO: comment."""
-
-      self._before_job_start(job)
-      iRet = job.run()
-      self._after_job_end(job, iRet)
-
-   def _start_asynchronous_job(self, job):
-      """TODO: comment."""
-
-      self._before_job_start(job)
-      job.start(self)
-      self._m_dictRunningJobs[id(job)] = job
 
    def job_complete(self, job):
       """Report that an asynchronous job has completed. This is typically called from a different
