@@ -458,14 +458,8 @@ class Make(object):
                # Pick an abamake.target.Target subclass for this target type.
                clsTarget = target.Target.select_subclass(elt)
                if clsTarget:
-                  # Every target must have a name attribute.
-                  sName = elt.getAttribute('name')
-                  if not sName:
-                     raise MakefileSyntaxError(
-                        '<{}>: missing “name” attribute'.format(elt.nodeName)
-                     )
                   # Instantiate the Target-derived class, assigning it its name.
-                  tgt = clsTarget(self, sName)
+                  tgt = clsTarget.parse_makefile_element(self, elt)
                   self.add_target(tgt)
                   listTargetsAndNodes.append((tgt, elt))
                   # Scan for nested target definitions.

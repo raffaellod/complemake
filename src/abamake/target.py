@@ -346,6 +346,28 @@ class Target(Dependency):
          Target._sm_dictTypeIds[self._m_sNodeName] = clsDerived
          return clsDerived
 
+   @classmethod
+   def parse_makefile_element(cls, mk, elt):
+      """Validates and processes the specified target XML element, throwing exceptions if any
+      attributes have invalid values or if any required ones are missing. The element name as
+      already been verified, but its attributes have not. Implementations should not descend into
+      the contents of the source element.
+
+      abamake.Make mk
+         Make instance to associate to the returned Target.
+      xml.dom.Element elt
+         Element to parse.
+      abamake.target.Target
+         New Target instantiated from the contents of elt.
+      """
+
+      # Every target must have a name attribute.
+      sName = elt.getAttribute('name')
+      if not sName:
+         raise MakefileSyntaxError('<{}>: missing “name” attribute'.format(elt.nodeName))
+      # Instantiate the Target-derived class, assigning it its name.
+      return cls(mk, sName)
+
    def parse_makefile_element_child(self, elt):
       """Validates and processes the specified child element of the target’s XML element.
 
