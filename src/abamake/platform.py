@@ -417,7 +417,12 @@ class DarwinPlatform(Platform):
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
       """See Platform.add_dir_to_dynlib_env_path()."""
 
-      raise NotImplementedError('TODO')
+      sLibPath = dictEnv.get('DYLD_LIBRARY_PATH', '')
+      if sLibPath:
+         sLibPath += ':'
+      sLibPath += os.path.abspath(sDir)
+      dictEnv['DYLD_LIBRARY_PATH'] = sLibPath
+      return dictEnv
 
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
