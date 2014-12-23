@@ -109,9 +109,17 @@ class Job(object):
 # SynchronousJob
 
 class SynchronousJob(Job):
-   """TODO: comment."""
+   """Job that is executed synchronously. Typically this is implemented directly in Python, which
+   means it might be faster than spawning a child process/thread to execute the task asynchronously.
+   """
 
    def run(self):
+      """Executes the job, synchronously.
+
+      int return
+         Exit code of the job.
+      """
+
       # The default implementation is a no-op and always returns success.
       return 0
 
@@ -119,7 +127,7 @@ class SynchronousJob(Job):
 # AsynchronousJob
 
 class AsynchronousJob(Job):
-   """TODO: comment."""
+   """Job that is executed asynchronously, typically in a separate process."""
 
    # Weak reference to the abamake.job.Runner that called start().
    _m_runner = None
@@ -136,7 +144,7 @@ class AsynchronousJob(Job):
       exit code.
 
       int return
-         Return code of the job.
+         Exit code of the job.
       """
 
       # The default implementation has nothing to wait for and always returns success.
@@ -547,7 +555,12 @@ class Runner(object):
          log(log.QUIET, '{} {}', log.qm_tool_name(iterCmd[0]), ' '.join(iterCmd[1:]))
 
    def enqueue(self, job):
-      """TODO: comment."""
+      """Adds a job to the job execution queue, or executes it immediately if it’s a synchronous
+      one.
+
+      abamake.job.Job
+         Job to execute.
+      """
 
       if isinstance(job, SynchronousJob):
          # Run the job immediately.
