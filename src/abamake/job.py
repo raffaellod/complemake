@@ -295,17 +295,6 @@ class ExternalCmdJob(AsynchronousJob):
             self._stderr_line_read(sLine.rstrip('\r\n'))
             fileStdErr.write(sLine)
 
-   def _stdout_chunk_read(self, byChunk):
-      """Internal method invoked for each stdout chunk read.
-
-      The default implementation doesn’t do anything.
-
-      bytes byChunk
-         Raw bytes output by the external process to stdout.
-      """
-
-      pass
-
    def _stdout_reader_thread(self):
       """Reads from the job process’ stdout."""
 
@@ -322,6 +311,17 @@ class ExternalCmdJob(AsynchronousJob):
             self._m_runner().job_complete(self)
             break
          self._stdout_chunk_read(by)
+
+   def _stdout_chunk_read(self, byChunk):
+      """Internal method invoked for each stdout chunk read.
+
+      The default implementation doesn’t do anything.
+
+      bytes byChunk
+         Raw bytes output by the external process to stdout.
+      """
+
+      pass
 
 ####################################################################################################
 # ExternalCmdCapturingJob
@@ -393,13 +393,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
    stdout = property(_get_stdout, doc = """Collected output of the process.""")
 
-   def _get_stdout_file_path(self):
-      return self._m_sStdOutFilePath
-
-   stdout_file_path = property(_get_stdout_file_path, doc = """
-      Path to the file to which the output of the process is saved.
-   """)
-
    def _stdout_chunk_read(self, byChunk):
       """See ExternalCmdJob._stdout_chunk_read(). Overridden to accumulate stdout in a member
       variable, so that it can be accessed from memory instead of having to be re-read from the file
@@ -408,6 +401,13 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
       self._m_byStdOut += byChunk
       self._m_fileStdOut.write(byChunk)
+
+   def _get_stdout_file_path(self):
+      return self._m_sStdOutFilePath
+
+   stdout_file_path = property(_get_stdout_file_path, doc = """
+      Path to the file to which the output of the process is saved.
+   """)
 
 ####################################################################################################
 # AbacladeUnitTestJob
@@ -548,6 +548,24 @@ class Runner(object):
          else:
             self._m_setQueuedJobs.add(job)
 
+   def job_complete(self, job):
+      """Report that an asynchronous job has completed. This is typically called from a different
+      thread owned by the job itself.
+
+      abamake.job.Job job
+         Job that has completed.
+      """
+
+      by = self._smc_structJobsStatusQueueMessage.pack(id(job))
+      with self._m_lockJobsStatusQueueWrite as lock:
+         # _m_fdJobsStatusQueueWrite may be None if the main thread has already left Runner.run().
+         # In that case, there’s nothing left to do, so just skip what follows.
+         if self._m_fdJobsStatusQueueWrite:
+            cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
+            while cbWritten < len(by):
+               by = by[cbWritten:]
+               cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
+
    def run(self):
       """Processes the job queue, starting jobs and waiting for them to complete. This method blocks
       until the job queue has been processed, which includes jobs added by on_complete handlers of
@@ -619,21 +637,3 @@ class Runner(object):
       # idJob is the ID of the job that just reported to have terminated; remove it from the running
       # jobs and return it.
       return self._m_dictRunningJobs.pop(idJob)
-
-   def job_complete(self, job):
-      """Report that an asynchronous job has completed. This is typically called from a different
-      thread owned by the job itself.
-
-      abamake.job.Job job
-         Job that has completed.
-      """
-
-      by = self._smc_structJobsStatusQueueMessage.pack(id(job))
-      with self._m_lockJobsStatusQueueWrite as lock:
-         # _m_fdJobsStatusQueueWrite may be None if the main thread has already left Runner.run().
-         # In that case, there’s nothing left to do, so just skip what follows.
-         if self._m_fdJobsStatusQueueWrite:
-            cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
-            while cbWritten < len(by):
-               by = by[cbWritten:]
-               cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
