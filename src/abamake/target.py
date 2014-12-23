@@ -202,16 +202,6 @@ class Target(Dependency):
       if dep not in self._m_listDependencies:
          self._m_listDependencies.append(dep)
 
-   def _build_tool_should_run(self):
-      """Checks if the target build tool needs to be run to freshen the target.
-
-      bool return
-         True if the build tool needs to be run, or False if the target is up-to-date.
-      """
-
-      mk = self._m_mk()
-      return mk.force_build or mk.metadata.has_target_snapshot_changed(self)
-
    def _build_tool_run(self):
       """Enqueues any jobs necessary to unconditionally build the target."""
 
@@ -221,6 +211,16 @@ class Target(Dependency):
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
       job = self._get_tool().create_jobs(mk, self, self._on_build_tool_run_complete)
       mk.job_runner.enqueue(job)
+
+   def _build_tool_should_run(self):
+      """Checks if the target build tool needs to be run to freshen the target.
+
+      bool return
+         True if the build tool needs to be run, or False if the target is up-to-date.
+      """
+
+      mk = self._m_mk()
+      return mk.force_build or mk.metadata.has_target_snapshot_changed(self)
 
    def _on_build_started(self):
       """Invoked after the target’s build is started."""
@@ -239,18 +239,25 @@ class Target(Dependency):
          # No dependencies are blocking, continue with the build.
          self._on_dependencies_updated()
 
-   def _on_dependency_updated(self):
-      """Invoked when the build of a dependency completes successfully."""
+   def _on_build_tool_complete(self):
+      """Invoked after the tool stage of the build has completed, regardless of whether a tool was
+      really run.
+      """
 
       log = self._m_mk().log
-      self._m_cBlockingDependencies -= 1
-      log(
-         log.HIGH, 'build[{}]: 1 dependency updated, {} remaining',
-         self, self._m_cBlockingDependencies
-      )
-      if self._m_cBlockingDependencies == 0:
-         # All dependencies up-to-date, continue with the build.
-         self._on_dependencies_updated()
+      log(log.HIGH, 'build[{}]: skipping metadata update', self)
+      self._on_metadata_updated()
+
+   def _on_build_tool_run_complete(self):
+      """Invoked after the job that builds the target has completed its execution."""
+
+      mk = self._m_mk()
+      log = mk.log
+      log(log.HIGH, 'build[{}]: updating metadata', self)
+      if not mk.dry_run:
+         # If the job was successfully executed, the target’s metadata can be updated.
+         mk.metadata.update_target_snapshot(self)
+      self._on_build_tool_complete()
 
    def _on_dependencies_updated(self):
       """Invoked after all the target’s dependencies have been updated."""
@@ -266,25 +273,18 @@ class Target(Dependency):
          # There’s nothing to do, so just continue to the next stage.
          self._on_build_tool_complete()
 
-   def _on_build_tool_run_complete(self):
-      """Invoked after the job that builds the target has completed its execution."""
-
-      mk = self._m_mk()
-      log = mk.log
-      log(log.HIGH, 'build[{}]: updating metadata', self)
-      if not mk.dry_run:
-         # If the job was successfully executed, the target’s metadata can be updated.
-         mk.metadata.update_target_snapshot(self)
-      self._on_build_tool_complete()
-
-   def _on_build_tool_complete(self):
-      """Invoked after the tool stage of the build has completed, regardless of whether a tool was
-      really run.
-      """
+   def _on_dependency_updated(self):
+      """Invoked when the build of a dependency completes successfully."""
 
       log = self._m_mk().log
-      log(log.HIGH, 'build[{}]: skipping metadata update', self)
-      self._on_metadata_updated()
+      self._m_cBlockingDependencies -= 1
+      log(
+         log.HIGH, 'build[{}]: 1 dependency updated, {} remaining',
+         self, self._m_cBlockingDependencies
+      )
+      if self._m_cBlockingDependencies == 0:
+         # All dependencies up-to-date, continue with the build.
+         self._on_dependencies_updated()
 
    def _on_metadata_updated(self):
       """Invoked after the metadata for the target has been updated."""
@@ -298,30 +298,6 @@ class Target(Dependency):
          tgtDependent()._on_dependency_updated()
       self._m_setBlockedDependents = None
       log(log.HIGH, 'build[{}]: end', self)
-
-   def start_build(self, tgtDependent = None):
-      """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
-      them to complete.
-
-      abamake.target.Target tgtDependent
-         Target that will need to be unblocked when the build of this target completes. If self is
-         already up-to-date, tgtDependent will be unblocked immediately.
-      """
-
-      log = self._m_mk().log
-      if self._m_bUpToDate:
-         log(log.HIGH, 'build[{}]: skipping', self)
-         # Nothing to do, but make sure we unblock the dependent target that called this method.
-         if tgtDependent:
-            tgtDependent._on_dependency_updated()
-      else:
-         log(log.HIGH, 'build[{}]: begin', self)
-         if tgtDependent:
-            # Add the dependent target to those we’ll unblock when this build completes.
-            self._m_setBlockedDependents.add(weakref.ref(tgtDependent))
-         if not self._m_bBuilding:
-            self._m_bBuilding = True
-            self._on_build_started()
 
    def dump_dependencies(self, sIndent = ''):
       """TODO: comment."""
@@ -355,6 +331,21 @@ class Target(Dependency):
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
+   class makefile_type_id(object):
+      """Decorator to teach Target.select_subclass() the association of the decorated class with an
+      Abamakefile type IDs (XML element name).
+
+      str sNodeName
+         Name of the element to associate with the decorated class.
+      """
+
+      def __init__(self, sNodeName):
+         self._m_sNodeName = sNodeName
+
+      def __call__(self, clsDerived):
+         Target._sm_dictTypeIds[self._m_sNodeName] = clsDerived
+         return clsDerived
+
    def parse_makefile_element_child(self, elt):
       """Validates and processes the specified child element of the target’s XML element.
 
@@ -383,27 +374,36 @@ class Target(Dependency):
 
       return cls._sm_dictTypeIds.get(eltTarget.nodeName)
 
+   def start_build(self, tgtDependent = None):
+      """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
+      them to complete.
+
+      abamake.target.Target tgtDependent
+         Target that will need to be unblocked when the build of this target completes. If self is
+         already up-to-date, tgtDependent will be unblocked immediately.
+      """
+
+      log = self._m_mk().log
+      if self._m_bUpToDate:
+         log(log.HIGH, 'build[{}]: skipping', self)
+         # Nothing to do, but make sure we unblock the dependent target that called this method.
+         if tgtDependent:
+            tgtDependent._on_dependency_updated()
+      else:
+         log(log.HIGH, 'build[{}]: begin', self)
+         if tgtDependent:
+            # Add the dependent target to those we’ll unblock when this build completes.
+            self._m_setBlockedDependents.add(weakref.ref(tgtDependent))
+         if not self._m_bBuilding:
+            self._m_bBuilding = True
+            self._on_build_started()
+
    def validate(self):
       """Checks that the target doesn’t have invalid settings that were undetectable by
       Target.parse_makefile_element_child().
       """
 
       pass
-
-   class makefile_type_id(object):
-      """Decorator to teach Target.select_subclass() the association of the decorated class with an
-      Abamakefile type IDs (XML element name).
-
-      str sNodeName
-         Name of the element to associate with the decorated class.
-      """
-
-      def __init__(self, sNodeName):
-         self._m_sNodeName = sNodeName
-
-      def __call__(self, clsDerived):
-         Target._sm_dictTypeIds[self._m_sNodeName] = clsDerived
-         return clsDerived
 
 ####################################################################################################
 # NamedTargetMixIn
@@ -798,7 +798,7 @@ class DynLibTarget(NamedBinaryTarget):
 class ToolUnitTestTarget(NamedTargetMixIn, Target):
    """Target that executes a unit test."""
 
-   # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
+   # True if comparison operands should be treated as amorphous BLOBs, or False if they should be
    # treated as strings.
    _m_bBinaryCompare = None
    # Filter (regex) to apply to the comparison operands.
@@ -822,6 +822,14 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
       log = self._m_mk().log
       log(log.HIGH, 'build[{}]: no job to run for a ToolUnitTestTarget', self)
       self._on_build_tool_run_complete()
+
+   def _on_build_tool_output_validated(self):
+      """Invoked after the unit test’s output has been validated."""
+
+      log = self._m_mk().log
+      log(log.HIGH, 'build[{}]: tool output validated', self)
+      # Resume with the Target build step we hijacked.
+      Target._on_build_tool_run_complete(self)
 
    def _on_build_tool_run_complete(self):
       """See Target._on_build_tool_run_complete(). Overridden to perform any comparisons defined for
@@ -856,8 +864,8 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
          log(log.QUIET, '{} {} <=> {}', log.qm_tool_name(sCmpQ), *listCmpNames)
 
       # Compare the targets.
-      # TODO: make this asynchronously, passing self._on_tool_output_validated as the on_complete
-      # handler for a new job, instead of doing this and the last line.
+      # TODO: make this asynchronously, passing self._on_build_tool_output_validated as the
+      # on_complete handler for a new job, instead of doing this and the last line.
       bEqual = (listCmpOperands[0] == listCmpOperands[1])
       if not bEqual:
          log(log.QUIET, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
@@ -866,15 +874,7 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
       # This comparison counts as an additional test case with a single assertion.
       log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
 
-      self._on_tool_output_validated()
-
-   def _on_tool_output_validated(self):
-      """Invoked after the unit test’s output has been validated."""
-
-      log = self._m_mk().log
-      log(log.HIGH, 'build[{}]: tool output validated', self)
-      # Resume with the Target build step we hijacked.
-      Target._on_build_tool_run_complete(self)
+      self._on_build_tool_output_validated()
 
    def parse_makefile_element_child(self, elt):
       """See Target.parse_makefile_element_child()."""
