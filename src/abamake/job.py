@@ -518,7 +518,7 @@ class Runner(object):
          mk = self._m_mk()
          log = mk.log
          log(
-            log.QUIET, 'run: job failed ({}); command was: {}',
+            log.QUIET, 'make: job failed ({}); command was: {}',
             iRet, job.get_verbose_command()
          )
          # If not configured to keep going after a failure, stop processing the queue.
@@ -579,7 +579,7 @@ class Runner(object):
       self._m_bProcessQueue = True
       try:
          while self._m_dictRunningJobs:
-            log(log.MEDIUM, 'run: waiting for a job to complete')
+            log(log.MEDIUM, 'make: waiting for a job to complete')
             # This is blocking.
             job = self._wait_for_job_complete()
 
@@ -593,7 +593,7 @@ class Runner(object):
             # If there’s another job in the queue (which may have been just added by the on_complete
             # handler), start it now.
             if self._m_bProcessQueue and self._m_setQueuedJobs:
-               log(log.MEDIUM, 'run: starting queued job')
+               log(log.MEDIUM, 'make: starting queued job')
                self._start_asynchronous_job(self._m_setQueuedJobs.pop())
       finally:
          with self._m_lockJobsStatusQueueWrite as lock:
