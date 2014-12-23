@@ -791,7 +791,7 @@ class ClangGnuLdLinker(Linker):
 
       sFileName = 'clang++'
 
-      # This will fail if Clang can’t find a LD binary for the target system type.
+      # This will fail if Clang can’t find an LD binary for the target system type.
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-Wl,--version'))
       if not sOut:
          return None
@@ -800,6 +800,46 @@ class ClangGnuLdLinker(Linker):
       match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
       if not match:
          return None
+
+      return sFileName
+
+####################################################################################################
+# ClangMachOLdLinker
+
+class ClangMachOLdLinker(Linker):
+   """Clang++-driven Mach-O object code linker (LD)."""
+
+   # Mapping table between abstract (*FLAG_*) flags
+   _smc_dictAbstactToImplFlags = {
+      Tool.FLAG_OUTPUT_PATH_FORMAT    : '-o{path}',
+      Linker.LDFLAG_ADD_LIB_DIR_FORMAT: '-L{dir}',
+      Linker.LDFLAG_ADD_LIB_FORMAT    : '-l{lib}',
+      Linker.LDFLAG_DYNLIB            : '-shared',
+   }
+
+   def _create_job_add_flags(self, listArgs):
+      """See Linker._create_job_add_flags()."""
+
+      Linker._create_job_add_flags(self, listArgs)
+
+      listArgs.extend([
+         '-ggdb',           # Generate debug info compatible with GDB.
+      ])
+
+      # TODO: add support for os.environ['LDFLAGS'] ?
+
+   @classmethod
+   def _exe_matches_tool_and_system_type(cls, st):
+      """See Linker._exe_matches_tool_and_system_type()."""
+
+      sFileName = 'clang++'
+
+      # This will fail if Clang can’t find an LD binary for the target system type.
+      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v', '-Wl,-v'))
+      if not sOut:
+         return None
+
+      # TODO: verify that Clang is really wrapping Mach-O ld.
 
       return sFileName
 
