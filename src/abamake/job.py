@@ -484,6 +484,8 @@ class Runner(object):
    offers a method to process the queue, run().
    """
 
+   # Count of failed jobs.
+   _m_cFailedJobs = None
    # Type of a message written to/read from the jobs status queue.
    _smc_structJobsStatusQueueMessage = struct.Struct('P')
    # Pipe end used by the main thread to get status updates from process-controlling threads.
@@ -508,10 +510,11 @@ class Runner(object):
          Make instance.
       """
 
-      self._m_mk = weakref.ref(mk)
+      self._m_cFailedJobs = 0
       self._m_fdJobsStatusQueueRead = None
       self._m_fdJobsStatusQueueWrite = None
       self._m_lockJobsStatusQueueWrite = threading.Lock()
+      self._m_mk = weakref.ref(mk)
       self._m_bProcessQueue = True
       self._m_setQueuedJobs = set()
       self._m_dictRunningJobs = {}
@@ -536,6 +539,8 @@ class Runner(object):
             log.QUIET, 'make: job failed ({}); command was: {}',
             iRet, job.get_verbose_command()
          )
+         # Track this failure.
+         self._m_cFailedJobs += 1
          # If not configured to keep going after a failure, stop processing the queue.
          if not mk.keep_going:
             self._m_bProcessQueue = False
@@ -571,6 +576,13 @@ class Runner(object):
             self._start_asynchronous_job(job)
          else:
             self._m_setQueuedJobs.add(job)
+
+   def _get_failed_jobs(self):
+      return self._m_cFailedJobs
+
+   failed_jobs = property(_get_failed_jobs, doc = """
+      Count of failed jobs. If 0, all jobs completed successfully.
+   """)
 
    def job_complete(self, job):
       """Report that an asynchronous job has completed. This is typically called from a different

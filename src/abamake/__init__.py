@@ -304,7 +304,7 @@ class Make(object):
       if not self._m_bDryRun:
          # Write any new metadata.
          self._m_mds.write()
-      return cFailedBuilds == 0
+      return self.job_runner.failed_jobs == 0
 
    def _get_dry_run(self):
       return self._m_bDryRun
