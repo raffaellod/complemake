@@ -301,8 +301,9 @@ class Make(object):
          tgt.start_build()
       # Keep running until all queued jobs have completed.
       cFailedBuilds = self._m_jr.run()
-      # Write any new metadata.
-      self._m_mds.write()
+      if not self._m_bDryRun:
+         # Write any new metadata.
+         self._m_mds.write()
       return cFailedBuilds == 0
 
    def _get_dry_run(self):
