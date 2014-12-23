@@ -70,7 +70,7 @@ def main(iterArgs):
       help = 'Show this informative message and exit.'
    )
    argparser.add_argument(
-      '-j', '--jobs', default = 999999, metavar = 'N', type = int,
+      '-j', '--jobs', default = None, metavar = 'N', type = int,
       help = 'Build using N processes at at time; if N is omitted, build all independent targets ' +
              'at the same time. If not specified, the default is --jobs <number of processors>.'
    )
@@ -97,12 +97,13 @@ def main(iterArgs):
    args = argparser.parse_args()
 
    mk = abamake.Make()
-   mk.dry_run          = args.dry_run
-   mk.force_build      = args.force_build
-   mk.force_test       = args.force_test
-#   mk.job_controller.running_jobs_max = args.jobs
-   mk.keep_going       = args.keep_going
-   mk.log.verbosity    += args.verbose
+   mk.dry_run                     = args.dry_run
+   mk.force_build                 = args.force_build
+   mk.force_test                  = args.force_test
+   if args.jobs:
+      mk.job_runner.running_jobs_max = args.jobs
+   mk.keep_going                  = args.keep_going
+   mk.log.verbosity               += args.verbose
 
    # Check for a makefile.
    sMakefilePath = args.makefile

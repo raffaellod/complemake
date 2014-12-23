@@ -490,8 +490,6 @@ class Runner(object):
    _m_bProcessQueue = True
    # Jobs queued to be run.
    _m_setQueuedJobs = None
-   # Maximum number of concurrent jobs, also known as degree of parallelism.
-   _m_cbMaxRunningJobs = 4
    # Maps the ID of running jobs with the corresponding Job instances.
    _m_dictRunningJobs = None
 
@@ -509,6 +507,7 @@ class Runner(object):
       self._m_bProcessQueue = True
       self._m_setQueuedJobs = set()
       self._m_dictRunningJobs = {}
+      self.running_jobs_max = multiprocessing.cpu_count()
 
    def _after_job_end(self, job, iRet):
       """TODO: comment."""
@@ -544,7 +543,7 @@ class Runner(object):
          self._run_synchronous_job(job)
       else:
          # If there’s a free job slot, start the job now, otherwise queue it for later.
-         if len(self._m_dictRunningJobs) < self._m_cbMaxRunningJobs:
+         if len(self._m_dictRunningJobs) < self.running_jobs_max:
             self._start_asynchronous_job(job)
          else:
             self._m_setQueuedJobs.add(job)
@@ -584,6 +583,35 @@ class Runner(object):
             os.close(self._m_fdJobsStatusQueueWrite)
             self._m_fdJobsStatusQueueRead = None
             self._m_fdJobsStatusQueueWrite = None
+
+   # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors
+   # in the system.
+   running_jobs_max = None
+
+   def _get_force_test(self):
+      return self._m_bForceTest
+
+   def _set_force_test(self, bForceTest):
+      self._m_bForceTest = bForceTest
+
+   force_test = property(_get_force_test, _set_force_test, doc = """
+      If True, all test targets are executed unconditionally; if False, test targets are only
+      executed if triggered by their dependencies.
+   """)
+
+   def _run_synchronous_job(self, job):
+      """TODO: comment."""
+
+      self._before_job_start(job)
+      iRet = job.run()
+      self._after_job_end(job, iRet)
+
+   def _start_asynchronous_job(self, job):
+      """TODO: comment."""
+
+      self._before_job_start(job)
+      job.start(self)
+      self._m_dictRunningJobs[id(job)] = job
 
    def _wait_for_job_complete(self):
       """Blocks to read from the jobs status queue, returning the first job that reported having
