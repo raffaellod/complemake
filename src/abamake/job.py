@@ -510,7 +510,14 @@ class Runner(object):
       self.running_jobs_max = multiprocessing.cpu_count()
 
    def _after_job_end(self, job, iRet):
-      """TODO: comment."""
+      """Invoked after a job completes, it executes its on_complete handler or reports a build
+      error, depending on the job’s exit code.
+
+      abamake.job.Job job
+         Job that just completed.
+      int iRet
+         Exit code of the job.
+      """
 
       if iRet == 0:
          job.on_complete()
@@ -526,7 +533,11 @@ class Runner(object):
             self._m_bProcessQueue = False
 
    def _before_job_start(self, job):
-      """TODO: comment."""
+      """Invoked before a job is started, it logs information about it.
+
+      abamake.job.Job job
+         Job that’s about to start.
+      """
 
       log = self._m_mk().log
       if log.verbosity >= log.LOW:
@@ -607,14 +618,23 @@ class Runner(object):
    running_jobs_max = None
 
    def _run_synchronous_job(self, job):
-      """TODO: comment."""
+      """Runs a synchrnous job, calling _before_job_start() and _after_job_end().
+
+      abamake.job.SynchronousJob job
+         Job to run.
+      """
 
       self._before_job_start(job)
       iRet = job.run()
       self._after_job_end(job, iRet)
 
    def _start_asynchronous_job(self, job):
-      """TODO: comment."""
+      """Starts an asynchrnous job, calling _before_job_start() and adding the job to
+      _m_dictRunningJobs.
+
+      abamake.job.AsynchronousJob job
+         Job to start.
+      """
 
       self._before_job_start(job)
       job.start(self)
