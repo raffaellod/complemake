@@ -108,6 +108,22 @@ class Tool(object):
       self._m_listInputFilePaths = []
       self._m_st = st
 
+   @classmethod
+   def _add_exe_to_system_type_cache(cls, st, sFilePath):
+      """Saves the path to the version of the tool that targets st.
+
+      abamake.platform.SystemType st
+         Target system type.
+      str sFilePath
+         Path to the executable file.
+      """
+
+      dictFilePaths = cls._sm_dictFilePaths
+      if not dictFilePaths:
+         dictFilePaths = {}
+         cls._sm_dictFilePaths = dictFilePaths
+      dictFilePaths[st] = sFilePath
+
    def add_flags(self, *iterArgs):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
       will take care of translating each flag into a command-line argument understood by a specific
@@ -128,63 +144,6 @@ class Tool(object):
       """
 
       self._m_listInputFilePaths.append(sInputFilePath)
-
-   @classmethod
-   def _add_exe_to_system_type_cache(cls, st, sFilePath):
-      """Saves the path to the version of the tool that targets st.
-
-      abamake.platform.SystemType st
-         Target system type.
-      str sFilePath
-         Path to the executable file.
-      """
-
-      dictFilePaths = cls._sm_dictFilePaths
-      if not dictFilePaths:
-         dictFilePaths = {}
-         cls._sm_dictFilePaths = dictFilePaths
-      dictFilePaths[st] = sFilePath
-
-   def create_jobs(self, mk, tgt, fnOnComplete):
-      """Returns a job that, when run, results in the execution of the tool.
-
-      The default implementation schedules a job whose command line is composed by calling
-      Tool._create_job_add_flags() and Tool._create_job_add_inputs().
-
-      abamake.Make mk
-         Make instance.
-      abamake.target.Target tgt
-         Target that this job will build.
-      callable fnOnComplete
-         Function to call after the job completes; it will be provided the return code of the job.
-      abamake.job.Job return
-         Job scheduled.
-      """
-
-      # Build the arguments list.
-      listArgs = [type(self)._get_exe_from_system_type_cache(self._m_st)]
-
-      self._create_job_add_flags(listArgs)
-
-      if self._m_sOutputFilePath:
-         if not mk.dry_run:
-            # Make sure that the output directory exists.
-            abamake.makedirs(os.path.dirname(self._m_sOutputFilePath))
-         # Get the compiler-specific command-line argument to specify an output file path.
-         sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
-         # Add the output file path.
-         listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
-
-      self._create_job_add_inputs(listArgs)
-
-      dictPopenArgs = {
-         'args': listArgs,
-      }
-      # Forward fnOnComplete directly to Job. More complex Tool subclasses that require
-      # multiple jobs will want to only do so with the last job.
-      return self._create_job_instance(
-         fnOnComplete, self._get_quiet_cmd(), dictPopenArgs, mk.log, tgt.build_log_path
-      )
 
    def _create_job_add_flags(self, listArgs):
       """Builds the flags portion of the tool’s command line.
@@ -234,6 +193,47 @@ class Tool(object):
 
       return abamake.job.ExternalCmdJob(
          fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
+      )
+
+   def create_jobs(self, mk, tgt, fnOnComplete):
+      """Returns a job that, when run, results in the execution of the tool.
+
+      The default implementation schedules a job whose command line is composed by calling
+      Tool._create_job_add_flags() and Tool._create_job_add_inputs().
+
+      abamake.Make mk
+         Make instance.
+      abamake.target.Target tgt
+         Target that this job will build.
+      callable fnOnComplete
+         Function to call after the job completes; it will be provided the return code of the job.
+      abamake.job.Job return
+         Job scheduled.
+      """
+
+      # Build the arguments list.
+      listArgs = [type(self)._get_exe_from_system_type_cache(self._m_st)]
+
+      self._create_job_add_flags(listArgs)
+
+      if self._m_sOutputFilePath:
+         if not mk.dry_run:
+            # Make sure that the output directory exists.
+            abamake.makedirs(os.path.dirname(self._m_sOutputFilePath))
+         # Get the compiler-specific command-line argument to specify an output file path.
+         sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
+         # Add the output file path.
+         listArgs.append(sFormat.format(path = self._m_sOutputFilePath))
+
+      self._create_job_add_inputs(listArgs)
+
+      dictPopenArgs = {
+         'args': listArgs,
+      }
+      # Forward fnOnComplete directly to Job. More complex Tool subclasses that require
+      # multiple jobs will want to only do so with the last job.
+      return self._create_job_instance(
+         fnOnComplete, self._get_quiet_cmd(), dictPopenArgs, mk.log, tgt.build_log_path
       )
 
    @classmethod
