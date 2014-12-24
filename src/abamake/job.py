@@ -302,6 +302,8 @@ class ExternalCmdJob(AsynchronousJob):
          for sLine in fileStdErrTextPipe:
             self._stderr_line_read(sLine.rstrip('\r\n'))
             fileStdErr.write(sLine)
+         # EOF: tell the runner that this job is finished.
+         self._m_runner().job_complete(self)
 
    def _stdout_reader_thread(self):
       """Reads from the job process’ stdout."""
@@ -315,8 +317,7 @@ class ExternalCmdJob(AsynchronousJob):
       while True:
          by = fileStdOutRaw.read(io.DEFAULT_BUFFER_SIZE)
          if not by:
-            # EOF; tell the runner that this job is finished.
-            self._m_runner().job_complete(self)
+            # EOF. Rely on _stderr_reader_thread() to call _m_runner.job_complete().
             break
          self._stdout_chunk_read(by)
 
