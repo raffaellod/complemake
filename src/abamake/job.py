@@ -503,6 +503,8 @@ class Runner(object):
    _m_setQueuedJobs = None
    # Maps the ID of running jobs with the corresponding Job instances.
    _m_dictRunningJobs = None
+   # See Runner.running_jobs_max
+   _m_cRunningJobsMax = None
 
    def __init__(self, mk):
       """Constructor.
@@ -519,7 +521,7 @@ class Runner(object):
       self._m_bProcessQueue = True
       self._m_setQueuedJobs = set()
       self._m_dictRunningJobs = {}
-      self.running_jobs_max = multiprocessing.cpu_count()
+      self._m_cRunningJobsMax = multiprocessing.cpu_count()
 
    def _after_job_end(self, job, iRet):
       """Invoked after a job completes, it executes its on_complete handler or reports a build
@@ -573,7 +575,7 @@ class Runner(object):
          self._run_synchronous_job(job)
       else:
          # If there’s a free job slot, start the job now, otherwise queue it for later.
-         if len(self._m_dictRunningJobs) < self.running_jobs_max:
+         if len(self._m_dictRunningJobs) < self._m_cRunningJobsMax:
             self._start_asynchronous_job(job)
          else:
             self._m_setQueuedJobs.add(job)
@@ -643,9 +645,16 @@ class Runner(object):
             self._m_fdJobsStatusQueueRead = None
             self._m_fdJobsStatusQueueWrite = None
 
-   # Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of processors
-   # in the system.
-   running_jobs_max = None
+   def _get_running_jobs_max(self):
+      return self._m_cRunningJobsMax
+
+   def _set_running_jobs_max(self, cRunningJobsMax):
+      self._m_cRunningJobsMax = cRunningJobsMax
+
+   running_jobs_max = property(_get_running_jobs_max, _set_running_jobs_max, doc = """
+      Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of
+      processors in the system.
+   """)
 
    def _run_synchronous_job(self, job):
       """Runs a synchrnous job, calling _before_job_start() and _after_job_end().
