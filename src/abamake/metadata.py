@@ -433,7 +433,7 @@ class MetadataStore(object):
          namespaceURI  = None,
          qualifiedName = None,
       )
-      eltRoot = doc.appendChild(doc.createElement('abamk-metadata'))
+      eltRoot = doc.appendChild(doc.createElement('abamake-metadata'))
 
       # Add the stored target snapshots to their section.
       eltTgtSnaps = eltRoot.appendChild(doc.createElement('target-snapshots'))
