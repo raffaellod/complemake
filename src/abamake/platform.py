@@ -449,6 +449,46 @@ class DarwinPlatform(Platform):
          return 0
 
 ####################################################################################################
+# FreeBsdPlatform
+
+class FreeBsdPlatform(Platform):
+   """FreeBSD platform."""
+
+   def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
+      """See Platform.add_dir_to_dynlib_env_path()."""
+
+      sLibPath = dictEnv.get('LD_LIBRARY_PATH', '')
+      if sLibPath:
+         sLibPath += ':'
+      sLibPath += os.path.abspath(sDir)
+      dictEnv['LD_LIBRARY_PATH'] = sLibPath
+      return dictEnv
+
+   def configure_tool(self, tool):
+      """See Platform.configure_tool()."""
+
+      pass
+
+   def dynlib_file_name(self, sName):
+      """See Platform.dynlib_file_name()."""
+
+      return 'lib{}.so'.format(sName)
+
+   def exe_file_name(self, sName):
+      """See Platform.exe_file_name()."""
+
+      return '{}'.format(sName)
+
+   @classmethod
+   def _match_system_type(cls, st):
+      """See Platform._match_system_type()."""
+
+      if st.os.startswith('freebsd'):
+         return 1
+      else:
+         return 0
+
+####################################################################################################
 # GnuPlatform
 
 class GnuPlatform(Platform):
