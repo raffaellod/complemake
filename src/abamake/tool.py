@@ -495,13 +495,10 @@ class ClangxxCompiler(CxxCompiler):
       if not sOut:
          return None
 
-      # Verify that it’s indeed Clang.
-      match = re.search(r'^clang version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE)
+      # Verify that it’s indeed Clang. Apple calls it LLVM, but it’s still Clang.
+      match = re.search(r'^(?:.*? )?(?:clang|LLVM) version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE)
       if not match:
-         # Apple brands it, but it’s still Clang.
-         match = re.search(r'^Apple LLVM version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE)
-         if not match:
-            return None
+         return None
 
       # Verify that this compiler supports the specified system type.
       match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
