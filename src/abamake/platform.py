@@ -467,7 +467,8 @@ class FreeBsdPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      pass
+      if isinstance(tool, abamake.tool.Linker):
+         tool.add_input_lib('pthread')
 
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
