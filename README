@@ -1,0 +1,172 @@
+﻿1. Introduction
+---------------
+
+Abamake is a build utility for C++ projects, featuring:
+
+•  Multiple platform compatibility (currently FreeBSD, Linux, OSX, Windows);
+   this is enough to no longer need to separately maintain a GNU makefile and
+   solution and projects for other IDEs;
+
+•  Single makefile per project, defining multiple build targets;
+
+•  Simplified syntax for a very shallow learning curve;
+
+•  Minimal-to-no build instructions required in each makefile, and no toolchain-
+   specific commands/flags;
+
+•  Implicit definition of intermediate targets, so that each makefile needs only
+   mention sources and outputs;
+
+•  Trivial unit test declaration and execution;
+
+•  Integration with Abaclade’s abc::testing unit testing framework, providing a
+   fluid automated testing experience (see <https://github.com/raffaellod/
+   abaclade>);
+
+•  Parallel execution of any and all independent sub-processes;
+
+•  Command-line options generally compatible with GNU make, to be immediately
+   usable by GNU make users.
+
+
+2. Past, present and future
+---------------------------
+
+
+2.1. Some history
+-----------------
+
+Abamake is a spin-off of Abaclade (see <https://github.com/raffaellod/abaclade>)
+which became necessary as the number of fixes to the different build systems in
+use (the traditional make utility and MSBuild) started becoming excessive:
+
+•  The syntax of traditional makefiles is one of a kind, and often that’s the
+   case for its replacements as well; while this is also true for Abamake, the
+   syntax for the latter is rather simplified and often only offers one way to
+   reach the desired result;
+
+•  Traditional makefiles require toolchain-specific commands/flags to be hard-
+   coded in the target build rules;
+
+•  MSBuild requires too many files, creating confusion;
+
+•  Traditional makefiles require quite some tooling to generate build rules for
+   intermediate targets;
+
+•  No way of  parallelizing the build by default, and many steps had to be
+   sequential anyway.
+
+
+2.2. Current status of Abamake
+-------------------------------
+
+Though not yet as complete as it should be, Abamake is the recommended utility
+to build projects using Abaclade.
+
+
+2.3. Project goals
+------------------
+
+Abamake has met or is targeting these goals:
+
+1. Offer a fast way of setting up C++ projects using Abaclade;
+
+2. Use all available resources for builds;
+
+3. Fully automate the testing of all targets built;
+
+All future development will be geared towards getting closer to accomplishing
+these objectives.
+
+
+3. Compatibility
+----------------
+
+Abamake is in full development, so the compatibility can and will change over
+time (hopefully expanding).
+
+Supported build systems:
+
+•  Clang + Apple LD
+   •  Clang 3.3 (later versions to be tested)
+   •  LD (version to be determined – anything from OSX 10.8 on should work)
+
+•  Clang + GNU LD
+   •  Clang 3.3 (later versions to be tested)
+   •  binutils (version to be determined – anything from 2010 on should work)
+
+•  GNU toolchain
+   •  GCC 4.6 to 4.9
+   •  binutils (version to be determined – anything from 2010 on should work)
+
+•  Microsoft toolchain
+   •  Visual C++ 10 (MSC 16 / Visual Studio 2010)
+
+Supported operating systems:
+
+•  GNU/Linux;
+•  OSX;
+•  FreeBSD;
+•  Microsoft Windows.
+
+Abamake requires Python 2.7 or 3.2 or later to be installed on the build host
+system.
+
+Future plans include removal of the dependency on Python.
+
+
+4. Building Abamake
+-------------------
+
+Since Abamake is entirely written in Python, it doesn’t need to be built.
+
+
+5. Installing Abamake
+---------------------
+
+At the moment, Abamake lacks any means for installation. To perform a manual
+installation, copy its module directory (src/abamake) to Python’s site packages
+and the main script (abamake.py) to a directory in the system PATH.
+
+TODO: make Abaclade installable.
+
+
+6. Using Abamake
+----------------
+
+In order to use Abamake, an Abamakefile (short for “Abamake makefile”, a fairly
+simple XML file; see [DOC:5581 Abamakefiles]) must be created for your project,
+defining a list of named and unnamed (file path-only) targets.
+
+Abamake should be run preferably from the directory containing the target
+project’s Abamakefile (.abamk), relying on the PATH environment variable to
+locate the abamake.py program:
+
+   abamake.py
+
+
+When running, Abamake will build the targets in the makefile and create outputs
+in the bin/ and lib/ folders.
+
+TODO: expand on Abamake arguments.
+
+
+
+
+--------------------------------------------------------------------------------
+Copyright 2010, 2011, 2012, 2013, 2014
+Raffaello D. Di Napoli
+
+This file is part of Abamake.
+
+Abamake is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+Abamake is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+Abamake. If not, see <http://www.gnu.org/licenses/>.
