@@ -468,14 +468,14 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
             )
             if self._m_cFailedTestAssertions:
                # Show the title of the failed test case.
-               sLine = 'test case failed: {}'.format(self._m_sCurrTestCase)
+               sLine = u'test case failed: {}'.format(self._m_sCurrTestCase)
             else:
                sLine = None
          else:
-            sLine = 'unknown info from abc::testing program: {}'.format(sLine)
+            sLine = u'unknown info from abc::testing program: {}'.format(sLine)
       if sLine is not None:
          # self._m_iterQuietCmd[1] is the unit test name.
-         self._m_log(None, '{}: {}', self._m_iterQuietCmd[1], sLine)
+         self._m_log(None, u'{}: {}', self._m_iterQuietCmd[1], sLine)
 
 ####################################################################################################
 # Runner
