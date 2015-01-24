@@ -110,6 +110,8 @@ class SystemType(object):
       return not self.__eq__(other)
 
    def __str__(self):
+      if self._m_sParsedSource:
+         return self._m_sParsedSource
       sVendor = self._m_sVendor or 'unknown'
       if self._m_sKernel:
          return '{}-{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sKernel, self._m_sOS)
