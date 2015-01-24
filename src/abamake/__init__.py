@@ -207,19 +207,23 @@ class Make(object):
       mk.build((tgt, ))
    """
 
+   # See Make.cross_build.
+   _m_bCrossBuild = None
    # See Make.dry_run.
-   _m_bDryRun = False
+   _m_bDryRun = None
    # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have
    # a file path assigned (file path -> Target).
    _m_dictFileTargets = None
    # See Make.force_build.
-   _m_bForceBuild = False
+   _m_bForceBuild = None
    # See Make.force_test.
-   _m_bForceTest = False
+   _m_bForceTest = None
+   # Platform under which targets will be built.
+   _m_platformHost = None
    # See Make.job_runner.
    _m_jr = None
    # See Make.keep_going.
-   _m_bKeepGoing = False
+   _m_bKeepGoing = None
    # See Make.log.
    _m_log = None
    # See Make.metadata.
@@ -227,8 +231,8 @@ class Make(object):
    # Targets defined in the makefile that have a name assigned (name -> Target).
    _m_dictNamedTargets = None
    # See Make.output_dir.
-   _m_sOutputDir = ''
-   # See Make.platform.
+   _m_sOutputDir = None
+   # Platform under which targets will be executed.
    _m_platformTarget = None
    # All targets explicitly or implicitly defined in the makefile.
    _m_setTargets = None
@@ -240,15 +244,18 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
+      self._m_bCrossBuild = False
       self._m_bDryRun = False
       self._m_dictFileTargets = {}
       self._m_bForceBuild = False
       self._m_bForceTest = False
+      self._m_platformHost = platform.Platform.detect_host()
       self._m_jr = job.Runner(self)
       self._m_bKeepGoing = False
       self._m_log = logging.Logger(logging.LogGenerator())
       self._m_mds = None
       self._m_dictNamedTargets = {}
+      self._m_sOutputDir = ''
       self._m_platformTarget = None
       self._m_setTargets = set()
 
@@ -286,6 +293,14 @@ class Make(object):
       """
 
       self._m_setTargets.add(tgt)
+
+   def _get_cross_build(self):
+      return self._m_bCrossBuild
+
+   cross_build = property(_get_cross_build, doc = """
+      If True, the host platform is not the same as the target platform, and Abamake may be unable
+      to execute the binaries it builds.
+   """)
 
    def build_targets(self, iterTargets):
       """Builds the specified targets, as well as their dependencies, as needed.
@@ -510,6 +525,7 @@ class Make(object):
    def _get_target_platform(self):
       if not self._m_platformTarget:
          self._m_platformTarget = platform.Platform.detect_host()
+         self._m_bCrossBuild = (self._m_platformTarget == self._m_platformHost)
       return self._m_platformTarget
 
    target_platform = property(_get_target_platform, doc = """
