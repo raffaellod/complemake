@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013, 2014
+# Copyright 2013, 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -525,7 +525,7 @@ class Make(object):
    def _get_target_platform(self):
       if not self._m_platformTarget:
          self._m_platformTarget = platform.Platform.detect_host()
-         self._m_bCrossBuild = (self._m_platformTarget == self._m_platformHost)
+         self._m_bCrossBuild = False
       return self._m_platformTarget
 
    target_platform = property(_get_target_platform, doc = """

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2014
+# Copyright 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -258,9 +258,6 @@ class SystemType(object):
 class Platform(object):
    """Generic software platform (OS/runtime environment)."""
 
-   # Tools to be used for this platform (abamake.tool.Tool => abamake.tool.Tool). Associates a Tool
-   # subclass to a more derived Tool subclass, representing the implementation to use of the tool.
-   _m_dictTools = None
    # System type (more specific than the platform type).
    _m_st = None
 
@@ -271,7 +268,6 @@ class Platform(object):
          System type of this platform.
       """
 
-      self._m_dictTools = {}
       self._m_st = st
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
@@ -376,26 +372,6 @@ class Platform(object):
          'Platform.exe_file_name() must be overridden in ' + type(self).__name__
       )
 
-   def get_tool(self, clsTool):
-      """Returns a subclass of the specified Tool subclass modeling the implementation of the
-      specified tool for the platform.
-
-      For example, my_platform.get_tool(abamake.tool.CxxCompiler) will return
-      abamake.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
-
-      type clsTool
-         Subclass of abamake.tool.Tool.
-      type return
-         Subclass of clsTool.
-      """
-
-      clsToolImpl = self._m_dictTools.get(clsTool)
-      if not clsToolImpl:
-         # TODO: support tools specified via command line: --tool-CxxCompiler i686-pc-linux-gnu-g++
-         clsToolImpl = clsTool.get_impl_for_system_type(self._m_st)
-         self._m_dictTools[clsTool] = clsToolImpl
-      return clsToolImpl
-
    @classmethod
    def _match_system_type(cls, st):
       """Returns a confidence index of how much the platform models the specified system type.
@@ -409,6 +385,15 @@ class Platform(object):
       """
 
       return 0
+
+   def system_type(self):
+      """Returns the system type from which the Platform instance was created.
+
+      abamake.platform.SystemType return
+         System type.
+      """
+
+      return self._m_st
 
 ####################################################################################################
 # DarwinPlatform

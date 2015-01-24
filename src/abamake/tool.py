@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013, 2014
+# Copyright 2013, 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -79,8 +79,8 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
-   # Associates SystemTypes to paths to this a tool’s executable (SystemType => str).
-   _sm_dictFilePaths = None
+   # Name by which Abamake can invoke the tool. Only set in leaf subclasses.
+   _sm_sFilePath = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
    # See Tool.output_file_path.
@@ -88,8 +88,9 @@ class Tool(object):
    # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
    # displayed.
    _smc_sQuietName = None
-   # Target system type.
-   _m_st = None
+   # Leaf subclass that has been selected as the tool for the current build. Only set in non-leaf
+   # subclasses.
+   _sm_clsSelectedDerived = None
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
 
@@ -97,32 +98,11 @@ class Tool(object):
    # with the intuitive meaning.
    FLAG_OUTPUT_PATH_FORMAT = AbstractFlag()
 
-   def __init__(self, st):
-      """Constructor.
-
-      abamake.platform.SystemType st
-         Target system type.
-      """
+   def __init__(self):
+      """Constructor."""
 
       self._m_setAbstractFlags = set()
       self._m_listInputFilePaths = []
-      self._m_st = st
-
-   @classmethod
-   def _add_exe_to_system_type_cache(cls, st, sFilePath):
-      """Saves the path to the version of the tool that targets st.
-
-      abamake.platform.SystemType st
-         Target system type.
-      str sFilePath
-         Path to the executable file.
-      """
-
-      dictFilePaths = cls._sm_dictFilePaths
-      if not dictFilePaths:
-         dictFilePaths = {}
-         cls._sm_dictFilePaths = dictFilePaths
-      dictFilePaths[st] = sFilePath
 
    def add_flags(self, *iterArgs):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
@@ -212,7 +192,7 @@ class Tool(object):
       """
 
       # Build the arguments list.
-      listArgs = [type(self)._get_exe_from_system_type_cache(self._m_st)]
+      listArgs = [self._sm_sFilePath]
 
       self._create_job_add_flags(listArgs)
 
@@ -237,16 +217,17 @@ class Tool(object):
       )
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """Returns True if the specified executable file is modeled by the tool, and if that
-      executable supports targeting the specified system type.
+   def _exe_matches_tool(cls, sFileName, st):
+      """Checks whether the specified tool executable file is modeled by cls, returning the
+      SystemType that the tool reports to support or True if all platforms are supported.
 
-      The default implementation always returns False.
-
+      str sFileName
+         Name of the executable to invoke.
       abamake.platform.SystemType st
-         System type.
-      str return
-         Path to a version of the tool that supports st, or None otherwise.
+         Target system type.
+      object return
+         SystemType supported by the tool or True if all platforms are supported, or None if the
+         executable does not exist or is not modeled by cls.
       """
 
       return None
@@ -278,44 +259,6 @@ class Tool(object):
          # Could not execute the program.
          return None
 
-   @classmethod
-   def _get_exe_from_system_type_cache(cls, st):
-      """Returns the path to the version of the tool that targets st, if any was ever cached.
-
-      abamake.platform.SystemType st
-         Target system type.
-      str return
-         Path to the executable file.
-      """
-
-      dictFilePaths = cls._sm_dictFilePaths
-      return dictFilePaths and dictFilePaths.get(st)
-
-   @classmethod
-   def get_impl_for_system_type(cls, st):
-      """Detects if a tool of the type of this class (e.g. a C++ compiler for
-      abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
-      implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
-
-      abamake.platform.SystemType st
-         System type for which the tool is needed.
-      type return
-         Matching abamake.tool.Tool subclass for the tool found or specified.
-      """
-
-      for clsDeriv in abamake.derived_classes(cls):
-         if cls._get_exe_from_system_type_cache(st):
-            # Implicit cached file name: always a match.
-            return clsDeriv
-         else:
-            # Attempt to detect whether this tool is available.
-            sFilePath = clsDeriv._exe_matches_tool_and_system_type(st)
-            if sFilePath:
-               # Match: cache the file name/path.
-               cls._add_exe_to_system_type_cache(st, sFilePath)
-               return clsDeriv
-      raise Exception('unable to detect {} tool for system type {}'.format(cls.__name__, st))
-
    def _get_quiet_cmd(self):
       """Returns an iterable containing the short name and relevant (input or output) files for the
       tool, to be displayed in quiet mode.
@@ -325,6 +268,47 @@ class Tool(object):
       """
 
       return self._smc_sQuietName, (self._m_sOutputFilePath or '')
+
+   @classmethod
+   def get_selected(cls, mk):
+      """Detects if a tool of the type of this class (e.g. a C++ compiler for
+      abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
+      implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
+
+      abamake.Make mk
+         Make instance.
+      type return
+         Matching abamake.tool.Tool subclass for the tool.
+      """
+
+      if not cls._sm_clsSelectedDerived:
+         # Attempt to detect whether the tool is available by checking for a supported executable.
+         stTarget = mk.target_platform.system_type()
+         for tplSupported in cls._get_supported():
+            sFileName = tplSupported[0]
+            for clsDeriv in tplSupported[1:]:
+               oRet = clsDeriv._exe_matches_tool(sFileName, stTarget)
+               if oRet:
+                  # TODO: verify that oRet is True or matches the target SystemType.
+                  cls._sm_clsSelectedDerived = clsDeriv
+                  clsDeriv._sm_sFilePath = sFileName
+         # If still got none, the requested tool is not available.
+         if not cls._sm_clsSelectedDerived:
+            raise Exception('unable to detect {} tool'.format(cls.__name__))
+      return cls._sm_clsSelectedDerived
+
+   @staticmethod
+   def _get_supported():
+      """Returns a tuple containing tuples where the first element is a tool name to try and
+      execute and the following elements are subclasses that should be used to detect whether the
+      tool is installed and really is the correct tool (e.g. instead of an identically-named
+      unrelated program).
+
+      tuple(tuple(std, type+)*) return
+         List of supported tool names and related subclasses.
+      """
+
+      return tuple()
 
    def _set_output_file_path(self, sOutputFilePath):
       self._m_sOutputFilePath = sOutputFilePath
@@ -374,10 +358,10 @@ class CxxCompiler(Tool):
    # replacement “dir” with the intuitive meaning.
    CFLAG_ADD_INCLUDE_DIR_FORMAT = AbstractFlag()
 
-   def __init__(self, st):
+   def __init__(self):
       """See Tool.__init__()."""
 
-      Tool.__init__(self, st)
+      Tool.__init__(self)
 
       self._m_listIncludeDirs = []
       self._m_dictMacros = {}
@@ -433,6 +417,19 @@ class CxxCompiler(Tool):
 
       return [iterQuietCmd[0]] + self._m_listInputFilePaths
 
+   @staticmethod
+   def _get_supported():
+      """See Tool._get_supported()."""
+
+      # TODO: prepend a user-provided compiler (e.g. ${CXX} or --tool-CxxCompiler=g++), to be
+      # evaluated by all subclasses.
+      return (
+         ('clang++', ClangxxCompiler),
+         ('g++',     GxxCompiler),
+         ('c++',     ClangxxCompiler, GxxCompiler),
+         ('cl.exe',  MscCompiler)
+      )
+
    # Name suffix for intermediate object files.
    object_suffix = None
 
@@ -486,17 +483,22 @@ class ClangxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See CxxCompiler._exe_matches_tool_and_system_type()."""
+   def _exe_matches_tool(cls, sFileName, st):
+      """See CxxCompiler._exe_matches_tool()."""
 
-      sFileName = 'clang++'
-
-      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v'))
+      listArgs = [sFileName]
+      if st:
+         listArgs.append('-target')
+         listArgs.append(str(st))
+      listArgs.append('-v')
+      sOut = Tool._get_cmd_output(listArgs)
       if not sOut:
          return None
 
       # Verify that it’s indeed Clang. Apple calls it LLVM, but it’s still Clang.
-      match = re.search(r'^(?:.*? )?(?:clang|LLVM) version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE)
+      match = re.search(
+         r'^(?:.*? )?(?:clang|LLVM) version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE
+      )
       if not match:
          return None
 
@@ -505,15 +507,10 @@ class ClangxxCompiler(CxxCompiler):
       if not match:
          return None
       try:
-         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
+         return abamake.platform.SystemType.parse_tuple(match.group('target'))
       except abamake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
-      # This is not a strict equality test.
-      if st != stSupported:
-         return None
-
-      return sFileName
 
    object_suffix = '.o'
 
@@ -569,34 +566,27 @@ class GxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See CxxCompiler._exe_matches_tool_and_system_type()."""
+   def _exe_matches_tool(cls, sFileName, st):
+      """See CxxCompiler._exe_matches_tool()."""
 
-      for sFileName in str(st) + '-g++', 'g++':
-         sOut = Tool._get_cmd_output((sFileName, '--version'))
-         if not sOut:
-            continue
+      sOut = Tool._get_cmd_output((sFileName, '--version'))
+      if not sOut:
+         return None
 
-         # Verify that it’s indeed G++.
-         match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
-         if not match:
-            continue
+      # Verify that it’s indeed G++.
+      match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return None
 
-         # Verify that this compiler supports the specified system type.
-         sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-         if not sOut:
-            continue
-         try:
-            stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-         except abamake.platform.SystemTypeTupleError:
-            # If the tuple can’t be parsed, assume it’s not supported.
-            continue
-         # This is not a strict equality test.
-         if st != stSupported:
-            continue
-
-         return sFileName
-      return None
+      # Verify that this compiler supports the specified system type.
+      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      if not sOut:
+         return None
+      try:
+         return abamake.platform.SystemType.parse_tuple(sOut)
+      except abamake.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return None
 
    object_suffix = '.o'
 
@@ -667,10 +657,8 @@ class MscCompiler(CxxCompiler):
       )
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See CxxCompiler._exe_matches_tool_and_system_type()."""
-
-      sFileName = 'cl'
+   def _exe_matches_tool(cls, sFileName, st):
+      """See CxxCompiler._exe_matches_tool()."""
 
       sOut = Tool._get_cmd_output((sFileName, '/?'))
       if not sOut:
@@ -681,9 +669,9 @@ class MscCompiler(CxxCompiler):
          re.MULTILINE
       )
 
-      # TODO: verify that match('target') matches st.
+      # TODO: parse and return match('target').
 
-      return sFileName
+      return True
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -710,10 +698,10 @@ class Linker(Tool):
    # the intuitive meaning.
    LDFLAG_ADD_LIB_FORMAT = AbstractFlag()
 
-   def __init__(self, st):
+   def __init__(self):
       """See Tool.__init__()."""
 
-      Tool.__init__(self, st)
+      Tool.__init__(self)
 
       self._m_listInputLibs = []
       self._m_listLibPaths = []
@@ -754,6 +742,18 @@ class Linker(Tool):
          for sLib in self._m_listInputLibs:
             listArgs.append(sFormat.format(lib = sLib))
 
+   @staticmethod
+   def _get_supported():
+      """See Tool._get_supported()."""
+
+      # TODO: prepend a user-provided compiler/linker driver (e.g. ${CXX} or --tool-CxxCompiler=g++)
+      # or linker (e.g. ${LD} or --tool-Linker=ld), to be evaluated by all subclasses.
+      return (
+         ('clang++',  ClangGnuLdLinker, ClangMachOLdLinker),
+         ('g++',      GxxGnuLdLinker),
+         ('link.exe', MsLinker)
+      )
+
 ####################################################################################################
 # ClangGnuLdLinker
 
@@ -783,13 +783,16 @@ class ClangGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See Linker._exe_matches_tool_and_system_type()."""
+   def _exe_matches_tool(cls, sFileName, st):
+      """See Linker._exe_matches_tool()."""
 
-      sFileName = 'clang++'
-
+      listArgs = [sFileName]
+      if st:
+         listArgs.append('-target')
+         listArgs.append(str(st))
+      listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-Wl,--version'))
+      sOut = Tool._get_cmd_output(listArgs)
       if not sOut:
          return None
 
@@ -798,7 +801,7 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      return sFileName
+      return True
 
 ####################################################################################################
 # ClangMachOLdLinker
@@ -826,11 +829,14 @@ class ClangMachOLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See Linker._exe_matches_tool_and_system_type()."""
+   def _exe_matches_tool(cls, sFileName, st):
+      """See Linker._exe_matches_tool()."""
 
-      sFileName = 'clang++'
-
+      listArgs = [sFileName]
+      if st:
+         listArgs.append('-target')
+         listArgs.append(str(st))
+      listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
       sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v', '-Wl,-v'))
       if not sOut:
@@ -838,7 +844,7 @@ class ClangMachOLdLinker(Linker):
 
       # TODO: verify that Clang is really wrapping Mach-O ld.
 
-      return sFileName
+      return True
 
 ####################################################################################################
 # GxxGnuLdLinker
@@ -869,34 +875,27 @@ class GxxGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See Linker._exe_matches_tool_and_system_type()."""
+   def _exe_matches_tool(cls, sFileName, st):
+      """See Linker._exe_matches_tool()."""
 
-      for sFileName in str(st) + '-g++', 'g++':
-         sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
-         if not sOut:
-            continue
+      sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
+      if not sOut:
+         return None
 
-         # Verify that G++ is really wrapping GNU ld.
-         match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
-         if not match:
-            continue
+      # Verify that G++ is really wrapping GNU ld.
+      match = re.search(r'^GNU ld .*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return None
 
-         # Verify that this linker driver supports the specified system type.
-         sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-         if not sOut:
-            continue
-         try:
-            stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-         except abamake.platform.SystemTypeTupleError:
-            # If the tuple can’t be parsed, assume it’s not supported.
-            continue
-         # This is not a strict equality test.
-         if st != stSupported:
-            continue
-
-         return sFileName
-      return None
+      # Verify that this linker driver supports the specified system type.
+      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      if not sOut:
+         return None
+      try:
+         return abamake.platform.SystemType.parse_tuple(sOut)
+      except abamake.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return None
 
 ####################################################################################################
 # MsLinker
@@ -949,10 +948,8 @@ class MsLinker(Linker):
       )
 
    @classmethod
-   def _exe_matches_tool_and_system_type(cls, st):
-      """See Linker._exe_matches_tool_and_system_type()."""
-
-      sFileName = 'link'
+   def _exe_matches_tool(cls, sFileName, st):
+      """See Linker._exe_matches_tool()."""
 
       sOut = Tool._get_cmd_output((sFileName, '/?'))
       if not sOut:
@@ -962,6 +959,6 @@ class MsLinker(Linker):
          r'^Microsoft \(R\) Incremental Linker Version (?P<ver>[.0-9]+)$', re.MULTILINE
       )
 
-      # TODO: see if the linker can be 32- or 64-bit specific, and if so ensure that it matches st.
+      # TODO: see if the linker can be 32- or 64-bit specific, and if so parse and return that.
 
-      return sFileName
+      return True

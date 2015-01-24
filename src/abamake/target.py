@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013, 2014
+# Copyright 2013, 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -528,9 +528,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
       mk = self._m_mk()
 
-      # TODO: Platform should instantiate the Tool and pass it _m_st.
-
-      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)(mk.target_platform._m_st)
+      cxx = abamake.tool.CxxCompiler.get_selected(mk)()
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -587,7 +585,7 @@ class CxxObjectTarget(ObjectTarget):
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
-         mk.target_platform.get_tool(abamake.tool.CxxCompiler).object_suffix, tgtFinalOutput
+         abamake.tool.CxxCompiler.get_selected(mk).object_suffix, tgtFinalOutput
       )
 
    def _get_tool(self):
@@ -597,9 +595,7 @@ class CxxObjectTarget(ObjectTarget):
 
       mk = self._m_mk()
 
-      # TODO: Platform should instantiate the Tool and pass it _m_st.
-
-      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)(mk.target_platform._m_st)
+      cxx = abamake.tool.CxxCompiler.get_selected(mk)()
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -658,9 +654,7 @@ class BinaryTarget(FileTarget):
 
       mk = self._m_mk()
 
-      # TODO: Platform should instantiate the Tool and pass it _m_st.
-
-      lnk = mk.target_platform.get_tool(abamake.tool.Linker)(mk.target_platform._m_st)
+      lnk = abamake.tool.Linker.get_selected(mk)()
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 
