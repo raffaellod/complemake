@@ -1021,17 +1021,43 @@ class MsLinker(Linker):
    def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut = Tool._get_cmd_output((sFileName, '/?'))
+      if stTarget:
+         # Ensure that link.exe is able to link object files for the specified target by forcing a
+         # /MACHINE argument; if the machine type is not supported, link will emit a LNK4012
+         # warning.
+         sMachine = stTarget.machine
+         if sMachine == 'arm':
+            sMachine = 'ARM'
+         elif sMachine == 'x86_64':
+            sMachine = 'X64'
+         elif sMachine in ('i386', 'i486', 'i586', 'i686'):
+            sMachine = 'X86'
+         else:
+            raise NotImplementedError('TODO')
+         tplMachineArg = ('/MACHINE', sMachine)
+         del sMachine
+      else:
+         tplMachineArg = None
+
+      listArgs = [sFileName]
+      if stTarget:
+         listArgs.extend(tplMachineArg)
+      else:
+         listArgs.append('/?')
+      sOut = Tool._get_cmd_output(listArgs)
       if not sOut:
          return None
 
       # “Microsoft (R) Incremental Linker Version 10.00.40219.01”
       # “Microsoft (R) Incremental Linker Version 12.00.31101.0”
-      reVersion = re.compile(
-         r'^Microsoft .*? Linker Version (?P<ver>[.0-9]+)$', re.MULTILINE
-      )
+      match = re.search(r'^Microsoft .*? Linker Version (?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      if not match:
+         return None
 
-      # TODO: ensure that link.exe is able to link object files for the target that cl.exe generates
-      # code for, using /MACHINE.
+      if stTarget:
+         # Check for a LNK4012 warning, as explained above.
+         match = re.seach(r'^LINK : warning LNK4012:', sOut, re.MULTILINE)
+         if not match:
+            return None
 
-      return ToolFactory(cls, sFileName, stTarget)
+      return ToolFactory(cls, sFileName, stTarget, tplMachineArg)
