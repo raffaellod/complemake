@@ -1034,17 +1034,11 @@ class MsLinker(Linker):
             sMachine = 'X86'
          else:
             raise NotImplementedError('TODO')
-         tplMachineArg = ('/MACHINE', sMachine)
-         del sMachine
+         sMachine = '/MACHINE:' + sMachine
       else:
-         tplMachineArg = None
+         sMachine = None
 
-      listArgs = [sFileName]
-      if stTarget:
-         listArgs.extend(tplMachineArg)
-      else:
-         listArgs.append('/?')
-      sOut = Tool._get_cmd_output(listArgs)
+      sOut = Tool._get_cmd_output((sFileName, sMachine or '/?'))
       if not sOut:
          return None
 
@@ -1057,7 +1051,11 @@ class MsLinker(Linker):
       if stTarget:
          # Check for a LNK4012 warning, as explained above.
          match = re.search(r'^LINK : warning LNK4012:', sOut, re.MULTILINE)
-         if not match:
+         if match:
             return None
 
-      return ToolFactory(cls, sFileName, stTarget, tplMachineArg)
+      if sMachine:
+         tplMachine = (sMachine, )
+      else:
+         tplMachine = None
+      return ToolFactory(cls, sFileName, stTarget, tplMachine)
