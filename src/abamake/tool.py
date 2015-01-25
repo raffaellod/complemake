@@ -729,7 +729,7 @@ class MscCompiler(CxxCompiler):
       if not match:
          return None
 
-      sTarget = match('target')
+      sTarget = match.group('target')
       if sTarget.endswith('x86'):
          stSupported = abamake.platform.SystemType('i386', None, None, 'win32')
       elif sTarget == 'x64':
