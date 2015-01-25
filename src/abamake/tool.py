@@ -1056,7 +1056,7 @@ class MsLinker(Linker):
 
       if stTarget:
          # Check for a LNK4012 warning, as explained above.
-         match = re.seach(r'^LINK : warning LNK4012:', sOut, re.MULTILINE)
+         match = re.search(r'^LINK : warning LNK4012:', sOut, re.MULTILINE)
          if not match:
             return None
 
