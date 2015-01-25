@@ -528,7 +528,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
       mk = self._m_mk()
 
-      cxx = abamake.tool.CxxCompiler.get_selected(mk)()
+      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -585,7 +585,7 @@ class CxxObjectTarget(ObjectTarget):
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
-         abamake.tool.CxxCompiler.get_selected(mk).object_suffix, tgtFinalOutput
+         mk.target_platform.get_tool(abamake.tool.CxxCompiler).object_suffix, tgtFinalOutput
       )
 
    def _get_tool(self):
@@ -595,7 +595,7 @@ class CxxObjectTarget(ObjectTarget):
 
       mk = self._m_mk()
 
-      cxx = abamake.tool.CxxCompiler.get_selected(mk)()
+      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -654,7 +654,7 @@ class BinaryTarget(FileTarget):
 
       mk = self._m_mk()
 
-      lnk = abamake.tool.Linker.get_selected(mk)()
+      lnk = mk.target_platform.get_tool(abamake.tool.Linker)
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 

@@ -72,6 +72,46 @@ class AbstractFlag(object):
       return None
 
 ####################################################################################################
+# ToolFactory
+
+class ToolFactory(object):
+   """Creates and configures Tool instances."""
+
+   # List of additional arguments, typically stemming from the target system type.
+   _m_iterArgs = None
+   # Name by which the tool shall be invoked.
+   _m_sFilePath = None
+   # Tool subclass that the factory will instantiate.
+   _m_clsProduct = None
+   # Target system type.
+   _m_stTarget = None
+
+   def __init__(self, clsProduct, sFilePath, stTarget, iterArgs = None):
+      """Constructor.
+
+      type clsProduct
+         Class to instantiate.
+      str sFilePath
+         Path to the tool’s executable.
+      iterable(str*) iterArgs
+         Optional list of additional arguments to be provided to the tool.
+      """
+
+      self._m_iterArgs = iterArgs
+      self._m_sFilePath = sFilePath
+      self._m_clsProduct = clsProduct
+      self._m_stTarget = stTarget
+
+   def __call__(self):
+      """Instantiates the target Tool subclass.
+
+      abamake.tool.Tool return
+         New tool instance.
+      """
+
+      return self._m_clsProduct(self._m_sFilePath, self._m_iterArgs)
+
+####################################################################################################
 # Tool
 
 class Tool(object):
@@ -79,8 +119,10 @@ class Tool(object):
 
    # Abstract tool flags (*FLAG_*).
    _m_setAbstractFlags = None
-   # Name by which Abamake can invoke the tool. Only set in leaf subclasses.
-   _sm_sFilePath = None
+   # Additional arguments provided by a ToolFactory.
+   _m_iterFactoryArgs = None
+   # Name by which the tool’s executable can be invoked.
+   _m_sFilePath = None
    # Files to be processed by the tool.
    _m_listInputFilePaths = None
    # See Tool.output_file_path.
@@ -88,9 +130,6 @@ class Tool(object):
    # Short name of the tool, to be displayed in quiet mode. If None, the tool file name will be
    # displayed.
    _smc_sQuietName = None
-   # Leaf subclass that has been selected as the tool for the current build. Only set in non-leaf
-   # subclasses.
-   _sm_clsSelectedDerived = None
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
 
@@ -98,11 +137,20 @@ class Tool(object):
    # with the intuitive meaning.
    FLAG_OUTPUT_PATH_FORMAT = AbstractFlag()
 
-   def __init__(self):
-      """Constructor."""
+   def __init__(self, sFilePath, iterFactoryArgs):
+      """Constructor.
+
+      str sFilePath
+         Path to the tool’s executable.
+      iterable(str*) iterFactoryArgs
+         Additional command-line arguments, as stored in the ToolFactory that instantiated the Tool.
+      """
 
       self._m_setAbstractFlags = set()
+      self._m_iterFactoryArgs = iterFactoryArgs
+      self._m_sFilePath = sFilePath
       self._m_listInputFilePaths = []
+      self._m_sOutputFilePath = None
 
    def add_flags(self, *iterArgs):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
@@ -135,6 +183,9 @@ class Tool(object):
          Arguments list.
       """
 
+      # Add the arguments provided via ToolFactory.
+      if self._m_iterFactoryArgs:
+         listArgs.extend(self._m_iterFactoryArgs)
       # Add any additional abstract flags, translating them to arguments understood by GCC.
       if self._m_setAbstractFlags:
          for flag in self._m_setAbstractFlags:
@@ -192,7 +243,7 @@ class Tool(object):
       """
 
       # Build the arguments list.
-      listArgs = [self._sm_sFilePath]
+      listArgs = [self._m_sFilePath]
 
       self._create_job_add_flags(listArgs)
 
@@ -217,17 +268,18 @@ class Tool(object):
       )
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """Checks whether the specified tool executable file is modeled by cls, returning the
-      SystemType that the tool reports to support or True if all platforms are supported.
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """Checks whether the specified tool executable file is modeled by cls and that executable
+      supports targeting the specified system type. returning a ToolFactory configured to
+      instantiate cls.
 
       str sFileName
          Name of the executable to invoke.
-      abamake.platform.SystemType st
+      abamake.platform.SystemType stTarget
          Target system type.
-      object return
-         SystemType supported by the tool or True if all platforms are supported, or None if the
-         executable does not exist or is not modeled by cls.
+      abamake.tool.ToolFactory return
+         Factory able to instantiate cls, or None if the executable does not exist or is not modeled
+         by cls or does not target st.
       """
 
       return None
@@ -270,33 +322,28 @@ class Tool(object):
       return self._smc_sQuietName, (self._m_sOutputFilePath or '')
 
    @classmethod
-   def get_selected(cls, mk):
+   def get_factory(cls, stTarget = None):
       """Detects if a tool of the type of this class (e.g. a C++ compiler for
       abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
       implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
 
-      abamake.Make mk
-         Make instance.
-      type return
-         Matching abamake.tool.Tool subclass for the tool.
+      abamake.platform.SystemType stTarget
+         System type for which the tool is needed. If omitted, the returned factory will create Tool
+         instances for the host platform or for whatever system type is targeted by the user-
+         specified tool (TODO).
+      abamake.tool.ToolFactory return
+         Factory able to instantiate a abamake.tool.Tool subclass matching the tool.
       """
 
-      if not cls._sm_clsSelectedDerived:
-         # Attempt to detect whether the tool is available by checking for a supported executable.
-         # stTarget may be None if it not explicitly set by the user.
-         stTarget = mk.target_platform.system_type()
-         for tplSupported in cls._get_supported():
-            sFileName = tplSupported[0]
-            for clsDeriv in tplSupported[1:]:
-               oRet = clsDeriv._exe_matches_tool(sFileName, stTarget)
-               if oRet:
-                  # TODO: verify that oRet is True or matches the target SystemType (if not None).
-                  cls._sm_clsSelectedDerived = clsDeriv
-                  clsDeriv._sm_sFilePath = sFileName
-         # If still got none, the requested tool is not available.
-         if not cls._sm_clsSelectedDerived:
-            raise Exception('unable to detect {} tool'.format(cls.__name__))
-      return cls._sm_clsSelectedDerived
+      # Attempt to detect whether the tool is available by checking for a supported executable.
+      for tplSupported in cls._get_supported():
+         sFileName = tplSupported[0]
+         for clsDeriv in tplSupported[1:]:
+            tf = clsDeriv._get_factory_if_exe_matches_tool_and_target(sFileName, stTarget)
+            if tf:
+               return tf
+      # The requested tool is not available.
+      raise Exception('unable to detect {} tool for system type {}'.format(cls.__name__, stTarget))
 
    @staticmethod
    def _get_supported():
@@ -359,10 +406,10 @@ class CxxCompiler(Tool):
    # replacement “dir” with the intuitive meaning.
    CFLAG_ADD_INCLUDE_DIR_FORMAT = AbstractFlag()
 
-   def __init__(self):
+   def __init__(self, sFilePath, iterFactoryArgs):
       """See Tool.__init__()."""
 
-      Tool.__init__(self)
+      Tool.__init__(self, sFilePath, iterFactoryArgs)
 
       self._m_listIncludeDirs = []
       self._m_dictMacros = {}
@@ -422,7 +469,7 @@ class CxxCompiler(Tool):
    def _get_supported():
       """See Tool._get_supported()."""
 
-      # TODO: prepend a user-provided compiler (e.g. ${CXX} or --tool-CxxCompiler=g++), to be
+      # TODO: prepend a user-provided compiler (e.g. ${CXX} or --tool-c++=g++), to be
       # evaluated by all subclasses.
       return (
          ('clang++', ClangxxCompiler),
@@ -484,19 +531,20 @@ class ClangxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See CxxCompiler._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
       listArgs = [sFileName]
-      if st:
-         listArgs.append('-target')
-         listArgs.append(str(st))
+      if stTarget:
+         listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-v')
       sOut = Tool._get_cmd_output(listArgs)
       if not sOut:
          return None
 
-      # Verify that it’s indeed Clang. Apple calls it LLVM, but it’s still Clang.
+      # “Apple LLVM version 6.0 (clang-600.0.56) (based on LLVM 3.5svn)”
+      # “clang version 3.5.0 (tags/RELEASE_350/final)”
+      # “FreeBSD clang version 3.3 (tags/RELEASE_33/final 183502) 20130610”
       match = re.search(
          r'^(?:.*? )?(?:clang|LLVM) version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE
       )
@@ -508,10 +556,12 @@ class ClangxxCompiler(CxxCompiler):
       if not match:
          return None
       try:
-         return abamake.platform.SystemType.parse_tuple(match.group('target'))
+         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
       except abamake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
+
+      return ToolFactory(cls, sFileName, stSupported, ('-target', str(stSupported)))
 
    object_suffix = '.o'
 
@@ -567,8 +617,8 @@ class GxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See CxxCompiler._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
       sOut = Tool._get_cmd_output((sFileName, '--version'))
       if not sOut:
@@ -584,10 +634,12 @@ class GxxCompiler(CxxCompiler):
       if not sOut:
          return None
       try:
-         return abamake.platform.SystemType.parse_tuple(sOut)
+         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
       except abamake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
+
+      return ToolFactory(cls, sFileName, stSupported)
 
    object_suffix = '.o'
 
@@ -658,8 +710,8 @@ class MscCompiler(CxxCompiler):
       )
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See CxxCompiler._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
       sOut = Tool._get_cmd_output((sFileName, '/?'))
       if not sOut:
@@ -670,22 +722,26 @@ class MscCompiler(CxxCompiler):
       # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for ARM”
       # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for x64”
       # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for x86”
-      reVersion = re.compile(
+      match = re.search(
          r'^Microsoft .*? Compiler Version (?P<ver>[.0-9]+) for (?P<target>\S+)$',
-         re.MULTILINE
+         sOut, re.MULTILINE
       )
+      if not match:
+         return None
 
       sTarget = match('target')
       if sTarget.endswith('x86'):
-         return abamake.platform.SystemType('i386', None, None, 'win32')
+         stSupported = abamake.platform.SystemType('i386', None, None, 'win32')
       elif sTarget == 'x64':
-         return abamake.platform.SystemType('x86_64', None, None, 'win64')
+         stSupported = abamake.platform.SystemType('x86_64', None, None, 'win64')
       elif sTarget == 'ARM':
          # TODO: is arm-win32 the correct system type “triplet” for Windows RT?
-         return abamake.platform.SystemType('arm', None, None, 'win32')
+         stSupported = abamake.platform.SystemType('arm', None, None, 'win32')
       else:
-         # Target not understood, so report it as not supported.
+         # Target not recognized, so report it as not supported.
          return None
+
+      return ToolFactory(cls, sFileName, stSupported)
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -712,10 +768,10 @@ class Linker(Tool):
    # the intuitive meaning.
    LDFLAG_ADD_LIB_FORMAT = AbstractFlag()
 
-   def __init__(self):
+   def __init__(self, sFilePath, iterFactoryArgs):
       """See Tool.__init__()."""
 
-      Tool.__init__(self)
+      Tool.__init__(self, sFilePath, iterFactoryArgs)
 
       self._m_listInputLibs = []
       self._m_listLibPaths = []
@@ -760,8 +816,8 @@ class Linker(Tool):
    def _get_supported():
       """See Tool._get_supported()."""
 
-      # TODO: prepend a user-provided compiler/linker driver (e.g. ${CXX} or --tool-CxxCompiler=g++)
-      # or linker (e.g. ${LD} or --tool-Linker=ld), to be evaluated by all subclasses.
+      # TODO: prepend a user-provided compiler/linker driver (e.g. ${CXX} or --tool-c++=g++) or
+      # linker (e.g. ${LD} or --tool-ld=ld), to be evaluated by all subclasses.
       return (
          ('clang++',  ClangGnuLdLinker, ClangMachOLdLinker),
          ('g++',      GxxGnuLdLinker),
@@ -797,13 +853,12 @@ class ClangGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See Linker._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       listArgs = [sFileName]
-      if st:
-         listArgs.append('-target')
-         listArgs.append(str(st))
+      if stTarget:
+         listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
       sOut = Tool._get_cmd_output(listArgs)
@@ -815,7 +870,7 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      return True
+      return ToolFactory(cls, sFileName, stTarget, ('-target', str(stTarget)))
 
 ####################################################################################################
 # ClangMachOLdLinker
@@ -843,22 +898,21 @@ class ClangMachOLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See Linker._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       listArgs = [sFileName]
-      if st:
-         listArgs.append('-target')
-         listArgs.append(str(st))
+      if stTarget:
+         listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut = Tool._get_cmd_output((sFileName, '-target', str(st), '-v', '-Wl,-v'))
+      sOut = Tool._get_cmd_output((sFileName, '-target', str(stTarget), '-v', '-Wl,-v'))
       if not sOut:
          return None
 
       # TODO: verify that Clang is really wrapping Mach-O ld.
 
-      return True
+      return ToolFactory(cls, sFileName, stTarget, ('-target', str(stTarget)))
 
 ####################################################################################################
 # GxxGnuLdLinker
@@ -889,8 +943,8 @@ class GxxGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See Linker._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
       if not sOut:
@@ -906,10 +960,12 @@ class GxxGnuLdLinker(Linker):
       if not sOut:
          return None
       try:
-         return abamake.platform.SystemType.parse_tuple(sOut)
+         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
       except abamake.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
+
+      return ToolFactory(cls, sFileName, stSupported)
 
 ####################################################################################################
 # MsLinker
@@ -962,8 +1018,8 @@ class MsLinker(Linker):
       )
 
    @classmethod
-   def _exe_matches_tool(cls, sFileName, st):
-      """See Linker._exe_matches_tool()."""
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+      """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       sOut = Tool._get_cmd_output((sFileName, '/?'))
       if not sOut:
@@ -978,4 +1034,4 @@ class MsLinker(Linker):
       # TODO: ensure that link.exe is able to link object files for the target that cl.exe generates
       # code for, using /MACHINE.
 
-      return True
+      return ToolFactory(cls, sFileName, stTarget)

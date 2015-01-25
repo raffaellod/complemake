@@ -112,6 +112,7 @@ class SystemType(object):
    def __str__(self):
       if self._m_sParsedSource:
          return self._m_sParsedSource
+      # TODO: don’t to this.
       sVendor = self._m_sVendor or 'unknown'
       if self._m_sKernel:
          return '{}-{}-{}-{}'.format(self._m_sMachine, sVendor, self._m_sKernel, self._m_sOS)
@@ -258,6 +259,10 @@ class SystemType(object):
 class Platform(object):
    """Generic software platform (OS/runtime environment)."""
 
+   # Factories that create Tools for this platform. Associates a Tool non-leaf subclass to a factory
+   # able to instantiate a leaf class configured for this platform’s system type (abamake.tool.Tool
+   # => abamake.tool.ToolFactory).
+   _m_dictToolFactories = None
    # System type (more specific than the platform type).
    _m_st = None
 
@@ -268,6 +273,7 @@ class Platform(object):
          System type of this platform.
       """
 
+      self._m_dictToolFactories = {}
       self._m_st = st
 
    def add_dir_to_dynlib_env_path(self, dictEnv, sDir):
@@ -371,6 +377,25 @@ class Platform(object):
       raise NotImplementedError(
          'Platform.exe_file_name() must be overridden in ' + type(self).__name__
       )
+
+   def get_tool(self, clsTool):
+      """Returns a leaf subclass of the specified Tool non-leaf subclass modeling the implementation
+      of the specified tool for the platform.
+
+      For example, my_platform.get_tool(abamake.tool.CxxCompiler) will return an instance of
+      abamake.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
+
+      type clsTool
+         Subclass of abamake.tool.Tool.
+      type return
+         Instance of a clsTool subclass.
+      """
+
+      clsToolFactory = self._m_dictToolFactories.get(clsTool)
+      if not clsToolFactory:
+         clsToolFactory = clsTool.get_factory(self._m_st)
+         self._m_dictToolFactories[clsTool] = clsToolFactory
+      return clsToolFactory()
 
    @classmethod
    def _match_system_type(cls, st):
