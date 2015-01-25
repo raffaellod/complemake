@@ -283,13 +283,14 @@ class Tool(object):
 
       if not cls._sm_clsSelectedDerived:
          # Attempt to detect whether the tool is available by checking for a supported executable.
+         # stTarget may be None if it not explicitly set by the user.
          stTarget = mk.target_platform.system_type()
          for tplSupported in cls._get_supported():
             sFileName = tplSupported[0]
             for clsDeriv in tplSupported[1:]:
                oRet = clsDeriv._exe_matches_tool(sFileName, stTarget)
                if oRet:
-                  # TODO: verify that oRet is True or matches the target SystemType.
+                  # TODO: verify that oRet is True or matches the target SystemType (if not None).
                   cls._sm_clsSelectedDerived = clsDeriv
                   clsDeriv._sm_sFilePath = sFileName
          # If still got none, the requested tool is not available.
@@ -664,14 +665,27 @@ class MscCompiler(CxxCompiler):
       if not sOut:
          return None
 
+      # “Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 16.00.40219.01 for 80x86”
+      # “Microsoft (R) C/C++ Optimizing Compiler Version 16.00.40219.01 for x64”
+      # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for ARM”
+      # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for x64”
+      # “Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for x86”
       reVersion = re.compile(
-         r'^Microsoft \(R\).*? Optimizing Compiler Version (?P<ver>[.0-9]+) for (?P<target>\S+)$',
+         r'^Microsoft .*? Compiler Version (?P<ver>[.0-9]+) for (?P<target>\S+)$',
          re.MULTILINE
       )
 
-      # TODO: parse and return match('target').
-
-      return True
+      sTarget = match('target')
+      if sTarget.endswith('x86'):
+         return abamake.platform.SystemType('i386', None, None, 'win32')
+      elif sTarget == 'x64':
+         return abamake.platform.SystemType('x86_64', None, None, 'win64')
+      elif sTarget == 'ARM':
+         # TODO: is arm-win32 the correct system type “triplet” for Windows RT?
+         return abamake.platform.SystemType('arm', None, None, 'win32')
+      else:
+         # Target not understood, so report it as not supported.
+         return None
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -919,7 +933,7 @@ class MsLinker(Linker):
       """See Linker._create_job_add_flags()."""
 
       listArgs.extend([
-         '/nologo',              # Suppress brand banner display.
+         '/NOLOGO',              # Suppress brand banner display.
       ])
 
       Linker._create_job_add_flags(self, listArgs)
@@ -955,10 +969,13 @@ class MsLinker(Linker):
       if not sOut:
          return None
 
+      # “Microsoft (R) Incremental Linker Version 10.00.40219.01”
+      # “Microsoft (R) Incremental Linker Version 12.00.31101.0”
       reVersion = re.compile(
-         r'^Microsoft \(R\) Incremental Linker Version (?P<ver>[.0-9]+)$', re.MULTILINE
+         r'^Microsoft .*? Linker Version (?P<ver>[.0-9]+)$', re.MULTILINE
       )
 
-      # TODO: see if the linker can be 32- or 64-bit specific, and if so parse and return that.
+      # TODO: ensure that link.exe is able to link object files for the target that cl.exe generates
+      # code for, using /MACHINE.
 
       return True
