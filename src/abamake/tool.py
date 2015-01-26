@@ -290,8 +290,8 @@ class Tool(object):
 
       iterable(str+) iterArgs
          Command line to invoke.
-      str return
-         Output of the program.
+      tuple(str, int) return
+         Output and exit code of the program.
       """
 
       # Make sure we have a US English environment dictionary.
@@ -303,13 +303,15 @@ class Tool(object):
          cls._sm_dictUSEngEnv = dictUSEngEnv
 
       try:
-         return subprocess.Popen(
+         proc = subprocess.Popen(
             iterArgs, env = dictUSEngEnv,
             stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True
-         ).communicate()[0].rstrip('\r\n')
+         );
+         sOut = proc.communicate()[0].rstrip('\r\n')
+         return sOut, proc.returncode
       except (abamake.FileNotFoundErrorCompat, OSError):
          # Could not execute the program.
-         return None
+         return None, None
 
    def _get_quiet_cmd(self):
       """Returns an iterable containing the short name and relevant (input or output) files for the
@@ -549,8 +551,8 @@ class ClangxxCompiler(CxxCompiler):
       if stTarget:
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-v')
-      sOut = Tool._get_cmd_output(listArgs)
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output(listArgs)
+      if not sOut or iRet != 0:
          return None
 
       # “Apple LLVM version 6.0 (clang-600.0.56) (based on LLVM 3.5svn)”
@@ -631,8 +633,8 @@ class GxxCompiler(CxxCompiler):
    def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
       """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut = Tool._get_cmd_output((sFileName, '--version'))
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output((sFileName, '--version'))
+      if not sOut or iRet != 0:
          return None
 
       # Verify that it’s indeed G++.
@@ -641,8 +643,8 @@ class GxxCompiler(CxxCompiler):
          return None
 
       # Verify that this compiler supports the specified system type.
-      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      if not sOut or iRet != 0:
          return None
       try:
          stSupported = abamake.platform.SystemType.parse_tuple(sOut)
@@ -724,7 +726,8 @@ class MscCompiler(CxxCompiler):
    def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
       """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut = Tool._get_cmd_output((sFileName, '/?'))
+      sOut, iRet = Tool._get_cmd_output((sFileName, '/?'))
+      # TODO: is iRet from cl.exe reliable?
       if not sOut:
          return None
 
@@ -870,8 +873,8 @@ class ClangGnuLdLinker(Linker):
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut = Tool._get_cmd_output(listArgs)
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output(listArgs)
+      if not sOut or iRet != 0:
          return None
 
       # Verify that Clang is really wrapping GNU ld.
@@ -915,8 +918,8 @@ class ClangMachOLdLinker(Linker):
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut = Tool._get_cmd_output((sFileName, '-target', str(stTarget), '-v', '-Wl,-v'))
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output((sFileName, '-target', str(stTarget), '-v', '-Wl,-v'))
+      if not sOut or iRet != 0:
          return None
 
       # TODO: verify that Clang is really wrapping Mach-O ld.
@@ -955,8 +958,8 @@ class GxxGnuLdLinker(Linker):
    def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut = Tool._get_cmd_output((sFileName, '-Wl,--version'))
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output((sFileName, '-Wl,--version'))
+      if not sOut or iRet != 0:
          return None
 
       # Verify that G++ is really wrapping GNU ld.
@@ -965,8 +968,8 @@ class GxxGnuLdLinker(Linker):
          return None
 
       # Verify that this linker driver supports the specified system type.
-      sOut = Tool._get_cmd_output((sFileName, '-dumpmachine'))
-      if not sOut:
+      sOut, iRet = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      if not sOut or iRet != 0:
          return None
       try:
          stSupported = abamake.platform.SystemType.parse_tuple(sOut)
@@ -1047,7 +1050,8 @@ class MsLinker(Linker):
       else:
          sMachine = None
 
-      sOut = Tool._get_cmd_output((sFileName, sMachine or '/?'))
+      sOut, iRet = Tool._get_cmd_output((sFileName, sMachine or '/?'))
+      # TODO: is iRet from link.exe reliable?
       if not sOut:
          return None
 
