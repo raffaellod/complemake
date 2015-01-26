@@ -91,7 +91,8 @@ def main(iterArgs):
    )
    argparser.add_argument(
       '--tool-c++', metavar = '/path/to/c++', dest = 'tool_cxx',
-      help = 'Use /path/to/c++ as the C++ compiler.'
+      help = 'Use /path/to/c++ as the C++ compiler (and linker driver, unless --tool-ld is also ' +
+             'specified).'
    )
    argparser.add_argument(
       '--tool-ld', metavar = '/path/to/ld',
