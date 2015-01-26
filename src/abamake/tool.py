@@ -322,11 +322,13 @@ class Tool(object):
       return self._smc_sQuietName, (self._m_sOutputFilePath or '')
 
    @classmethod
-   def get_factory(cls, stTarget = None):
-      """Detects if a tool of the type of this class (e.g. a C++ compiler for
+   def get_factory(cls, sFilePathOverride = None, stTarget = None):
+      """Detects if a tool of the type of this non-leaf subclass (e.g. a C++ compiler for
       abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
-      implementation class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
+      leaf class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
 
+      str sFilePathOverride
+         Path to a tool’s executable that will be used instead of the default for each leaf class.
       abamake.platform.SystemType stTarget
          System type for which the tool is needed. If omitted, the returned factory will create Tool
          instances for the host platform or for whatever system type is targeted by the user-
@@ -335,15 +337,26 @@ class Tool(object):
          Factory able to instantiate a abamake.tool.Tool subclass matching the tool.
       """
 
-      # Attempt to detect whether the tool is available by checking for a supported executable.
-      for tplSupported in cls._get_supported():
-         sFileName = tplSupported[0]
-         for clsDeriv in tplSupported[1:]:
-            tf = clsDeriv._get_factory_if_exe_matches_tool_and_target(sFileName, stTarget)
+      if sFilePathOverride:
+         # Check if any leaf class can model the specified executable.
+         for clsDeriv in abamake.derived_classes(cls):
+            tf = clsDeriv._get_factory_if_exe_matches_tool_and_target(sFilePathOverride, stTarget)
             if tf:
                return tf
-      # The requested tool is not available.
-      raise Exception('unable to detect {} tool for system type {}'.format(cls.__name__, stTarget))
+         raise Exception('unsupported executable {} specified as {} tool{}'.format(
+            sFilePathOverride, cls.__name__, ' for system type ' + str(stTarget) if stTarget else ''
+         ))
+      else:
+         # Attempt to detect whether the tool is available by checking for a supported executable.
+         for tplSupported in cls._get_supported():
+            sFileName = tplSupported[0]
+            for clsDeriv in tplSupported[1:]:
+               tf = clsDeriv._get_factory_if_exe_matches_tool_and_target(sFileName, stTarget)
+               if tf:
+                  return tf
+         raise Exception('unable to detect {} tool{}'.format(
+            cls.__name__, ' for system type ' + str(stTarget) if stTarget else ''
+         ))
 
    @staticmethod
    def _get_supported():
@@ -469,8 +482,6 @@ class CxxCompiler(Tool):
    def _get_supported():
       """See Tool._get_supported()."""
 
-      # TODO: prepend a user-provided compiler (e.g. ${CXX} or --tool-c++=g++), to be
-      # evaluated by all subclasses.
       return (
          ('clang++', ClangxxCompiler),
          ('g++',     GxxCompiler),
@@ -816,8 +827,6 @@ class Linker(Tool):
    def _get_supported():
       """See Tool._get_supported()."""
 
-      # TODO: prepend a user-provided compiler/linker driver (e.g. ${CXX} or --tool-c++=g++) or
-      # linker (e.g. ${LD} or --tool-ld=ld), to be evaluated by all subclasses.
       return (
          ('clang++',  ClangGnuLdLinker, ClangMachOLdLinker),
          ('g++',      GxxGnuLdLinker),

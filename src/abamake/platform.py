@@ -393,8 +393,9 @@ class Platform(object):
 
       clsToolFactory = self._m_dictToolFactories.get(clsTool)
       if not clsToolFactory:
-         clsToolFactory = clsTool.get_factory(self._m_st)
+         clsToolFactory = clsTool.get_factory(None, self._m_st)
          self._m_dictToolFactories[clsTool] = clsToolFactory
+#        print('using {} as {}'.format(clsToolFactory._m_sFilePath, clsTool.__name__))
       return clsToolFactory()
 
    @classmethod
@@ -410,6 +411,24 @@ class Platform(object):
       """
 
       return 0
+
+   def set_tool(self, clsTool, sFilePath):
+      """Applies the user’s choice of executable to be used as the specified tool type (e.g.
+      CxxCompiler), detecting the tool subtype (e.g. ClangxxCompiler).
+
+      type clsTool
+         Subclass of abamake.tool.Tool.
+      str sFilePath
+         Path to the tool’s executable.
+      """
+
+      if clsTool in self._m_dictToolFactories:
+         raise Exception('tool {} already set or detected for system type {}'.format(
+            clsTool.__name__, self._m_st
+         ))
+      clsToolFactory = clsTool.get_factory(sFilePath, self._m_st)
+      self._m_dictToolFactories[clsTool] = clsToolFactory
+ #    print('using {} as {}'.format(clsToolFactory._m_sFilePath, clsTool.__name__))
 
    def system_type(self):
       """Returns the system type from which the Platform instance was created.

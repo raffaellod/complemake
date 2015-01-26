@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013, 2014
+# Copyright 2013, 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -34,6 +34,7 @@ import os
 import sys
 
 import abamake
+import abamake.tool
 
 
 ####################################################################################################
@@ -89,6 +90,14 @@ def main(iterArgs):
              'be used as makefile.'
    )
    argparser.add_argument(
+      '--tool-c++', metavar = '/path/to/c++', dest = 'tool_cxx',
+      help = 'Use /path/to/c++ as the C++ compiler.'
+   )
+   argparser.add_argument(
+      '--tool-ld', metavar = '/path/to/ld',
+      help = 'Use /path/to/ld as the linker/linker driver.'
+   )
+   argparser.add_argument(
       'target', nargs = '*',
       help = 'List of target files to be conditionally built. If none are specified, all targets ' +
              'declared in the Abamakefile (.abamk) will be conditionally built.'
@@ -97,13 +106,20 @@ def main(iterArgs):
    args = argparser.parse_args()
 
    mk = abamake.Make()
-   mk.dry_run                     = args.dry_run
-   mk.force_build                 = args.force_build
-   mk.force_test                  = args.force_test
+   mk.dry_run = args.dry_run
+   mk.force_build = args.force_build
+   mk.force_test = args.force_test
    if args.jobs:
       mk.job_runner.running_jobs_max = args.jobs
-   mk.keep_going                  = args.keep_going
-   mk.log.verbosity               += args.verbose
+   mk.keep_going = args.keep_going
+   if args.tool_cxx:
+      mk.target_platform.set_tool(abamake.tool.CxxCompiler, args.tool_cxx)
+      if not args.tool_ld:
+         # Also use the C++ compiler as the linker driver.
+         mk.target_platform.set_tool(abamake.tool.Linker, args.tool_cxx)
+   if args.tool_ld:
+      mk.target_platform.set_tool(abamake.tool.Linker, args.tool_ld)
+   mk.log.verbosity += args.verbose
 
    # Check for a makefile.
    sMakefilePath = args.makefile
