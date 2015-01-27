@@ -140,25 +140,26 @@ class SystemType(object):
             return SystemType('i386', None, None, 'win32')
          elif sMachine == 'AMD64':
             return SystemType('x86_64', None, None, 'win64')
-      elif sOS == 'Darwin':
-         # TODO: don’t assume Vendor == Apple.
-         return SystemType(sMachine, 'apple', None, 'darwin' + sRelease)
-      elif sOS in ('FreeBSD', 'Linux'):
+      elif sOS in ('Darwin', 'FreeBSD', 'Linux'):
+         sVendor = None
+         sKernel = None
          if sOS == 'Linux':
             sKernel = 'linux'
             # TODO: don’t assume OS == GNU.
             sOS = 'gnu'
          else:
-            sKernel = None
             sOS = sOS.lower()
             if sMachine == 'amd64':
                sMachine = 'x86_64'
-            if sOS == 'freebsd':
-               match = re.match(r'^\d+(?:\.\d+)?', sRelease)
-               if match:
-                  sOS += match.group()
+            if sOS == 'darwin':
+               # TODO: don’t assume Vendor == Apple.
+               sVendor = 'apple'
+            # Add the release version number to the OS field.
+            match = re.match(r'^\d+(?:\.\d+)*', sRelease)
+            if match:
+               sOS += match.group()
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
-            return SystemType(sMachine, None, sKernel, sOS)
+            return SystemType(sMachine, sVendor, sKernel, sOS)
 
       raise SystemTypeError('unsupported system type')
 
