@@ -637,8 +637,11 @@ class GxxCompiler(CxxCompiler):
       if not sOut or iRet != 0:
          return None
 
-      # Verify that it’s indeed G++.
-      match = re.search(r'^g\+\+.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE)
+      # Verify that it’s indeed G++. Note that G++ will report the name it was invoked by as its own
+      # name.
+      match = re.search(
+         '^' + re.escape(os.path.basename(sFileName)) + r'.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE
+      )
       if not match:
          return None
 
