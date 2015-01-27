@@ -23,6 +23,7 @@ Abamake.
 """
 
 import os
+import re
 import sys
 
 import abamake
@@ -152,6 +153,10 @@ class SystemType(object):
             sOS = sOS.lower()
             if sMachine == 'amd64':
                sMachine = 'x86_64'
+            if sOS == 'FreeBSD':
+               match = re.match(r'^\d+', sRelease)
+               if match:
+                  sOS += match.group()
          if sMachine in ('i386', 'i486', 'i586', 'i686', 'x86_64'):
             return SystemType(sMachine, None, sKernel, sOS)
 
