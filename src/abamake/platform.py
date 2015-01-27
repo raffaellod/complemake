@@ -557,7 +557,7 @@ class GnuPlatform(Platform):
    def _match_system_type(cls, st):
       """See Platform._match_system_type()."""
 
-      if st.os == 'gnu':
+      if st.os in ('gnu', 'gnueabi'):
          return 1
       else:
          return 0
