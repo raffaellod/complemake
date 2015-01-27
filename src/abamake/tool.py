@@ -916,18 +916,67 @@ class ClangMachOLdLinker(Linker):
    def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
+      # Mach-O ld is a lot pickier than GNU ld, and it won’t report its name if invoked with any
+      # other options. This means that we first need to check that sFilePath is Clang++, then ask
+      # it for ld’s path, and finally determine whether that ld is good to use.
+
+      # TODO: begin copy & paste from ClangxxCompiler
       listArgs = [sFilePath]
       if stTarget:
          listArgs.extend(('-target', str(stTarget)))
-      listArgs.append('-Wl,--version')
-      # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut, iRet = Tool._get_cmd_output((sFilePath, '-target', str(stTarget), '-v', '-Wl,-v'))
+      listArgs.append('-v')
+      sOut, iRet = Tool._get_cmd_output(listArgs)
       if not sOut or iRet != 0:
          return None
 
-      # TODO: verify that Clang is really wrapping Mach-O ld.
+      # “Apple LLVM version 6.0 (clang-600.0.56) (based on LLVM 3.5svn)”
+      # “clang version 3.5.0 (tags/RELEASE_350/final)”
+      # “FreeBSD clang version 3.3 (tags/RELEASE_33/final 183502) 20130610”
+      match = re.search(
+         r'^(?:.*? )?(?:clang|LLVM) version (?P<ver>[^ ]+)(?: .*)?$', sOut, re.MULTILINE
+      )
+      if not match:
+         return None
 
-      return ToolFactory(cls, sFilePath, stTarget, ('-target', str(stTarget)))
+      # Verify that this compiler supports the specified system type.
+      match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
+      if not match:
+         return None
+      try:
+         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
+      except abamake.platform.SystemTypeTupleError:
+         # If the tuple can’t be parsed, assume it’s not supported.
+         return None
+      # TODO: end copy & paste from ClangxxCompiler
+
+      # Get the path to ld.
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '-print-prog-name=ld'))
+      if not sOut or iRet != 0:
+         return None
+      sLdFilePath = sOut
+
+      # Verify that it’s really Mach-O ld.
+      sOut, iRet = Tool._get_cmd_output((sLdFilePath, '-v'))
+      if not sOut or iRet != 0:
+         return None
+      # @(#)PROGRAM:ld  PROJECT:ld64-241.9
+      if not sOut.startswith('@(#)PROGRAM:ld '):
+         return None
+      if stSupported:
+         # Extract the list of supported architectures.
+         # configured to support archs: armv6 armv7 arm64 i386 x86_64 x86_64h armv6m armv7m
+         match = re.search(
+            r'^[Cc]onfigured to support arch[^:]*:(?P<archs>(:? [-_0-9A-Za-z]+)+)$',
+            sOut, re.MULTILINE
+         )
+         if not match:
+            return None
+         setArchs = set(match.group('archs')[1:].split(' '))
+         # Verify that the machine architecture is supported.
+         if stSupported.machine not in setArchs:
+            return None
+
+      return ToolFactory(cls, sFilePath, stSupported, ('-target', str(stSupported)))
 
 ####################################################################################################
 # GxxGnuLdLinker
