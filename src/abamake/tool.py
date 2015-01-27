@@ -268,13 +268,13 @@ class Tool(object):
       )
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """Checks whether the specified tool executable file is modeled by cls and that executable
       supports targeting the specified system type. returning a ToolFactory configured to
       instantiate cls.
 
-      str sFileName
-         Name of the executable to invoke.
+      str sFilePath
+         Path to the executable to invoke.
       abamake.platform.SystemType stTarget
          Target system type.
       abamake.tool.ToolFactory return
@@ -544,10 +544,10 @@ class ClangxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
-      listArgs = [sFileName]
+      listArgs = [sFilePath]
       if stTarget:
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-v')
@@ -574,7 +574,7 @@ class ClangxxCompiler(CxxCompiler):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFileName, stSupported, ('-target', str(stSupported)))
+      return ToolFactory(cls, sFilePath, stSupported, ('-target', str(stSupported)))
 
    object_suffix = '.o'
 
@@ -630,23 +630,23 @@ class GxxCompiler(CxxCompiler):
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut, iRet = Tool._get_cmd_output((sFileName, '--version'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '--version'))
       if not sOut or iRet != 0:
          return None
 
       # Verify that it’s indeed G++. Note that G++ will report the name it was invoked by as its own
       # name.
       match = re.search(
-         '^' + re.escape(os.path.basename(sFileName)) + r'.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE
+         '^' + re.escape(os.path.basename(sFilePath)) + r'.*?(?P<ver>[.0-9]+)$', sOut, re.MULTILINE
       )
       if not match:
          return None
 
       # Verify that this compiler supports the specified system type.
-      sOut, iRet = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut or iRet != 0:
          return None
       try:
@@ -655,7 +655,7 @@ class GxxCompiler(CxxCompiler):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFileName, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported)
 
    object_suffix = '.o'
 
@@ -726,10 +726,10 @@ class MscCompiler(CxxCompiler):
       )
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See CxxCompiler._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut, iRet = Tool._get_cmd_output((sFileName, '/?'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '/?'))
       # TODO: is iRet from cl.exe reliable?
       if not sOut:
          return None
@@ -758,7 +758,7 @@ class MscCompiler(CxxCompiler):
          # Target not recognized, so report it as not supported.
          return None
 
-      return ToolFactory(cls, sFileName, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported)
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -868,10 +868,10 @@ class ClangGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
-      listArgs = [sFileName]
+      listArgs = [sFilePath]
       if stTarget:
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
@@ -885,7 +885,7 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      return ToolFactory(cls, sFileName, stTarget, ('-target', str(stTarget)))
+      return ToolFactory(cls, sFilePath, stTarget, ('-target', str(stTarget)))
 
 ####################################################################################################
 # ClangMachOLdLinker
@@ -913,21 +913,21 @@ class ClangMachOLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
-      listArgs = [sFileName]
+      listArgs = [sFilePath]
       if stTarget:
          listArgs.extend(('-target', str(stTarget)))
       listArgs.append('-Wl,--version')
       # This will fail if Clang can’t find an LD binary for the target system type.
-      sOut, iRet = Tool._get_cmd_output((sFileName, '-target', str(stTarget), '-v', '-Wl,-v'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '-target', str(stTarget), '-v', '-Wl,-v'))
       if not sOut or iRet != 0:
          return None
 
       # TODO: verify that Clang is really wrapping Mach-O ld.
 
-      return ToolFactory(cls, sFileName, stTarget, ('-target', str(stTarget)))
+      return ToolFactory(cls, sFilePath, stTarget, ('-target', str(stTarget)))
 
 ####################################################################################################
 # GxxGnuLdLinker
@@ -958,10 +958,10 @@ class GxxGnuLdLinker(Linker):
       # TODO: add support for os.environ['LDFLAGS'] ?
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
-      sOut, iRet = Tool._get_cmd_output((sFileName, '-Wl,--version'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '-Wl,--version'))
       if not sOut or iRet != 0:
          return None
 
@@ -971,7 +971,7 @@ class GxxGnuLdLinker(Linker):
          return None
 
       # Verify that this linker driver supports the specified system type.
-      sOut, iRet = Tool._get_cmd_output((sFileName, '-dumpmachine'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut or iRet != 0:
          return None
       try:
@@ -980,7 +980,7 @@ class GxxGnuLdLinker(Linker):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFileName, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported)
 
 ####################################################################################################
 # MsLinker
@@ -1033,7 +1033,7 @@ class MsLinker(Linker):
       )
 
    @classmethod
-   def _get_factory_if_exe_matches_tool_and_target(cls, sFileName, stTarget):
+   def _get_factory_if_exe_matches_tool_and_target(cls, sFilePath, stTarget):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       if stTarget:
@@ -1053,7 +1053,7 @@ class MsLinker(Linker):
       else:
          sMachine = None
 
-      sOut, iRet = Tool._get_cmd_output((sFileName, sMachine or '/?'))
+      sOut, iRet = Tool._get_cmd_output((sFilePath, sMachine or '/?'))
       # TODO: is iRet from link.exe reliable?
       if not sOut:
          return None
@@ -1074,4 +1074,4 @@ class MsLinker(Linker):
          tplMachine = (sMachine, )
       else:
          tplMachine = None
-      return ToolFactory(cls, sFileName, stTarget, tplMachine)
+      return ToolFactory(cls, sFilePath, stTarget, tplMachine)
