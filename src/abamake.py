@@ -86,6 +86,10 @@ def main(iterArgs):
              'be used as makefile.'
    )
    argparser.add_argument(
+      '-g', '--target-system-type', metavar = 'SYSTEM-TYPE',
+      help = 'Use SYSTEM-TYPE (e.g. dash-separated triplet) as the build target system type.'
+   )
+   argparser.add_argument(
       '--tool-c++', metavar = '/path/to/c++', dest = 'tool_cxx',
       help = 'Use /path/to/c++ as the C++ compiler (and linker driver, unless --tool-ld is also ' +
              'specified).'
@@ -113,6 +117,8 @@ def main(iterArgs):
    if args.jobs:
       mk.job_runner.running_jobs_max = args.jobs
    mk.keep_going = args.keep_going
+   if args.target_system_type:
+      mk.target_platform = args.target_system_type
    if args.tool_cxx:
       mk.target_platform.set_tool(abamake.tool.CxxCompiler, args.tool_cxx)
       if not args.tool_ld:

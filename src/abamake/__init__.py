@@ -528,7 +528,22 @@ class Make(object):
          self._m_bCrossBuild = False
       return self._m_platformTarget
 
-   target_platform = property(_get_target_platform, doc = """
+   def _set_target_platform(self, o):
+      if self._m_platformTarget:
+         raise Exception('cannot set target platform after it’s already been assigned or detected')
+      if isinstance(o, str):
+         o = platform.SystemType.parse_tuple(o)
+      if isinstance(o, platform.SystemType):
+         o = platform.Platform.from_system_type(o)
+      if not isinstance(o, platform.Platform):
+         raise TypeError((
+            'cannot set target platform from object of type {}; expected one of ' +
+            'str, abamake.platform.SystemType, abamake.platform.Platform'
+         ).format(type(o)))
+      self._m_platformTarget = o
+      self._m_bCrossBuild = (o.system_type() == self._m_platformHost.system_type())
+
+   target_platform = property(_get_target_platform, _set_target_platform, doc = """
       Platform under which the generated outputs will execute.
    """)
 
