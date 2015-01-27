@@ -80,10 +80,6 @@ def main(iterArgs):
       help = 'Continue building targets even if other independent targets fail.'
    )
    argparser.add_argument(
-      '-v', '--verbose', action = 'count', default = 0,
-      help = 'Increase verbosity level; can be specified multiple times.'
-   )
-   argparser.add_argument(
       '-m', '--makefile', metavar = 'PROJECT.ABAMK', nargs = 1,
       help = 'Abamakefile (.abamk) containing instructions on how to build targets. If omitted ' +
              'and the current directory contains a single file matching *.abamk, that file will ' +
@@ -97,6 +93,10 @@ def main(iterArgs):
    argparser.add_argument(
       '--tool-ld', metavar = '/path/to/ld',
       help = 'Use /path/to/ld as the linker/linker driver.'
+   )
+   argparser.add_argument(
+      '-v', '--verbose', action = 'count', default = 0,
+      help = 'Increase verbosity level; can be specified multiple times.'
    )
    argparser.add_argument(
       'target', nargs = '*',

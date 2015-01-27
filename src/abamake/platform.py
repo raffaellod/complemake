@@ -326,27 +326,6 @@ class Platform(object):
 
       return cls.from_system_type(SystemType.detect_host())
 
-   @classmethod
-   def from_system_type(cls, st):
-      """Returns an instance of the Platform subclass that most closely matches the specified system
-      type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
-      return an abamake.platform.GnuPlatform instance.
-
-      abamake.platform.SystemType st
-         System type.
-      abamake.platform.Platform return
-         Corresponding platform.
-      """
-
-      iBestMatch, clsBestMatch = 0, None
-      for clsDeriv in abamake.derived_classes(cls):
-         iMatch = clsDeriv._match_system_type(st)
-         if iMatch > iBestMatch:
-            iBestMatch, clsBestMatch = iMatch, clsDeriv
-      if not clsBestMatch:
-         raise Exception('unable to detect platform for system type {}'.format(st))
-      return clsBestMatch(st)
-
    def dynlib_file_name(self, sName):
       """Generates a file name for a dynamic library from the specified name.
 
@@ -377,6 +356,27 @@ class Platform(object):
       raise NotImplementedError(
          'Platform.exe_file_name() must be overridden in ' + type(self).__name__
       )
+
+   @classmethod
+   def from_system_type(cls, st):
+      """Returns an instance of the Platform subclass that most closely matches the specified system
+      type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
+      return an abamake.platform.GnuPlatform instance.
+
+      abamake.platform.SystemType st
+         System type.
+      abamake.platform.Platform return
+         Corresponding platform.
+      """
+
+      iBestMatch, clsBestMatch = 0, None
+      for clsDeriv in abamake.derived_classes(cls):
+         iMatch = clsDeriv._match_system_type(st)
+         if iMatch > iBestMatch:
+            iBestMatch, clsBestMatch = iMatch, clsDeriv
+      if not clsBestMatch:
+         raise Exception('unable to detect platform for system type {}'.format(st))
+      return clsBestMatch(st)
 
    def get_tool(self, clsTool):
       """Returns a leaf subclass of the specified Tool non-leaf subclass modeling the implementation
