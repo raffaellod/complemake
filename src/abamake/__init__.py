@@ -244,7 +244,7 @@ class Make(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_bCrossBuild = False
+      self._m_bCrossBuild = None
       self._m_bDryRun = False
       self._m_dictFileTargets = {}
       self._m_bForceBuild = False
@@ -541,7 +541,7 @@ class Make(object):
             'str, abamake.platform.SystemType, abamake.platform.Platform'
          ).format(type(o)))
       self._m_platformTarget = o
-      self._m_bCrossBuild = (o.system_type() == self._m_platformHost.system_type())
+      self._m_bCrossBuild = (o.system_type() != self._m_platformHost.system_type())
 
    target_platform = property(_get_target_platform, _set_target_platform, doc = """
       Platform under which the generated outputs will execute.

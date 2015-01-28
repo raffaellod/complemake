@@ -1086,7 +1086,20 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          self._on_test_run_complete, ('TEST', self._m_sName), dictPopenArgs,
          mk.log, self.build_log_path, self.file_path + '.out'
       )
-      mk.job_runner.enqueue(job)
+      try:
+         mk.job_runner.enqueue(job)
+         bStarted = True
+      except OSError as x:
+         # ENOEXEC == 8 ‒ Exec format error
+         if x.errno == 8 and mk.cross_build:
+            bStarted = False
+         else:
+            # Not something we consider acceptable.
+            raise
+      if not bStarted:
+         # Report that the test was not run, and skip self._on_test_run_complete().
+         log(log.QUIET, '{} {}', log.qm_tool_name('SKIP-X'), ' '.join(listArgs))
+         NamedBinaryTarget._on_build_tool_run_complete(self)
 
    def _on_test_run_complete(self):
       """Invoked after the unit test has been run."""
