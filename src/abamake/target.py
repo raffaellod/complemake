@@ -1090,7 +1090,10 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          mk.job_runner.enqueue(job)
          bStarted = True
       except OSError as x:
-         # ENOEXEC == 8 ‒ Exec format error
+         # On POSIX, x.errno == ENOEXEC (8, “Exec format error”) indicates that the binary is for a
+         # different machine/architecture.
+         # On Windows, x.winerror == ERROR_BAD_EXE_FORMAT (193, “%1 is not a valid Win32
+         # application”) for the same condition, but Python properly maps it to errno 8.
          if x.errno == 8 and mk.cross_build:
             bStarted = False
          else:
