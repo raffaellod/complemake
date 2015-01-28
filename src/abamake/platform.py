@@ -136,7 +136,9 @@ class SystemType(object):
       sOS, sNode, sRelease, sVersion, sMachine, sProcessor = pyplatform.uname()
 
       if sOS == 'Windows':
-         if sMachine == 'x86':
+         if sMachine == 'ARM':
+            return SystemType('arm', None, None, 'win32')
+         elif sMachine == 'x86':
             return SystemType('i386', None, None, 'win32')
          elif sMachine == 'AMD64':
             return SystemType('x86_64', None, None, 'win64')
@@ -623,7 +625,9 @@ class Win32Platform(WinPlatform):
    def _match_system_type(cls, st):
       """See WinPlatform._match_system_type()."""
 
-      if st.machine in ('i386', 'i486', 'i586', 'i686') and st.os in ('win32', 'mingw', 'mingw32'):
+      if st.machine in ('arm', 'i386', 'i486', 'i586', 'i686') and \
+         st.os in ('win32', 'mingw', 'mingw32') \
+      :
          return 2
       else:
          return 0
