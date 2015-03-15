@@ -485,9 +485,9 @@ class CxxCompiler(Tool):
       """See Tool._get_supported()."""
 
       return (
-         ('clang++', ClangxxCompiler),
          ('g++',     GxxCompiler),
-         ('c++',     ClangxxCompiler, GxxCompiler),
+         ('clang++', ClangxxCompiler),
+         ('c++',     GxxCompiler, ClangxxCompiler),
          ('cl.exe',  MscCompiler)
       )
 
@@ -834,8 +834,8 @@ class Linker(Tool):
       """See Tool._get_supported()."""
 
       return (
-         ('clang++',  ClangGnuLdLinker, ClangMachOLdLinker),
          ('g++',      GxxGnuLdLinker),
+         ('clang++',  ClangGnuLdLinker, ClangMachOLdLinker),
          ('link.exe', MsLinker)
       )
 
@@ -917,7 +917,7 @@ class ClangMachOLdLinker(Linker):
       """See Linker._get_factory_if_exe_matches_tool_and_target()."""
 
       # Mach-O ld is a lot pickier than GNU ld, and it won’t report its name if invoked with any
-      # other options. This means that we first need to check that sFilePath is Clang++, then ask
+      # other options. This means that we first need to check whether sFilePath is Clang++, then ask
       # it for ld’s path, and finally determine whether that ld is good to use.
 
       # TODO: begin copy & paste from ClangxxCompiler
