@@ -788,6 +788,8 @@ class DynLibTarget(NamedBinaryTarget):
    def configure_compiler(self, tool):
       """See NamedBinaryTarget.configure_compiler()."""
 
+      NamedBinaryTarget.configure_compiler(self, tool)
+
       if isinstance(tool, abamake.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
          tool.add_flags(abamake.tool.CxxCompiler.CFLAG_DYNLIB)
