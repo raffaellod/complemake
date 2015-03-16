@@ -93,6 +93,8 @@ class ToolFactory(object):
          Class to instantiate.
       str sFilePath
          Path to the tool’s executable.
+      abamake.platform.SystemType stTarget
+         Target system type.
       iterable(str*) iterArgs
          Optional list of additional arguments to be provided to the tool.
       """
