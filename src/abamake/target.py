@@ -599,6 +599,9 @@ class CxxObjectTarget(ObjectTarget):
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
+      if False:
+         cxx.add_macro('ABAMAKE_USING_VALGRIND')
+
       if self._m_tgtFinalOutput:
          # Let the final output configure the compiler.
          self._m_tgtFinalOutput().configure_compiler(cxx)
