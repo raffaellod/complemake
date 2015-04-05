@@ -34,6 +34,11 @@ import abamake.target
 class FileSignature(object):
    """Signature metadata for a single file."""
 
+   # MetadataStore.get_signatures() modes.
+   ASSUME_NEW   = object()
+   UPDATE_CACHE = object()
+   USE_CACHE    = object()
+
    __slots__ = (
       # Date/time of the file’s last modification.
       '_m_dtMTime',
@@ -45,6 +50,18 @@ class FileSignature(object):
       """Constructor."""
 
       self._m_dtMTime = None
+
+   @classmethod
+   def fake_new(cls):
+      """Generates a fake signature that no real file can ever match.
+
+      abamake.metadata.FileSignature return
+         Generated signature.
+      """
+
+      self = cls()
+      self._m_dtMTime = 0xffffffff
+      return self
 
    @classmethod
    def generate(cls, sFilePath):
@@ -141,11 +158,15 @@ class TargetSnapshot(object):
          # Collect signatures for all the target’s dependencies’ generated files (inputs).
          self._m_dictInputSigs = {}
          for dep in tgt.get_dependencies():
-            mds.get_signatures(dep.get_generated_files(), self._m_dictInputSigs)
+            mds.get_signatures(
+               dep.get_generated_files(), self._m_dictInputSigs, FileSignature.USE_CACHE
+            )
          # Collect signatures for all the target’s generated files (outputs).
          self._m_dictOutputSigs = {}
          if isinstance(tgt, abamake.target.FileTarget):
-            mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs)
+            mds.get_signatures(
+               tgt.get_generated_files(), self._m_dictOutputSigs, FileSignature.USE_CACHE
+            )
 
    def equals_stored(self, tssStored, log):
       """Compares self (current snapshot) with the stored snapshot for the same target, logging any
@@ -236,17 +257,20 @@ class TargetSnapshot(object):
 
       return eltTarget
 
-   def update(self, mds):
+   def update(self, mds, bDryRun):
       """Updates the snapshot.
 
       abamake.metadata.MetadataStore mds
          MetadataStore instance.
+      bool bDryRun
+         True if “dry run” mode is active, or False otherwise.
       """
 
       if isinstance(self._m_tgt, abamake.target.FileTarget):
          # Recreate signatures for all the target’s generated files (outputs).
          mds.get_signatures(
-            self._m_tgt.get_generated_files(), self._m_dictOutputSigs, bForceCacheUpdate = True
+            self._m_tgt.get_generated_files(), self._m_dictOutputSigs,
+            FileSignature.ASSUME_NEW if bDryRun else FileSignature.UPDATE_CACHE
          )
 
 ####################################################################################################
@@ -316,7 +340,7 @@ class MetadataStore(object):
                      )
          log(log.HIGH, 'metadata: store loaded: {}', sFilePath)
 
-   def get_signatures(self, iterFilePaths, dictOut, bForceCacheUpdate = False):
+   def get_signatures(self, iterFilePaths, dictOut, oMode = None):
       """Retrieves the signatures for the specified file paths and stores them in the provided
       dictionary.
 
@@ -334,25 +358,29 @@ class MetadataStore(object):
          Enumerates file paths.
       dict(str: abamake.metadata.FileSignature) dictOut
          Dictionary in which every signature will be stored, even if None.
-      bool bForceCacheUpdate
-         If True, the signatures cache will not be read, but newly-read signatures will be written
-         to it. If False, signatures will first be looked up in the cache, and stored in it only if
-         missing.
+      object oMode
+         If FileSignature.ASSUME_NEW, the signature will be unconditionally updated to a fictional
+         value that cannot be matched by a real file. If FileSignature.UPDATE_CACHE, the signatures
+         cache will not be read, but newly-read signatures will be written to it. If None,
+         signatures will first be looked up in the cache, and stored in it only if missing.
       """
 
       for sFilePath in iterFilePaths:
-         if bForceCacheUpdate:
-            # Don’t use the cache.
-            fs = None
-         else:
+         if oMode is FileSignature.USE_CACHE:
             # See if we already have a signature for this file in the cache.
             fs = self._m_dictSignatures.get(sFilePath)
+         else:
+            # Don’t use the cache.
+            fs = None
          if not fs:
-            # Need to read this file’s signature.
-            try:
-               fs = FileSignature.generate(sFilePath)
-            except (abamake.FileNotFoundErrorCompat, OSError):
-               fs = None
+            if oMode is FileSignature.ASSUME_NEW:
+               fs = FileSignature.fake_new()
+            else:
+               # Need to read this file’s signature.
+               try:
+                  fs = FileSignature.generate(sFilePath)
+               except (abamake.FileNotFoundErrorCompat, OSError):
+                  fs = None
             # Cache this signature.
             self._m_dictSignatures[sFilePath] = fs
          # Return this signature.
@@ -403,20 +431,23 @@ class MetadataStore(object):
       # Compare current and stored snapshots.
       return not tssCurr.equals_stored(tssStored, log)
 
-   def update_target_snapshot(self, tgt):
+   def update_target_snapshot(self, tgt, bDryRun):
       """Updates the snapshot for the specified target.
 
       abamake.target.Target tgt
          Target for which to update the snapshot.
+      bool bDryRun
+         True if “dry run” mode is active, or False otherwise.
       """
 
       log = self._m_log
       log(log.HIGH, 'metadata: {}: updating target snapshot', tgt)
 
       tssCurr = self._get_curr_target_snapshot(tgt)
-      tssCurr.update(self)
+      tssCurr.update(self, bDryRun)
       self._m_dictStoredTargetSnapshots[tgt] = tssCurr
-      self._m_bDirty = True
+      if not bDryRun:
+         self._m_bDirty = True
 
    def write(self):
       """Stores metadata to the file from which it was loaded."""

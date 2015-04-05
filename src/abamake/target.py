@@ -254,9 +254,7 @@ class Target(Dependency):
       mk = self._m_mk()
       log = mk.log
       log(log.HIGH, 'build[{}]: updating metadata', self)
-      if not mk.dry_run:
-         # If the job was successfully executed, the target’s metadata can be updated.
-         mk.metadata.update_target_snapshot(self)
+      mk.metadata.update_target_snapshot(self, mk.dry_run)
       self._on_build_tool_complete()
 
    def _on_dependencies_updated(self):
