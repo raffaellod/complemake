@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013, 2014
+# Copyright 2013, 2014, 2015
 # Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
@@ -32,7 +32,7 @@ standard output of the program; this is typically used to execute unit tests, si
 considered the non-log output of the test; for example, a unit test for an image manipulation
 library could output a generated bitmap to stdout, to have Abamake compare it against a pre-rendered
 bitmap and determine whether the test is passed or not, in addition to checking the unit test
-executable’s return code.
+executable’s exit code.
 
 Special support is provided for unit tests using the abc::testing framework. Such tests are executed
 using abamake.AbacladeUnitTestJob, a subclass of abamake.ExternalCmdCapturingJob; the stderr and
@@ -570,9 +570,15 @@ class Runner(object):
          Job to execute.
       """
 
-      if isinstance(job, SynchronousJob):
+      if self._m_mk().dry_run:
+         # Report running the job with a exit code of 0.
+         self._before_job_start(job)
+         self._after_job_end(job, 0)
+      elif isinstance(job, SynchronousJob):
          # Run the job immediately.
-         self._run_synchronous_job(job)
+         self._before_job_start(job)
+         iRet = job.run()
+         self._after_job_end(job, iRet)
       else:
          # If there’s a free job slot, start the job now, otherwise queue it for later.
          if len(self._m_dictRunningJobs) < self._m_cRunningJobsMax:
@@ -655,17 +661,6 @@ class Runner(object):
       Maximum count of running jobs, i.e. degree of parallelism. Defaults to the number of
       processors in the system.
    """)
-
-   def _run_synchronous_job(self, job):
-      """Runs a synchrnous job, calling _before_job_start() and _after_job_end().
-
-      abamake.job.SynchronousJob job
-         Job to run.
-      """
-
-      self._before_job_start(job)
-      iRet = job.run()
-      self._after_job_end(job, iRet)
 
    def _start_asynchronous_job(self, job):
       """Starts an asynchrnous job, calling _before_job_start() and adding the job to

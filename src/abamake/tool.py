@@ -211,7 +211,7 @@ class Tool(object):
       It allows subclasses to customize the job creation.
 
       callable fnOnComplete
-         Function to call after the job completes; it will be provided the return code of the job.
+         Function to call after the job completes; it will be provided the exit code of the job.
       iterable(str, str*) iterQuietCmd
          See iterQuietCmd argument in abamake.job.ExternalCmdJob.__init__().
       dict(str: object) dictPopenArgs
@@ -239,7 +239,7 @@ class Tool(object):
       abamake.target.Target tgt
          Target that this job will build.
       callable fnOnComplete
-         Function to call after the job completes; it will be provided the return code of the job.
+         Function to call after the job completes; it will be provided the exit code of the job.
       abamake.job.Job return
          Job scheduled.
       """
