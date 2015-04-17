@@ -612,6 +612,8 @@ class GxxCompiler(CxxCompiler):
          '-ggdb',                  # Generate debug info compatible with GDB.
          '-O0',                    # Disable code optimization.
          '-DDEBUG=1',              # Enable debug code.
+
+#        '-coverage',
       ])
       listArgs.extend([
          '-Wall',                  # Enable more warnings.
@@ -1004,6 +1006,9 @@ class GxxGnuLdLinker(Linker):
       ])
       listArgs.extend([
          '-ggdb',           # Generate debug info compatible with GDB.
+
+#        '-coverage',
+#        '-lgcov',
       ])
 
       # TODO: add support for os.environ['LDFLAGS'] ?
