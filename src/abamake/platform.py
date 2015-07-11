@@ -601,6 +601,7 @@ class WinPlatform(Platform):
       if isinstance(tool, abamake.tool.Linker):
          tool.add_input_lib('kernel32')
          tool.add_input_lib('user32')
+         tool.add_input_lib('ws2_32')
 
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
