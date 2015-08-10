@@ -602,6 +602,7 @@ class WinPlatform(Platform):
          tool.add_input_lib('kernel32')
          tool.add_input_lib('user32')
          tool.add_input_lib('ws2_32')
+         tool.add_input_lib('mswsock')
 
    def dynlib_file_name(self, sName):
       """See Platform.dynlib_file_name()."""
