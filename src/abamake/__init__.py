@@ -311,14 +311,16 @@ class Make(object):
          True if all the targets were built successfuly, or False otherwise.
       """
 
-      # Begin building the selected targets.
-      for tgt in iterTargets:
-         tgt.start_build()
-      # Keep running until all queued jobs have completed.
-      cFailedBuilds = self._m_jr.run()
-      if not self._m_bDryRun:
-         # Write any new metadata.
-         self._m_mds.write()
+      try:
+         # Begin building the selected targets.
+         for tgt in iterTargets:
+            tgt.start_build()
+         # Keep running until all queued jobs have completed.
+         cFailedBuilds = self._m_jr.run()
+      finally:
+         if not self._m_bDryRun:
+            # Write any new metadata.
+            self._m_mds.write()
       return self.job_runner.failed_jobs == 0
 
    def _get_dry_run(self):
