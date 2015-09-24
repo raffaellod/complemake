@@ -888,10 +888,10 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
       bEqual = (listCmpOperands[0] == listCmpOperands[1])
       if not bEqual:
          log(log.QUIET, '{}: error: {} and {} differ', self._m_sName, *listCmpNames)
-         # TODO: report build failure.
-         return
       # This comparison counts as an additional test case with a single assertion.
       log.add_testcase_result(self._m_sName, 1, 0 if bEqual else 1)
+      if not bEqual:
+         return
 
       self._on_build_tool_output_validated()
 
