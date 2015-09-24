@@ -45,11 +45,11 @@ Abamake (short for “Abaclade Make”) was created to satisfy these requirement
    outputs (this had already been achieved via Makefile.inc for GNU make, and was not required for
    MSBuild);
 
-•  Trivial unit test declaration and execution (this had been implemented in both GNU make and
-   MSBuild, but at the cost of a lot of made-up conventions);
+•  Trivial test declaration and execution (this had been implemented in both GNU make and MSBuild,
+   but at the cost of a lot of made-up conventions);
 
-•  Integration with abc::testing unit testing framework (this had already been accomplished for GNU
-   make, but was still only planned for MSBuild);
+•  Integration with abc::testing framework (this had already been accomplished for GNU make, but was
+   still only planned for MSBuild);
 
 •  Default parallel building of independent targets;
 

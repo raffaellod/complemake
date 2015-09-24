@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Builds outputs and runs unit tests as specified in a .abamk file."""
+"""Builds outputs and runs tests as specified in a .abamk file."""
 
 # TODO: maybe support launching gdb/devenv to run one of the programs via debugger?
 #

@@ -142,11 +142,11 @@ class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
    pass
 
 ####################################################################################################
-# UnitTestExecScriptDependency
+# TestExecScriptDependency
 
-class UnitTestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
-   """Executable that runs a unit test according to a “script”. Used to mimic interaction with a
-   shell that Abamake does not implement.
+class TestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
+   """Executable that runs a test according to a “script”. Used to mimic interaction with a shell
+   that Abamake does not implement.
    """
 
    pass
@@ -709,15 +709,15 @@ class BinaryTarget(FileTarget):
          if not dep:
             dep = ForeignLibDependency(sName)
          self.add_dependency(dep)
-      elif elt.nodeName in ('exeunittest', 'toolunittest'):
-         # A unit test must be built after the target it’s supposed to test.
+      elif elt.nodeName in ('exetest', 'tooltest'):
+         # A test must be built after the target it’s supposed to test.
          sName = elt.getAttribute('name')
-         tgtUnitTest = mk.get_named_target(sName, None)
-         if not tgtUnitTest:
+         tgtTest = mk.get_named_target(sName, None)
+         if not tgtTest:
             raise abamake.TargetReferenceError(
-               '{}: could not find definition of referenced unit test: {}'.format(self, sName)
+               '{}: could not find definition of referenced test: {}'.format(self, sName)
             )
-         tgtUnitTest.add_dependency(self)
+         tgtTest.add_dependency(self)
       else:
          return FileTarget.parse_makefile_element_child(self, elt)
       return True
@@ -811,11 +811,11 @@ class DynLibTarget(NamedBinaryTarget):
       return lnk
 
 ####################################################################################################
-# ToolUnitTestTarget
+# ToolTestTarget
 
-@Target.makefile_type_id('toolunittest')
-class ToolUnitTestTarget(NamedTargetMixIn, Target):
-   """Target that executes a unit test."""
+@Target.makefile_type_id('tooltest')
+class ToolTestTarget(NamedTargetMixIn, Target):
+   """Target that executes a test."""
 
    # True if comparison operands should be treated as amorphous BLOBs, or False if they should be
    # treated as strings.
@@ -839,11 +839,11 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
       """See Target._build_tool_run()."""
 
       log = self._m_mk().log
-      log(log.HIGH, 'build[{}]: no job to run for a ToolUnitTestTarget', self)
+      log(log.HIGH, 'build[{}]: no job to run for a ToolTestTarget', self)
       self._on_build_tool_run_complete()
 
    def _on_build_tool_output_validated(self):
-      """Invoked after the unit test’s output has been validated."""
+      """Invoked after the test’s output has been validated."""
 
       log = self._m_mk().log
       log(log.HIGH, 'build[{}]: tool output validated', self)
@@ -852,7 +852,7 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
 
    def _on_build_tool_run_complete(self):
       """See Target._on_build_tool_run_complete(). Overridden to perform any comparisons defined for
-      the unit test.
+      the test.
       """
 
       mk = self._m_mk()
@@ -899,8 +899,8 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
       """See Target.parse_makefile_element_child()."""
 
       mk = self._m_mk()
-      if elt.nodeName in ('exeunittest', 'toolunittest'):
-         raise abamake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
+      if elt.nodeName in ('exetest', 'tooltest'):
+         raise abamake.MakefileSyntaxError('<test> not allowed in <test>')
       elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
          # Due to specifying a non-default tool, this <source> does not generate an object file or
          # an executable.
@@ -933,7 +933,7 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
          else:
             raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
-         dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
+         dep = TestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          # Note that we don’t invoke our add_dependency() override.
@@ -954,7 +954,7 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
          Transformed comparison operand.
       """
 
-      # TODO: refactor code shared with ExecutableUnitTestTarget._transform_comparison_operand().
+      # TODO: refactor code shared with ExecutableTestTarget._transform_comparison_operand().
 
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply different transformations.
@@ -982,12 +982,12 @@ class ToolUnitTestTarget(NamedTargetMixIn, Target):
          )
 
 ####################################################################################################
-# ExecutableUnitTestTarget
+# ExecutableTestTarget
 
-@Target.makefile_type_id('exeunittest')
-class ExecutableUnitTestTarget(NamedBinaryTarget):
-   """Builds an executable unit test. The output file will be placed in the “bin/unittest” directory
-   relative to the output base directory.
+@Target.makefile_type_id('exetest')
+class ExecutableTestTarget(NamedBinaryTarget):
+   """Builds an executable test. The output file will be placed in the “bin/test” directory relative
+   to the output base directory.
    """
 
    # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
@@ -995,12 +995,12 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
    _m_bBinaryCompare = None
    # Filter (regex) to apply to the comparison operands.
    _m_reFilter = None
-   # True if the unit test executable uses abc::testing to execute test cases and report their
-   # results, making it compatible with being run via AbacladeUnitTestJob, or False if it’s a
-   # monolithic single test, executed via ExternalCmdCapturingJob.
+   # True if the test executable uses abc::testing to execute test cases and report their results,
+   # making it compatible with being run via AbacladeTestJob, or False if it’s a monolithic single
+   # test, executed via ExternalCmdCapturingJob.
    #
    # TODO: make this a three-state, with True/False meaning explicit declaration, for example by
-   # <unittest name="my-test" type="abc"> or type="exe", and None (default) meaning False with auto-
+   # <test name="my-test" type="abc"> or type="exe", and None (default) meaning False with auto-
    # detect that can change to True using the current logic in add_dependency().
    _m_bUsesAbacladeTesting = None
 
@@ -1014,15 +1014,15 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
       """
 
       NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
-         mk.output_dir, 'bin', 'unittest', mk.target_platform.exe_file_name(sName)
+         mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(sName)
       ))
 
    def add_dependency(self, dep):
-      """See NamedBinaryTarget.add_dependency(). Overridden to detect if the unit test is linked to
-      abaclade-testing, making it compatible with being run via AbacladeUnitTestJob.
+      """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
+      abaclade-testing, making it compatible with being run via AbacladeTestJob.
       """
 
-      # Check if this unit test uses the abaclade-testing framework.
+      # Check if this test uses the abaclade-testing framework.
       if isinstance(dep, (ForeignLibDependency, DynLibTarget)):
          if dep.name == 'abaclade-testing':
             self._m_bUsesAbacladeTesting = True
@@ -1031,10 +1031,10 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
 
    def get_exec_environ(self):
       """Generates an os.environ-like dictionary containing any variables necessary to execute the
-      unit test.
+      test.
 
       dict(str: str) return
-         Modified environment, or None if no environment changes are needed to run the unit test.
+         Modified environment, or None if no environment changes are needed to run the test.
       """
 
       # If the build target is linked to a library built by this same makefile, make sure we add
@@ -1049,17 +1049,17 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
 
    def _on_build_tool_run_complete(self):
       """See NamedBinaryTarget._on_build_tool_run_complete(). Overridden to execute the freshly-
-      built unit test.
+      built test.
       """
 
       mk = self._m_mk()
       log = mk.log
-      log(log.HIGH, 'build[{}]: executing unit test', self)
+      log(log.HIGH, 'build[{}]: executing test', self)
 
       # Prepare the command line.
       for dep in self._m_listDependencies:
-         if isinstance(dep, UnitTestExecScriptDependency):
-            # We also have a “script” to drive the unit test.
+         if isinstance(dep, TestExecScriptDependency):
+            # We also have a “script” to drive the test.
             listArgs = [dep.file_path]
             # TODO: support more arguments once parse_makefile_element_child() can recognize them.
             break
@@ -1072,15 +1072,15 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          'args': listArgs,
          'env' : self.get_exec_environ(),
       }
-      # If we’re using a script to run this unit test, tweak the Popen invocation to run a possibly
-      # non-executable file.
+      # If we’re using a script to run this test, tweak the Popen invocation to run a possibly non-
+      # executable file.
       if len(listArgs) > 1:
          mk.target_platform.adjust_popen_args_for_script(dictPopenArgs)
 
       # If the build target uses abc::testing, run it with the special abc::testing job,
-      # AbacladeUnitTestJob.
+      # AbacladeTestJob.
       if self._m_bUsesAbacladeTesting:
-         clsJob = abamake.job.AbacladeUnitTestJob
+         clsJob = abamake.job.AbacladeTestJob
       else:
          clsJob = abamake.job.ExternalCmdCapturingJob
       # This will store stdout and stderr of the program to file, and will buffer stdout in
@@ -1108,7 +1108,7 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          NamedBinaryTarget._on_build_tool_run_complete(self)
 
    def _on_test_run_complete(self):
-      """Invoked after the unit test has been run."""
+      """Invoked after the test has been run."""
 
       mk = self._m_mk()
       log = mk.log
@@ -1162,8 +1162,8 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
       """See NamedBinaryTarget.parse_makefile_element_child()."""
 
       mk = self._m_mk()
-      if elt.nodeName in ('exeunittest', 'toolunittest'):
-         raise abamake.MakefileSyntaxError('<unittest> not allowed in <unittest>')
+      if elt.nodeName in ('exetest', 'tooltest'):
+         raise abamake.MakefileSyntaxError('<test> not allowed in <test>')
       elif elt.nodeName == 'expected-output':
          dep = OutputRerefenceDependency(elt.getAttribute('path'))
          # Note that we don’t invoke our add_dependency() override.
@@ -1175,7 +1175,7 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          else:
             raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
       elif elt.nodeName == 'script':
-         dep = UnitTestExecScriptDependency(elt.getAttribute('path'))
+         dep = TestExecScriptDependency(elt.getAttribute('path'))
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
          # Note that we don’t invoke our add_dependency() override.
@@ -1198,7 +1198,7 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          Transformed comparison operand.
       """
 
-      # TODO: refactor code shared with ToolUnitTestTarget._transform_comparison_operand().
+      # TODO: refactor code shared with ToolTestTarget._transform_comparison_operand().
 
       # Apply the only supported filter.
       # TODO: use an interface/specialization to apply different transformations.
@@ -1221,7 +1221,7 @@ class ExecutableUnitTestTarget(NamedBinaryTarget):
          if isinstance(dep, OutputRerefenceDependency):
             cStaticCmpOperands += 1
       if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
-         # Expected a file against which to compare the unit test’s output.
+         # Expected a file against which to compare the test’s output.
          raise abamake.MakefileError(
-            '{}: can’t compare the unit test output against more than one file'.format(self)
+            '{}: can’t compare the test output against more than one file'.format(self)
          )

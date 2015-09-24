@@ -28,17 +28,16 @@ them to any subclasses; stderr is always logged to a file, with a name (chosen b
 instantiates the job) that’s typically output_dir/log/<path-to-the-target-built-by-the-job>.
 
 A subclass of abamake.ExternalCmdJob, abamake.ExternalCmdCapturingJob, also captures to file the
-standard output of the program; this is typically used to execute unit tests, since stdout is
-considered the non-log output of the test; for example, a unit test for an image manipulation
-library could output a generated bitmap to stdout, to have Abamake compare it against a pre-rendered
-bitmap and determine whether the test is passed or not, in addition to checking the unit test
-executable’s exit code.
+standard output of the program; this is typically used to execute tests, since stdout is considered
+the non-log output of the test; for example, a test for an image manipulation library could output a
+generated bitmap to stdout, to have Abamake compare it against a pre-rendered bitmap and determine
+whether the test is passed or not, in addition to checking the test executable’s exit code.
 
-Special support is provided for unit tests using the abc::testing framework. Such tests are executed
-using abamake.AbacladeUnitTestJob, a subclass of abamake.ExternalCmdCapturingJob; the stderr and
-stdout are still captured and stored in files, but additionally stderr is parsed to capture progress
-of the assertions and test cases executed, and the resulting counts are used to display a test
-summary at the end of Abamake’s execution.
+Special support is provided for tests using the abc::testing framework. Such tests are executed 
+using abamake.AbacladeTestJob, a subclass of abamake.ExternalCmdCapturingJob; the stderr and stdout
+are still captured and stored in files, but additionally stderr is parsed to capture progress of the
+assertions and test cases executed, and the resulting counts are used to display a test summary at
+the end of Abamake’s execution.
 
 TODO: link to documentation for abc::testing support in Abamake.
 """
@@ -419,9 +418,9 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
    """)
 
 ####################################################################################################
-# AbacladeUnitTestJob
+# AbacladeTestJob
 
-class AbacladeUnitTestJob(ExternalCmdCapturingJob):
+class AbacladeTestJob(ExternalCmdCapturingJob):
    """External program performing tests using the abc::testing framework. Such a program will
    communicate via stderr its test results (courtesy of abc::testing::runner), which this class will
    parse and log.
@@ -474,7 +473,7 @@ class AbacladeUnitTestJob(ExternalCmdCapturingJob):
          else:
             sLine = u'unknown info from abc::testing program: {}'.format(sLine)
       if sLine is not None:
-         # self._m_iterQuietCmd[1] is the unit test name.
+         # self._m_iterQuietCmd[1] is the test name.
          self._m_log(None, u'{}: {}', self._m_iterQuietCmd[1], sLine)
 
 ####################################################################################################
