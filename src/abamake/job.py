@@ -53,7 +53,6 @@ import time
 import weakref
 
 import abamake
-import abamake.target
 
 
 ####################################################################################################
