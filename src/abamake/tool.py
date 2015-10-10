@@ -640,6 +640,11 @@ class GxxCompiler(CxxCompiler):
          '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
       ])
 
+      if self._m_ver and self._m_ver >= abamake.version.Version(4, 9):
+         listArgs.extend([
+            '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
+         ])
+
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
    @classmethod
