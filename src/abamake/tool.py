@@ -601,7 +601,7 @@ class GxxCompiler(CxxCompiler):
 
       listArgs.extend([
          '-c',                     # Compile without linking.
-         '-std=c++0x',             # Select C++11 language standard.
+         '-std=c++11',             # Select C++11 language standard.
          '-fnon-call-exceptions',  # Allow trapping instructions to throw exceptions.
          '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
       ])
