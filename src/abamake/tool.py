@@ -29,6 +29,7 @@ import subprocess
 import abamake
 import abamake.job
 import abamake.logging
+import abamake.version
 
 
 ####################################################################################################
@@ -85,8 +86,10 @@ class ToolFactory(object):
    _m_clsProduct = None
    # Target system type.
    _m_stTarget = None
+   # Tool version.
+   _m_ver = None
 
-   def __init__(self, clsProduct, sFilePath, stTarget, iterArgs = None):
+   def __init__(self, clsProduct, sFilePath, stTarget, ver, iterArgs = None):
       """Constructor.
 
       type clsProduct
@@ -95,6 +98,8 @@ class ToolFactory(object):
          Path to the tool’s executable.
       abamake.platform.SystemType stTarget
          Target system type.
+      abamake.version.Version ver
+         Version of the tool.
       iterable(str*) iterArgs
          Optional list of additional arguments to be provided to the tool.
       """
@@ -103,6 +108,7 @@ class ToolFactory(object):
       self._m_sFilePath = sFilePath
       self._m_clsProduct = clsProduct
       self._m_stTarget = stTarget
+      self._m_ver = ver
 
    def __call__(self):
       """Instantiates the target Tool subclass.
@@ -111,7 +117,7 @@ class ToolFactory(object):
          New tool instance.
       """
 
-      return self._m_clsProduct(self._m_sFilePath, self._m_iterArgs)
+      return self._m_clsProduct(self._m_sFilePath, self._m_ver, self._m_iterArgs)
 
 ####################################################################################################
 # Tool
@@ -134,12 +140,14 @@ class Tool(object):
    _smc_sQuietName = None
    # Environment block (dictionary) modified to force programs to display output in US English.
    _sm_dictUSEngEnv = None
+   # Version.
+   _m_ver = None
 
    # Specifies an output file path. Must be in str.format() syntax and include a replacement “path”
    # with the intuitive meaning.
    FLAG_OUTPUT_PATH_FORMAT = AbstractFlag()
 
-   def __init__(self, sFilePath, iterFactoryArgs):
+   def __init__(self, sFilePath, ver, iterFactoryArgs):
       """Constructor.
 
       str sFilePath
@@ -153,6 +161,7 @@ class Tool(object):
       self._m_sFilePath = sFilePath
       self._m_listInputFilePaths = []
       self._m_sOutputFilePath = None
+      self._m_ver = ver
 
    def add_flags(self, *iterArgs):
       """Adds abstract flags (*FLAG_*) to the tool’s command line. The most derived specialization
@@ -423,10 +432,10 @@ class CxxCompiler(Tool):
    # replacement “dir” with the intuitive meaning.
    CFLAG_ADD_INCLUDE_DIR_FORMAT = AbstractFlag()
 
-   def __init__(self, sFilePath, iterFactoryArgs):
+   def __init__(self, sFilePath, ver, iterFactoryArgs):
       """See Tool.__init__()."""
 
-      Tool.__init__(self, sFilePath, iterFactoryArgs)
+      Tool.__init__(self, sFilePath, ver, iterFactoryArgs)
 
       self._m_listIncludeDirs = []
       self._m_dictMacros = {}
@@ -576,7 +585,7 @@ class ClangxxCompiler(CxxCompiler):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported, ('-target', str(stSupported)))
+      return ToolFactory(cls, sFilePath, stSupported, None, ('-target', str(stSupported)))
 
    object_suffix = '.o'
 
@@ -648,6 +657,7 @@ class GxxCompiler(CxxCompiler):
       )
       if not match:
          return None
+      ver = abamake.version.Version.parse(match.group('ver'))
 
       # Verify that this compiler supports the specified system type.
       sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
@@ -659,7 +669,7 @@ class GxxCompiler(CxxCompiler):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported, ver)
 
    object_suffix = '.o'
 
@@ -762,7 +772,7 @@ class MscCompiler(CxxCompiler):
          # Target not recognized, so report it as not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported, None)
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -789,10 +799,10 @@ class Linker(Tool):
    # the intuitive meaning.
    LDFLAG_ADD_LIB_FORMAT = AbstractFlag()
 
-   def __init__(self, sFilePath, iterFactoryArgs):
+   def __init__(self, sFilePath, ver, iterFactoryArgs):
       """See Tool.__init__()."""
 
-      Tool.__init__(self, sFilePath, iterFactoryArgs)
+      Tool.__init__(self, sFilePath, ver, iterFactoryArgs)
 
       self._m_listInputLibs = []
       self._m_listLibPaths = []
@@ -889,7 +899,7 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      return ToolFactory(cls, sFilePath, stTarget, ('-target', str(stTarget)))
+      return ToolFactory(cls, sFilePath, stTarget, None, ('-target', str(stTarget)))
 
 ####################################################################################################
 # ClangMachOLdLinker
@@ -980,7 +990,7 @@ class ClangMachOLdLinker(Linker):
          if stSupported.machine not in setArchs:
             return None
 
-      return ToolFactory(cls, sFilePath, stSupported, ('-target', str(stSupported)))
+      return ToolFactory(cls, sFilePath, stSupported, None, ('-target', str(stSupported)))
 
 ####################################################################################################
 # GxxGnuLdLinker
@@ -1036,7 +1046,7 @@ class GxxGnuLdLinker(Linker):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported)
+      return ToolFactory(cls, sFilePath, stSupported, None)
 
 ####################################################################################################
 # MsLinker
@@ -1130,4 +1140,4 @@ class MsLinker(Linker):
          tplMachine = (sMachine, )
       else:
          tplMachine = None
-      return ToolFactory(cls, sFilePath, stTarget, tplMachine)
+      return ToolFactory(cls, sFilePath, stTarget, None, tplMachine)
