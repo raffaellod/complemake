@@ -575,6 +575,8 @@ class ClangxxCompiler(CxxCompiler):
       if not match:
          return None
 
+      ver = abamake.version.Version.parse(match.group('ver'))
+
       # Verify that this compiler supports the specified system type.
       match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
       if not match:
@@ -585,7 +587,7 @@ class ClangxxCompiler(CxxCompiler):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported, None, ('-target', str(stSupported)))
+      return ToolFactory(cls, sFilePath, stSupported, ver, ('-target', str(stSupported)))
 
    object_suffix = '.o'
 
@@ -662,6 +664,7 @@ class GxxCompiler(CxxCompiler):
       )
       if not match:
          return None
+
       ver = abamake.version.Version.parse(match.group('ver'))
 
       # Verify that this compiler supports the specified system type.
@@ -765,6 +768,8 @@ class MscCompiler(CxxCompiler):
       if not match:
          return None
 
+      ver = abamake.version.Version.parse(match.group('ver'))
+
       sTarget = match.group('target')
       if sTarget.endswith('x86'):
          stSupported = abamake.platform.SystemType('i386', None, None, 'win32')
@@ -777,7 +782,7 @@ class MscCompiler(CxxCompiler):
          # Target not recognized, so report it as not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported, None)
+      return ToolFactory(cls, sFilePath, stSupported, ver)
 
    # See CxxCompiler.object_suffix.
    object_suffix = '.obj'
@@ -904,7 +909,9 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      return ToolFactory(cls, sFilePath, stTarget, None, ('-target', str(stTarget)))
+      ver = abamake.version.Version.parse(match.group('ver'))
+
+      return ToolFactory(cls, sFilePath, stTarget, ver, ('-target', str(stTarget)))
 
 ####################################################################################################
 # ClangMachOLdLinker
@@ -957,6 +964,8 @@ class ClangMachOLdLinker(Linker):
       if not match:
          return None
 
+      ver = abamake.version.Version.parse(match.group('ver'))
+
       # Verify that this compiler supports the specified system type.
       match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
       if not match:
@@ -995,7 +1004,7 @@ class ClangMachOLdLinker(Linker):
          if stSupported.machine not in setArchs:
             return None
 
-      return ToolFactory(cls, sFilePath, stSupported, None, ('-target', str(stSupported)))
+      return ToolFactory(cls, sFilePath, stSupported, ver, ('-target', str(stSupported)))
 
 ####################################################################################################
 # GxxGnuLdLinker
@@ -1041,6 +1050,8 @@ class GxxGnuLdLinker(Linker):
       if not match:
          return None
 
+      ver = abamake.version.Version.parse(match.group('ver'))
+
       # Verify that this linker driver supports the specified system type.
       sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut or iRet != 0:
@@ -1051,7 +1062,7 @@ class GxxGnuLdLinker(Linker):
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
-      return ToolFactory(cls, sFilePath, stSupported, None)
+      return ToolFactory(cls, sFilePath, stSupported, ver)
 
 ####################################################################################################
 # MsLinker
@@ -1135,6 +1146,8 @@ class MsLinker(Linker):
       if not match:
          return None
 
+      ver = abamake.version.Version.parse(match.group('ver'))
+
       if stTarget:
          # Check for a LNK4012 warning, as explained above.
          match = re.search(r'^LINK : warning LNK4012:', sOut, re.MULTILINE)
@@ -1145,4 +1158,4 @@ class MsLinker(Linker):
          tplMachine = (sMachine, )
       else:
          tplMachine = None
-      return ToolFactory(cls, sFilePath, stTarget, None, tplMachine)
+      return ToolFactory(cls, sFilePath, stTarget, ver, tplMachine)
