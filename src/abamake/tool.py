@@ -525,9 +525,10 @@ class ClangxxCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
-         '-c',                     # Compile without linking.
-         '-std=c++11',             # Select C++11 language standard.
-         '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
+         '-c',                         # Compile without linking.
+         '-std=c++11',                 # Select C++11 language standard.
+         '-fvisibility=hidden',        # Set default ELF symbol visibility to “hidden”.
+         '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
       ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
@@ -616,6 +617,10 @@ class GxxCompiler(CxxCompiler):
          '-fnon-call-exceptions',  # Allow trapping instructions to throw exceptions.
          '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
       ])
+      if self._m_ver and self._m_ver >= abamake.version.Version(4, 9):
+         listArgs.extend([
+            '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
+         ])
 
       CxxCompiler._create_job_add_flags(self, listArgs)
 
@@ -641,11 +646,6 @@ class GxxCompiler(CxxCompiler):
                                    # integer value.
          '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
       ])
-
-      if self._m_ver and self._m_ver >= abamake.version.Version(4, 9):
-         listArgs.extend([
-            '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
-         ])
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
