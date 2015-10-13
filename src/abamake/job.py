@@ -617,8 +617,7 @@ class Runner(object):
       other jobs.
       """
 
-      mk = self._m_mk()
-      log = mk.log
+      log = self._m_mk().log
       self._m_bProcessQueue = True
       while self._m_dictRunningJobs:
          log(log.MEDIUM, 'make: waiting for a job to complete')
