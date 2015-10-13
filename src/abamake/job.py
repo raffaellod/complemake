@@ -607,9 +607,7 @@ class Runner(object):
       by = self._smc_structJobsStatusQueueMessage.pack(id(job))
       with self._m_lockJobsStatusQueueWrite as lock:
          cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
-         while cbWritten < len(by):
-            by = by[cbWritten:]
-            cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
+         assert cbWritten == len(by)
 
    def run(self):
       """Processes the job queue, starting jobs and waiting for them to complete. This method blocks
@@ -675,8 +673,7 @@ class Runner(object):
       # Wait for, read and unpack a message on the jobs status queue.
       cbNeeded = self._smc_structJobsStatusQueueMessage.size
       by = os.read(self._m_fdJobsStatusQueueRead, cbNeeded)
-      while len(by) < cbNeeded:
-         by += os.read(self._m_fdJobsStatusQueueRead, cbNeeded - len(by))
+      assert len(by) == cbNeeded
       idJob, = self._smc_structJobsStatusQueueMessage.unpack(by)
       # idJob is the ID of the job that just reported to have terminated; remove it from the running
       # jobs and return it.
