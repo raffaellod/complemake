@@ -240,8 +240,6 @@ class ExternalCmdJob(AsynchronousJob):
       if self._m_popen:
          iRet = self._m_popen.wait()
          self._m_thrStdErrReader.join()
-         if self._m_thrStdOutReader:
-            self._m_thrStdOutReader.join()
          return iRet
       else:
          return None
@@ -300,8 +298,12 @@ class ExternalCmdJob(AsynchronousJob):
          for sLine in fileStdErrTextPipe:
             self._stderr_line_read(sLine.rstrip('\r\n'))
             fileStdErr.write(sLine)
-         # EOF: tell the runner that this job is finished.
-         self._m_runner().job_complete(self)
+      # If we started the stdout thread, join it before ending this thread or releasing the job.
+      if self._m_thrStdOutReader:
+         self._m_thrStdOutReader.join()
+         self._m_thrStdOutReader = None
+      # EOF: tell the runner that this job is finished.
+      self._m_runner().job_complete(self)
 
    def _stdout_reader_thread(self):
       """Reads from the job process’ stdout."""
