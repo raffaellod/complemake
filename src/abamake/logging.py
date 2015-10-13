@@ -1,8 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2014
-# Raffaello D. Di Napoli
+# Copyright 2014 Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
 #
