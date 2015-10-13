@@ -512,14 +512,19 @@ class Runner(object):
       """
 
       self._m_cFailedJobs = 0
-      self._m_fdJobsStatusQueueRead = None
-      self._m_fdJobsStatusQueueWrite = None
+      self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
       self._m_lockJobsStatusQueueWrite = threading.Lock()
       self._m_mk = weakref.ref(mk)
       self._m_bProcessQueue = True
       self._m_setQueuedJobs = set()
       self._m_dictRunningJobs = {}
       self._m_cRunningJobsMax = multiprocessing.cpu_count()
+
+   def __del__(self):
+      """Destructor."""
+
+      os.close(self._m_fdJobsStatusQueueRead)
+      os.close(self._m_fdJobsStatusQueueWrite)
 
    def _after_job_end(self, job, iRet):
       """Invoked after a job completes, it executes its on_complete handler or reports a build
@@ -601,13 +606,10 @@ class Runner(object):
 
       by = self._smc_structJobsStatusQueueMessage.pack(id(job))
       with self._m_lockJobsStatusQueueWrite as lock:
-         # _m_fdJobsStatusQueueWrite may be None if the main thread has already left Runner.run().
-         # In that case, there’s nothing left to do, so just skip what follows.
-         if self._m_fdJobsStatusQueueWrite:
-            cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
-            while cbWritten < len(by):
-               by = by[cbWritten:]
-               cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
+         cbWritten = os.write(self._m_fdJobsStatusQueueWrite, by)
+         while cbWritten < len(by):
+            by = by[cbWritten:]
+            cbWritten = os.write(self._m_fdJobsStatusQueueRead, by)
 
    def run(self):
       """Processes the job queue, starting jobs and waiting for them to complete. This method blocks
@@ -617,37 +619,28 @@ class Runner(object):
 
       mk = self._m_mk()
       log = mk.log
-      with self._m_lockJobsStatusQueueWrite as lock:
-         self._m_fdJobsStatusQueueRead, self._m_fdJobsStatusQueueWrite = os.pipe()
       self._m_bProcessQueue = True
-      try:
-         while self._m_dictRunningJobs:
-            log(log.MEDIUM, 'make: waiting for a job to complete')
-            # This is blocking.
-            job = self._wait_for_job_complete()
+      while self._m_dictRunningJobs:
+         log(log.MEDIUM, 'make: waiting for a job to complete')
+         # This is blocking.
+         job = self._wait_for_job_complete()
 
-            # job reported that it just terminated: wait on its threads/processes, and let it run
-            # its on_complete handler.
-            iRet = job.join()
-            self._after_job_end(job, iRet)
-            # Release the Job instance.
-            del job
+         # job reported that it just terminated: wait on its threads/processes, and let it run its
+         # on_complete handler.
+         iRet = job.join()
+         self._after_job_end(job, iRet)
+         # Release the Job instance.
+         del job
 
-            # If there’s another job in the queue (which may have been just added by the on_complete
-            # handler), start it now.
-            if self._m_bProcessQueue:
-               if self._m_setQueuedJobs:
-                  log(log.MEDIUM, 'make: starting queued job')
-                  self._start_asynchronous_job(self._m_setQueuedJobs.pop())
-            else:
-               # TODO: the build failed, stop all running jobs.
-               pass
-      finally:
-         with self._m_lockJobsStatusQueueWrite as lock:
-            os.close(self._m_fdJobsStatusQueueRead)
-            os.close(self._m_fdJobsStatusQueueWrite)
-            self._m_fdJobsStatusQueueRead = None
-            self._m_fdJobsStatusQueueWrite = None
+         # If there’s another job in the queue (which may have been just added by the on_complete
+         # handler), start it now.
+         if self._m_bProcessQueue:
+            if self._m_setQueuedJobs:
+               log(log.MEDIUM, 'make: starting queued job')
+               self._start_asynchronous_job(self._m_setQueuedJobs.pop())
+         else:
+            # TODO: the build failed, stop all running jobs.
+            pass
 
    def _get_running_jobs_max(self):
       return self._m_cRunningJobsMax
