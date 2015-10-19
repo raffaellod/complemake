@@ -71,7 +71,7 @@ class YamlParser(object):
 
    _smc_reComment = re.compile(r'[\t ]*#.*$')
    _smc_reIndent = re.compile(r'^[\t ]*')
-   _smc_reMapKey = re.compile(r'^(?P<key>[^:]+) *: *')
+   _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
 
    def __init__(self, sSourceName, iterLines):
       """Constructor.
@@ -262,4 +262,3 @@ class YamlParserTestCase(unittest.TestCase):
       #   - a
       #    - b
       #''')), ['a - b'])
-
