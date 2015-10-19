@@ -93,7 +93,7 @@ class YamlParser(object):
       self.find_and_consume_doc_start()
       if not self.next_line():
          return None
-      return self.consume_object()
+      return self.consume_object(False)
 
    def consume_map(self):
       # Save the current indentation, and use the line’s indentation + 1 as the new indentation.
@@ -110,17 +110,24 @@ class YamlParser(object):
 
          # Parse whatever is left; if spanning multiple lines, this will continue until the
          # indentation returns to iCurrIndent.
-         dictRet[sKey] = self.consume_object()
+         dictRet[sKey] = self.consume_object(True)
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
-         # the sequence.
+         # the map.
          if self._m_sLine is None or self._m_iLineIndent < iCurrIndent:
             # No next line, or the next line is not part of the map.
             break
       self._m_iCurrIndent = iCurrIndent
       return dictRet
 
-   def consume_object(self):
+   def consume_object(self, bInContainer):
+      """Dispatches a call to any of the other consume_*() functions, after inspecting the current
+      line.
+
+      bool bInContainer
+         True if the scalar is in a container (sequence, map, etc.), or False otherwise.
+      """
+
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
          self.next_line()
@@ -132,18 +139,25 @@ class YamlParser(object):
          return self.consume_map()
       else:
          # Not a sequence and not a map, this line must contain a scalar.
-         return self.consume_scalar()
+         return self.consume_scalar(bInContainer)
 
-   def consume_scalar(self):
+   def consume_scalar(self, bInContainer):
       """Consumes a scalar.
       
+      bool bInContainer
+         True if the scalar is in a container (sequence, map, etc.), or False otherwise.
       str return
          Raw scalar value.
       """
 
       sRet = self._m_sLine
-      # A next line with same or more indentation is considered a continuation of the scalar.
-      while self.next_line() and self._m_iLineIndent > self._m_iCurrIndent:
+      # If we’re in a container, a next line with more indentation is considered a continuation of
+      # the scalar; outside of a container, the same indentation level will also count as
+      # continuation.
+      iCurrIndent = self._m_iCurrIndent
+      if bInContainer:
+         iCurrIndent += 1
+      while self.next_line() and self._m_iLineIndent >= iCurrIndent:
          # TODO: maybe validate that _m_sLine does not contain “:”?
          sRet += ' ' + self._m_sLine
       return sRet
@@ -152,7 +166,7 @@ class YamlParser(object):
       # Save the current indentation, and use the line’s indentation + len(“- ”) as the new
       # indentation.
       iCurrIndent = self._m_iCurrIndent
-      self._m_iCurrIndent = self._m_iLineIndent + 2
+      self._m_iCurrIndent = self._m_iLineIndent
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
@@ -160,7 +174,7 @@ class YamlParser(object):
 
          # Parse whatever is left; if spanning multiple lines, this will continue until the
          # indentation returns to iCurrIndent.
-         listRet.append(self.consume_object())
+         listRet.append(self.consume_object(True))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
@@ -221,10 +235,20 @@ class YamlParserTestCase(unittest.TestCase):
    def runTest(self):
       import textwrap
 
-      self.assertRaises(SyntaxError, parse_string, '')
-      self.assertRaises(SyntaxError, parse_string, 'a')
-      self.assertRaises(SyntaxError, parse_string, 'a: b')
-      self.assertRaises(SyntaxError, parse_string, '%YAML 1.2')
+      self.assertRaises(SyntaxError, parse_string, '''
+      ''')
+
+      self.assertRaises(SyntaxError, parse_string, '''
+         a
+      ''')
+
+      self.assertRaises(SyntaxError, parse_string, '''
+         a: b
+      ''')
+
+      self.assertRaises(SyntaxError, parse_string, '''
+         %YAML 1.2
+      ''')
 
       self.assertEqual(parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -247,8 +271,9 @@ class YamlParserTestCase(unittest.TestCase):
       self.assertEqual(parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
-         - a
-      ''')), ['a'])
+         a
+         b
+      ''')), 'a b')
 
       self.assertEqual(parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -256,9 +281,24 @@ class YamlParserTestCase(unittest.TestCase):
          a: b
       ''')), {'a': 'b'})
 
-      #self.assertEqual(parse_string(textwrap.dedent('''
-      #   %YAML 1.2
-      #   ---
-      #   - a
-      #    - b
-      #''')), ['a - b'])
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:b
+         c: d
+         e :f
+         g : h
+      ''')), {'a': 'b', 'c': 'd', 'e': 'f', 'g': 'h'})
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+      ''')), ['a'])
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+          - b
+      ''')), ['a - b'])
