@@ -219,4 +219,47 @@ class YamlParser(object):
 
 class YamlParserTestCase(unittest.TestCase):
    def runTest(self):
+      import textwrap
+
       self.assertRaises(SyntaxError, parse_string, '')
+      self.assertRaises(SyntaxError, parse_string, 'a')
+      self.assertRaises(SyntaxError, parse_string, 'a: b')
+      self.assertRaises(SyntaxError, parse_string, '%YAML 1.2')
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+      ''')), None)
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a
+      ''')), 'a')
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a
+          b
+      ''')), 'a b')
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+      ''')), ['a'])
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+      ''')), {'a': 'b'})
+
+      #self.assertEqual(parse_string(textwrap.dedent('''
+      #   %YAML 1.2
+      #   ---
+      #   - a
+      #    - b
+      #''')), ['a - b'])
+
