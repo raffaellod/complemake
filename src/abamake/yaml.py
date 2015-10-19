@@ -93,7 +93,10 @@ class YamlParser(object):
       self.find_and_consume_doc_start()
       if not self.next_line():
          return None
-      return self.consume_object(False)
+      o = self.consume_object(False)
+      if self._m_sLine is not None:
+         raise self.parsing_error('invalid token')
+      return o
 
    def consume_map(self):
       # Save the current indentation, and use the line’s indentation + 1 as the new indentation.
@@ -284,6 +287,20 @@ class YamlParserTestCase(unittest.TestCase):
       self.assertEqual(parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
+         a:
+          b
+      ''')), {'a': 'b'})
+
+      self.assertRaises(SyntaxError, parse_string, '''
+         %YAML 1.2
+         ---
+         a:
+         b
+      ''')
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
          a:b
          c: d
          e :f
@@ -295,6 +312,20 @@ class YamlParserTestCase(unittest.TestCase):
          ---
          - a
       ''')), ['a'])
+
+      self.assertEqual(parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - b
+      ''')), ['a', 'b'])
+
+      self.assertRaises(SyntaxError, parse_string, '''
+         %YAML 1.2
+         ---
+         - a
+         -b
+      ''')
 
       self.assertEqual(parse_string(textwrap.dedent('''
          %YAML 1.2
