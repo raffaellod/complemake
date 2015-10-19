@@ -22,6 +22,7 @@
 import io
 import os
 import re
+import unittest
 
 
 ####################################################################################################
@@ -39,6 +40,26 @@ def parse_file(sFilePath):
    with io.open(sFilePath, 'rt') as fileYaml:
       yp = YamlParser(sFilePath, fileYaml)
       return yp()
+
+def parse_string(s):
+   """Loads and parses a string containing YAML.
+
+   str s
+      YAML source.
+   object return
+      Python object corresponding to the contents of the string.
+   """
+
+   yp = YamlParser('<string>', iter(s.splitlines(True)))
+   return yp()
+
+####################################################################################################
+# SyntaxError
+
+class SyntaxError(Exception):
+   """Indicates a syntactical or semantical error in a YAML source."""
+
+   pass
 
 ####################################################################################################
 # YamlParser
@@ -190,6 +211,12 @@ class YamlParser(object):
          return sLine is not None
 
    def parsing_error(self, sMessage):
-      return Exception('{}:{}: {}, found: “{}”'.format(
+      return SyntaxError('{}:{}: {}, found: “{}”'.format(
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
+
+# (cd src && python -m unittest abamake/yaml.py)
+
+class YamlParserTestCase(unittest.TestCase):
+   def runTest(self):
+      self.assertRaises(SyntaxError, parse_string, '')
