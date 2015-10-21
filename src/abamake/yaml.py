@@ -70,6 +70,7 @@ class YamlParser(object):
    """
 
    _smc_reComment = re.compile(r'[\t ]*#.*$')
+   _smc_reHorizontalWhitespace = re.compile(r'^[\t ]*$')
    _smc_reIndent = re.compile(r'^[\t ]*')
    _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
 
@@ -134,7 +135,10 @@ class YamlParser(object):
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
          self.next_line()
-      if self._m_sLine.startswith('- '):
+
+      if self._m_sLine.startswith('"') or self._m_sLine.startswith('\''):
+         return self.consume_quoted_string()
+      elif self._m_sLine.startswith('- '):
          # Restart parsing this line as a sequence.
          return self.consume_sequence()
       elif ':' in self._m_sLine:
@@ -146,7 +150,7 @@ class YamlParser(object):
 
    def consume_scalar(self, bInContainer):
       """Consumes a scalar.
-      
+
       bool bInContainer
          True if the scalar is in a container (sequence, map, etc.), or False otherwise.
       str return
@@ -163,6 +167,39 @@ class YamlParser(object):
       while self.next_line() and self._m_iLineIndent >= iCurrIndent:
          # TODO: maybe validate that _m_sLine does not contain “:”?
          sRet += ' ' + self._m_sLine
+      return sRet
+
+   def consume_quoted_string(self):
+      """Consumes a quoted string.
+
+      str return
+         String value.
+      """
+
+      sQuote = self._m_sLine[0]
+      ich = self._m_sLine.find(sQuote, len(sQuote))
+      if ich > 0:
+         # The quoted string is on a single line; verify that nothing follows it.
+         if not self._smc_reHorizontalWhitespace.match(self._m_sLine, ich + len(sQuote)):
+            self.parsing_error('unexpected characters after string end quote')
+         sRet = self._m_sLine[len(sQuote):ich]
+         # Advance one line to consume what we’ll return.
+         self.next_line()
+      else:
+         # The string spans multiple lines; go find its end.
+         sRet = self._m_sLine[len(sQuote):]
+         while self.next_line():
+            sRet += ' '
+            ich = self._m_sLine.find(sQuote)
+            if ich >= 0:
+               # Found the end of the string; consume it and verify that nothing follows it.
+               if not self._smc_reHorizontalWhitespace.match(self._m_sLine, ich + 1):
+                  self.parsing_error('unexpected characters after string end quote')
+               sRet += self._m_sLine[0:ich]
+               break
+            sRet += self._m_sLine
+         else:
+            self.parsing_error('unexpected end of input while looking for string end quote')
       return sRet
 
    def consume_sequence(self):
