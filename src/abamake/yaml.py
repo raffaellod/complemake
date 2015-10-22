@@ -177,8 +177,6 @@ class YamlParser(object):
          if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
             raise self.parsing_error('unexpected characters after string end quote')
          sRet = self._m_sLine[len(sQuote):ichEndQuote]
-         # Advance one line to consume what we’ll return.
-         self.next_line()
       else:
          # The string spans multiple lines; go find its end.
          sRet = self._m_sLine[len(sQuote):]
@@ -194,6 +192,8 @@ class YamlParser(object):
             sRet += self._m_sLine
          else:
             raise self.parsing_error('unexpected end of input while looking for string end quote')
+      # Advance one line to consume what we’re returning.
+      self.next_line()
       return sRet
 
    def consume_sequence(self):
