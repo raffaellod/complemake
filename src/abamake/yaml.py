@@ -64,7 +64,7 @@ class YamlParser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments)."""
 
    _smc_reComment = re.compile(r'[\t ]*#.*$')
-   _smc_reHorizontalWhitespace = re.compile(r'^[\t ]*$')
+   _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    _smc_reIndent = re.compile(r'^[\t ]*')
    _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
 
@@ -171,12 +171,12 @@ class YamlParser(object):
       """
 
       sQuote = self._m_sLine[0]
-      ich = self._m_sLine.find(sQuote, len(sQuote))
-      if ich > 0:
+      ichEndQuote = self._m_sLine.find(sQuote, len(sQuote))
+      if ichEndQuote > 0:
          # The quoted string is on a single line; verify that nothing follows it.
-         if not self._smc_reHorizontalWhitespace.match(self._m_sLine, ich + len(sQuote)):
-            self.parsing_error('unexpected characters after string end quote')
-         sRet = self._m_sLine[len(sQuote):ich]
+         if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
+            raise self.parsing_error('unexpected characters after string end quote')
+         sRet = self._m_sLine[len(sQuote):ichEndQuote]
          # Advance one line to consume what we’ll return.
          self.next_line()
       else:
@@ -184,16 +184,16 @@ class YamlParser(object):
          sRet = self._m_sLine[len(sQuote):]
          while self.next_line():
             sRet += ' '
-            ich = self._m_sLine.find(sQuote)
-            if ich >= 0:
+            ichEndQuote = self._m_sLine.find(sQuote)
+            if ichEndQuote >= 0:
                # Found the end of the string; consume it and verify that nothing follows it.
-               if not self._smc_reHorizontalWhitespace.match(self._m_sLine, ich + 1):
-                  self.parsing_error('unexpected characters after string end quote')
-               sRet += self._m_sLine[0:ich]
+               if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
+                  raise self.parsing_error('unexpected characters after string end quote')
+               sRet += self._m_sLine[0:ichEndQuote]
                break
             sRet += self._m_sLine
          else:
-            self.parsing_error('unexpected end of input while looking for string end quote')
+            raise self.parsing_error('unexpected end of input while looking for string end quote')
       return sRet
 
    def consume_sequence(self):
