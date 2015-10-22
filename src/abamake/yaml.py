@@ -22,11 +22,9 @@
 import io
 import os
 import re
-import unittest
 
 
 ####################################################################################################
-# Non-member fuctions
 
 def parse_file(sFilePath):
    """Loads and parses a YAML file.
@@ -54,7 +52,6 @@ def parse_string(s):
    return yp()
 
 ####################################################################################################
-# SyntaxError
 
 class SyntaxError(Exception):
    """Indicates a syntactical or semantical error in a YAML source."""
@@ -62,12 +59,9 @@ class SyntaxError(Exception):
    pass
 
 ####################################################################################################
-# YamlParser
 
 class YamlParser(object):
-   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments),
-   just enough to read Abamakefiles.
-   """
+   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments)."""
 
    _smc_reComment = re.compile(r'[\t ]*#.*$')
    _smc_reHorizontalWhitespace = re.compile(r'^[\t ]*$')
@@ -218,7 +212,8 @@ class YamlParser(object):
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
-         if self._m_sLine is None or self._m_iLineIndent < iCurrIndent or not self._m_sLine.startswith('- '):
+         sLine = self._m_sLine
+         if sLine is None or self._m_iLineIndent < iCurrIndent or not sLine.startswith('- '):
             # No next line, or the next line is not part of the sequence.
             break
       self._m_iCurrIndent = iCurrIndent
@@ -268,105 +263,3 @@ class YamlParser(object):
       return SyntaxError('{}:{}: {}, found: “{}”'.format(
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
-
-# (cd src && python -m unittest abamake/yaml.py)
-
-class YamlParserTestCase(unittest.TestCase):
-   def runTest(self):
-      import textwrap
-
-      self.assertRaises(SyntaxError, parse_string, '''
-      ''')
-
-      self.assertRaises(SyntaxError, parse_string, '''
-         a
-      ''')
-
-      self.assertRaises(SyntaxError, parse_string, '''
-         a: b
-      ''')
-
-      self.assertRaises(SyntaxError, parse_string, '''
-         %YAML 1.2
-      ''')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-      ''')), None)
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a
-      ''')), 'a')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a
-          b
-      ''')), 'a b')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a
-         b
-      ''')), 'a b')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a: b
-      ''')), {'a': 'b'})
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a:
-          b
-      ''')), {'a': 'b'})
-
-      self.assertRaises(SyntaxError, parse_string, '''
-         %YAML 1.2
-         ---
-         a:
-         b
-      ''')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a:b
-         c: d
-         e :f
-         g : h
-      ''')), {'a': 'b', 'c': 'd', 'e': 'f', 'g': 'h'})
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         - a
-      ''')), ['a'])
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         - a
-         - b
-      ''')), ['a', 'b'])
-
-      self.assertRaises(SyntaxError, parse_string, '''
-         %YAML 1.2
-         ---
-         - a
-         -b
-      ''')
-
-      self.assertEqual(parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         - a
-          - b
-      ''')), ['a - b'])
