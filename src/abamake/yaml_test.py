@@ -185,6 +185,32 @@ class QuotedStringTest(unittest.TestCase):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
+         a'b
+      ''')), 'a\'b')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a"b
+      ''')), 'a"b')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a
+         "
+      ''')), 'a "')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a
+         "b"
+      ''')), 'a "b"')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
          'a'
       ''')), 'a')
 
@@ -193,3 +219,54 @@ class QuotedStringTest(unittest.TestCase):
          ---
          "a"
       ''')), 'a')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         " a"
+      ''')), ' a')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         "a "
+      ''')), 'a ')
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+         %YAML 1.2
+         ---
+         "a"b
+      ''')
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+         %YAML 1.2
+         ---
+         "a"
+         b
+      ''')
+
+class QuotedMultilineStringTest(unittest.TestCase):
+   def runTest(self):
+      import textwrap
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         "
+         a"
+      ''')), ' a')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         "a
+         "
+      ''')), 'a ')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         "
+         a
+         "
+      ''')), ' a ')
