@@ -67,6 +67,7 @@ class YamlParser(object):
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    _smc_reIndent = re.compile(r'^[\t ]*')
    _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
+   _smc_reSequenceDash = re.compile(r'- +')
 
    def __init__(self, sSourceName, iterLines):
       """Constructor.
@@ -77,26 +78,26 @@ class YamlParser(object):
          Object that yields YAML lines.
       """
 
+      self._m_iContainerIndent = 0
       self._m_iLine = 0
       self._m_sLine = None
       self._m_iLineIndent = 0
-      self._m_iCurrIndent = 0
       self._m_iterLines = iterLines
+      self._m_iScalarWrapMinIndent = 0
       self._m_sSourceName = sSourceName
 
    def __call__(self):
       self.find_and_consume_doc_start()
       if not self.next_line():
          return None
-      o = self.consume_object(False)
+      o = self.consume_object()
       if self._m_sLine is not None:
          raise self.parsing_error('invalid token')
       return o
 
    def consume_map(self):
-      # Save the current indentation, and use the line’s indentation + 1 as the new indentation.
-      iCurrIndent = self._m_iCurrIndent
-      self._m_iCurrIndent = self._m_iLineIndent
+      iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
+      self._m_iScalarWrapMinIndent = self._m_iContainerIndent + 1
       dictRet = {}
       while True:
          match = self._smc_reMapKey.match(self._m_sLine)
@@ -106,25 +107,21 @@ class YamlParser(object):
          sKey = match.group('key')
          self._m_sLine = self._m_sLine[len(match.group()):]
 
-         # Parse whatever is left; if spanning multiple lines, this will continue until the
-         # indentation returns to iCurrIndent.
-         dictRet[sKey] = self.consume_object(True)
+         # Parse whatever is left; this may span multiple lines.
+         # TODO: reject non-explicit sequences or maps.
+         dictRet[sKey] = self.consume_object()
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
-         if self._m_sLine is None or self._m_iLineIndent < iCurrIndent:
+         if self._m_sLine is None or self._m_iLineIndent < self._m_iContainerIndent:
             # No next line, or the next line is not part of the map.
             break
-      self._m_iCurrIndent = iCurrIndent
+      self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       return dictRet
 
-   def consume_object(self, bInContainer):
+   def consume_object(self):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
-      line.
-
-      bool bInContainer
-         True if the scalar is in a container (sequence, map, etc.), or False otherwise.
-      """
+      line."""
 
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
@@ -140,26 +137,18 @@ class YamlParser(object):
          return self.consume_map()
       else:
          # Not a sequence and not a map, this line must contain a scalar.
-         return self.consume_scalar(bInContainer)
+         return self.consume_scalar()
 
-   def consume_scalar(self, bInContainer):
+   def consume_scalar(self):
       """Consumes a scalar.
 
-      bool bInContainer
-         True if the scalar is in a container (sequence, map, etc.), or False otherwise.
       str return
          Raw scalar value.
       """
 
       sRet = self._m_sLine
-      # If we’re in a container, a next line with more indentation is considered a continuation of
-      # the scalar; outside of a container, the same indentation level will also count as
-      # continuation.
-      iCurrIndent = self._m_iCurrIndent
-      if bInContainer:
-         iCurrIndent += 1
-      while self.next_line() and self._m_iLineIndent >= iCurrIndent:
-         # TODO: maybe validate that _m_sLine does not contain “:”?
+      while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
+         # TODO: validate that _m_sLine does not contain “:”.
          sRet += ' ' + self._m_sLine
       return sRet
 
@@ -197,26 +186,31 @@ class YamlParser(object):
       return sRet
 
    def consume_sequence(self):
-      # Save the current indentation, and use the line’s indentation + len(“- ”) as the new
-      # indentation.
-      iCurrIndent = self._m_iCurrIndent
-      self._m_iCurrIndent = self._m_iLineIndent
+      iOldContainerIndent = self._m_iContainerIndent
+      iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
-         self._m_sLine = self._m_sLine[2:].lstrip(' ')
+         match = self._smc_reSequenceDash.match(self._m_sLine)
+         cchMatched = len(match.group())
+         self._m_sLine = self._m_sLine[cchMatched:]
+         # The indentation of the sequence element includes the dash match.
+         self._m_iContainerIndent = self._m_iLineIndent + cchMatched
+         self._m_iScalarWrapMinIndent = self._m_iLineIndent + 1
 
-         # Parse whatever is left; if spanning multiple lines, this will continue until the
-         # indentation returns to iCurrIndent.
-         listRet.append(self.consume_object(True))
+         # Parse whatever is left; this may span multiple lines.
+         listRet.append(self.consume_object())
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
          sLine = self._m_sLine
-         if sLine is None or self._m_iLineIndent < iCurrIndent or not sLine.startswith('- '):
+         if sLine is None or self._m_iLineIndent < iOldContainerIndent or not sLine.startswith('- '):
             # No next line, or the next line is not part of the sequence.
             break
-      self._m_iCurrIndent = iCurrIndent
+         elif self._m_iLineIndent > iOldContainerIndent:
+            raise self.parsing_error('excessive indentation for sequence element')
+      self._m_iContainerIndent = iOldContainerIndent
+      self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       return listRet
 
    def find_and_consume_doc_start(self):
