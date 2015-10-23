@@ -44,12 +44,12 @@ class MapTest(unittest.TestCase):
           b
       ''')), {'a': 'b'})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a:
          b
-      ''')
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -62,20 +62,20 @@ class MapTest(unittest.TestCase):
 
 class PrologTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
-      ''')
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          a
-      ''')
+      '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          a: b
-      ''')
+      '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
-      ''')
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -97,12 +97,12 @@ class SequenceTest(unittest.TestCase):
          - b
       ''')), ['a', 'b'])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
          -b
-      ''')
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -149,17 +149,17 @@ class StringTest(unittest.TestCase):
 
 class QuotedStringTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          'a
-      ''')
+      '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a
-      ''')
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -223,18 +223,18 @@ class QuotedStringTest(unittest.TestCase):
          "a "
       ''')), 'a ')
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a"b
-      ''')
+      '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a"
          b
-      ''')
+      '''))
 
 class QuotedMultilineStringTest(unittest.TestCase):
    def runTest(self):
