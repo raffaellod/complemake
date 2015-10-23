@@ -19,6 +19,7 @@
 
 """Test cases for the YAML parser."""
 
+import textwrap
 import unittest
 
 import abamake.yaml as yaml
@@ -30,8 +31,6 @@ import abamake.yaml as yaml
 
 class MapTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -63,8 +62,6 @@ class MapTest(unittest.TestCase):
 
 class PrologTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
       ''')
 
@@ -87,8 +84,6 @@ class PrologTest(unittest.TestCase):
 
 class SequenceTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -118,8 +113,6 @@ class SequenceTest(unittest.TestCase):
 
 class StringTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -156,8 +149,6 @@ class StringTest(unittest.TestCase):
 
 class QuotedStringTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, '''
          %YAML 1.2
          ---
@@ -247,8 +238,6 @@ class QuotedStringTest(unittest.TestCase):
 
 class QuotedMultilineStringTest(unittest.TestCase):
    def runTest(self):
-      import textwrap
-
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
