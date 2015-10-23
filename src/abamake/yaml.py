@@ -126,6 +126,9 @@ class YamlParser(object):
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
          self.next_line()
+         bWrapped = True
+      else:
+         bWrapped = False
 
       if self._m_sLine.startswith('"') or self._m_sLine.startswith('\''):
          return self.consume_quoted_string()
@@ -137,6 +140,8 @@ class YamlParser(object):
          return self.consume_map()
       else:
          # Not a sequence and not a map, this line must contain a scalar.
+         if bWrapped and self._m_iLineIndent < self._m_iScalarWrapMinIndent:
+            raise self.parsing_error('insufficient indentation for scalar starting on a new line')
          return self.consume_scalar()
 
    def consume_scalar(self):
