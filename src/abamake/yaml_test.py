@@ -84,6 +84,14 @@ class MapInMapTest(unittest.TestCase):
           d: e
       ''')), {'a': {'b': 'c', 'd': 'e'}})
 
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+          b: c
+           d: e
+      '''))
+
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
