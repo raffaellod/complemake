@@ -72,7 +72,7 @@ class MapInSequenceTest(unittest.TestCase):
          %YAML 1.2
          ---
          - a: b
-           c
+         c
       '''))
 
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
@@ -86,8 +86,15 @@ class MapInSequenceTest(unittest.TestCase):
          %YAML 1.2
          ---
          - a: b
-         c
+           c
       '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a: b
+            c
+      ''')), [{'a': 'b c'}])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
