@@ -156,7 +156,8 @@ class YamlParser(object):
 
       sRet = self._m_sLine
       while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
-         # TODO: validate that _m_sLine does not contain “:”.
+         if ':' in self._m_sLine:
+            raise self.parsing_error('map key not expected in scalar context')
          sRet += ' ' + self._m_sLine
       return sRet
 
