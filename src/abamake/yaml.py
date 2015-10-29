@@ -96,8 +96,10 @@ class YamlParser(object):
       return o
 
    def consume_map(self):
+      iOldContainerIndent = self._m_iContainerIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
-      self._m_iScalarWrapMinIndent = self._m_iContainerIndent + 1
+      self._m_iContainerIndent += 1
+      self._m_iScalarWrapMinIndent = self._m_iContainerIndent
       dictRet = {}
       while True:
          match = self._smc_reMapKey.match(self._m_sLine)
@@ -113,10 +115,11 @@ class YamlParser(object):
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
-         if self._m_sLine is None or self._m_iLineIndent < self._m_iContainerIndent:
+         if self._m_sLine is None or self._m_iLineIndent < iOldContainerIndent:
             # No next line, or the next line is not part of the map.
             break
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
+      self._m_iContainerIndent = iOldContainerIndent
       return dictRet
 
    def consume_object(self):
