@@ -150,6 +150,10 @@ class YamlParser(object):
       elif ':' in self._m_sLine:
          if bAfterMapKey:
             raise self.parsing_error('map key not expected in map value context')
+         if bWrapped and self._m_iLineIndent < self._m_iContainerIndent:
+            # This line is returning to the containing map’s indent, so this line does not contain a
+            # value for the map but a new key.
+            return None
          # Restart parsing this line as a map.
          return self.consume_map()
       else:
