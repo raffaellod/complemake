@@ -90,7 +90,7 @@ class YamlParser(object):
       self.find_and_consume_doc_start()
       if not self.next_line():
          return None
-      o = self.consume_object()
+      o = self.consume_object(False)
       if self._m_sLine is not None:
          raise self.parsing_error('invalid token')
       return o
@@ -111,7 +111,7 @@ class YamlParser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
-         dictRet[sKey] = self.consume_object()
+         dictRet[sKey] = self.consume_object(True)
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
@@ -122,23 +122,34 @@ class YamlParser(object):
       self._m_iContainerIndent = iOldContainerIndent
       return dictRet
 
-   def consume_object(self):
+   def consume_object(self, bAfterMapKey):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
-      line."""
+      line.
+
+      bool bAfterMapKey
+         True if a map key was read from the current line, or False otherwise.
+      object return
+         Read object.
+      """
 
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
          self.next_line()
          bWrapped = True
+         bAfterMapKey = False
       else:
          bWrapped = False
 
       if self._m_sLine.startswith('"') or self._m_sLine.startswith('\''):
          return self.consume_quoted_string()
       elif self._m_sLine.startswith('- '):
+         if bAfterMapKey:
+            raise self.parsing_error('sequence element not expected in map value context')
          # Restart parsing this line as a sequence.
          return self.consume_sequence()
       elif ':' in self._m_sLine:
+         if bAfterMapKey:
+            raise self.parsing_error('map key not expected in map value context')
          # Restart parsing this line as a map.
          return self.consume_map()
       else:
@@ -208,7 +219,7 @@ class YamlParser(object):
          self._m_iScalarWrapMinIndent = self._m_iLineIndent + 1
 
          # Parse whatever is left; this may span multiple lines.
-         listRet.append(self.consume_object())
+         listRet.append(self.consume_object(False))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
