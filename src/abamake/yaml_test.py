@@ -60,8 +60,19 @@ class MapTest(unittest.TestCase):
          g : h
       ''')), {'a': 'b', 'c': 'd', 'e': 'f', 'g': 'h'})
 
-class MapInMapTest(unittest.TestCase):
-   def runTest(self):
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b: c
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+          c
+      ''')), {'a': 'b c'})
+
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
@@ -73,8 +84,23 @@ class MapInMapTest(unittest.TestCase):
          %YAML 1.2
          ---
          a:
+         b: c
+      ''')), {'a': None, 'b': 'c'})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
           b: c
       ''')), {'a': {'b': 'c'}})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+          b: c
+         d: e
+      ''')), {'a': {'b': 'c'}, 'd': 'e'})
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -91,14 +117,6 @@ class MapInMapTest(unittest.TestCase):
           b: c
            d: e
       '''))
-
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         a:
-          b: c
-         d: e
-      ''')), {'a': {'b': 'c'}, 'd': 'e'})
 
 class MapInSequenceTest(unittest.TestCase):
    def runTest(self):
@@ -149,6 +167,13 @@ class MapInSequenceTest(unittest.TestCase):
          - a: b
            c: d
       ''')), [{'a': 'b', 'c': 'd'}])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a: b
+         - c: d
+      ''')), [{'a': 'b'}, {'c': 'd'}])
 
 class PrologTest(unittest.TestCase):
    def runTest(self):
