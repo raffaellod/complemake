@@ -67,7 +67,7 @@ class YamlParser(object):
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    _smc_reIndent = re.compile(r'^[\t ]*')
    _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
-   _smc_reSequenceDash = re.compile(r'- +')
+   _smc_reSequenceDash = re.compile(r'-(?: +|$)')
 
    def __init__(self, sSourceName, iterLines):
       """Constructor.
@@ -142,11 +142,12 @@ class YamlParser(object):
 
       if self._m_sLine.startswith('"') or self._m_sLine.startswith('\''):
          return self.consume_quoted_string()
-      elif self._m_sLine.startswith('- '):
+      match = self._smc_reSequenceDash.match(self._m_sLine)
+      if match:
          if bAfterMapKey:
             raise self.parsing_error('sequence element not expected in map value context')
          # Restart parsing this line as a sequence.
-         return self.consume_sequence()
+         return self.consume_sequence(match)
       elif ':' in self._m_sLine:
          if bAfterMapKey:
             raise self.parsing_error('map key not expected in map value context')
@@ -209,13 +210,20 @@ class YamlParser(object):
       self.next_line()
       return sRet
 
-   def consume_sequence(self):
+   def consume_sequence(self, match):
+      """Consumes a sequence.
+
+      re.Match match
+         Matched sequence element start characters.
+      list(object) return
+         Sequence value.
+      """
+
       iOldContainerIndent = self._m_iContainerIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
-         match = self._smc_reSequenceDash.match(self._m_sLine)
          cchMatched = len(match.group())
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
@@ -227,11 +235,14 @@ class YamlParser(object):
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
-         sLine = self._m_sLine
-         if sLine is None or self._m_iLineIndent < iOldContainerIndent or not sLine.startswith('- '):
-            # No next line, or the next line is not part of the sequence.
+         if self._m_sLine is None or self._m_iLineIndent < iOldContainerIndent:
             break
-         elif self._m_iLineIndent > iOldContainerIndent:
+            # No next line, or the next line is not part of the sequence.
+         match = self._smc_reSequenceDash.match(self._m_sLine)
+         if not match:
+            # The next line is not a sequence element.
+            break
+         if self._m_iLineIndent > iOldContainerIndent:
             raise self.parsing_error('excessive indentation for sequence element')
       self._m_iContainerIndent = iOldContainerIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
