@@ -220,7 +220,7 @@ class YamlParser(object):
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
          self._m_iContainerIndent = self._m_iLineIndent + cchMatched
-         self._m_iScalarWrapMinIndent = self._m_iLineIndent + 1
+         self._m_iScalarWrapMinIndent = iOldContainerIndent + 1
 
          # Parse whatever is left; this may span multiple lines.
          listRet.append(self.consume_object(False))
