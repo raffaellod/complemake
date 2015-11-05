@@ -97,10 +97,13 @@ class YamlParser(object):
       return o
 
    def consume_map(self):
+      iIndent = self._m_iLineIndent
       iOldMapMinIndent = self._m_iMapMinIndent
+      iOldSequenceMinIndent = self._m_iSequenceMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
-      self._m_iMapMinIndent += 1
-      self._m_iScalarWrapMinIndent = self._m_iMapMinIndent
+      self._m_iMapMinIndent = iIndent + 1
+      self._m_iSequenceMinIndent = iIndent
+      self._m_iScalarWrapMinIndent = iIndent + 1
       dictRet = {}
       while True:
          match = self._smc_reMapKey.match(self._m_sLine)
@@ -116,11 +119,12 @@ class YamlParser(object):
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
-         if self._m_sLine is None or self._m_iLineIndent < iOldMapMinIndent:
+         if self._m_sLine is None or self._m_iLineIndent < iIndent:
             # No next line, or the next line is not part of the map.
             break
-      self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iMapMinIndent = iOldMapMinIndent
+      self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
+      self._m_iSequenceMinIndent = iOldSequenceMinIndent
       return dictRet
 
    def consume_object(self, bAfterMapKey):
@@ -148,6 +152,10 @@ class YamlParser(object):
          if bAfterMapKey:
             raise self.parsing_error('sequence element not expected in map value context')
          # Restart parsing this line as a sequence.
+         if bWrapped and self._m_iLineIndent < self._m_iSequenceMinIndent:
+            # This line is returning to the containing sequence’s indent, so this line does not
+            # contain a sequence element but a new sequence.
+            return None
          return self.consume_sequence(match)
       elif ':' in self._m_sLine:
          if bAfterMapKey:
@@ -220,6 +228,7 @@ class YamlParser(object):
          Sequence value.
       """
 
+      iIndent = self._m_iLineIndent
       iOldMapMinIndent = self._m_iMapMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
       iOldSequenceMinIndent = self._m_iSequenceMinIndent
@@ -229,23 +238,24 @@ class YamlParser(object):
          cchMatched = len(match.group())
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
-         self._m_iMapMinIndent = self._m_iLineIndent + cchMatched
-         self._m_iSequenceMinIndent = self._m_iLineIndent + cchMatched
-         self._m_iScalarWrapMinIndent = iOldSequenceMinIndent + 1
+         self._m_iLineIndent += cchMatched
+         self._m_iMapMinIndent = iIndent + cchMatched
+         self._m_iSequenceMinIndent = iIndent + cchMatched
+         self._m_iScalarWrapMinIndent = iIndent + 1
 
          # Parse whatever is left; this may span multiple lines.
          listRet.append(self.consume_object(False))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
-         if self._m_sLine is None or self._m_iLineIndent < iOldSequenceMinIndent:
+         if self._m_sLine is None or self._m_iLineIndent < iIndent:
             break
             # No next line, or the next line is not part of the sequence.
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if not match:
             # The next line is not a sequence element.
             break
-         if self._m_iLineIndent > iOldSequenceMinIndent:
+         if self._m_iLineIndent > iIndent:
             raise self.parsing_error('excessive indentation for sequence element')
       self._m_iMapMinIndent = iOldMapMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
