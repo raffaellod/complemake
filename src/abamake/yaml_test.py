@@ -29,6 +29,24 @@ import abamake.yaml as yaml
 
 # (cd src && python -m unittest abamake/yaml.py)
 
+class ComplexTest(unittest.TestCase):
+   def runTest(self):
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c:
+
+            d:
+               e: f
+               g: h
+               i:
+               -  j
+            k: "
+         a"
+            l: 'm'
+      ''')), {'a': 'b', 'c': {'d': {'e': 'f', 'g': 'h', 'i': ['j']}, 'k': ' a', 'l': 'm'}})
+
 class MapTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
