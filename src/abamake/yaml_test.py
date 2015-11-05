@@ -276,13 +276,19 @@ class SequenceTest(unittest.TestCase):
           - b
       ''')), ['a - b'])
 
-      # This is probably not correct, but it doesn’t seem something to stay awake at night for.
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+           - b
+      ''')), ['a - b'])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
           - a
          - b
-      ''')), ['a', 'b'])
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -303,8 +309,24 @@ class SequenceTest(unittest.TestCase):
          %YAML 1.2
          ---
          - a
+           - b
+         - c
+      ''')), ['a - b', 'c'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
          - b
           - c
+      ''')), ['a', 'b - c'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - b
+           - c
       ''')), ['a', 'b - c'])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
@@ -346,9 +368,25 @@ class SequenceTest(unittest.TestCase):
          %YAML 1.2
          ---
          -
+           - a
+         - b
+      ''')), [['a'], 'b'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         -
           - a
           - b
       ''')), [['a', 'b']])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         -
+           - a
+          - b
+      '''))
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
