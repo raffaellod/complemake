@@ -78,12 +78,13 @@ class YamlParser(object):
          Object that yields YAML lines.
       """
 
-      self._m_iContainerIndent = 0
       self._m_iLine = 0
       self._m_sLine = None
       self._m_iLineIndent = 0
       self._m_iterLines = iterLines
+      self._m_iMapMinIndent = 0
       self._m_iScalarWrapMinIndent = 0
+      self._m_iSequenceMinIndent = 0
       self._m_sSourceName = sSourceName
 
    def __call__(self):
@@ -96,10 +97,10 @@ class YamlParser(object):
       return o
 
    def consume_map(self):
-      iOldContainerIndent = self._m_iContainerIndent
+      iOldMapMinIndent = self._m_iMapMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
-      self._m_iContainerIndent += 1
-      self._m_iScalarWrapMinIndent = self._m_iContainerIndent
+      self._m_iMapMinIndent += 1
+      self._m_iScalarWrapMinIndent = self._m_iMapMinIndent
       dictRet = {}
       while True:
          match = self._smc_reMapKey.match(self._m_sLine)
@@ -115,11 +116,11 @@ class YamlParser(object):
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
-         if self._m_sLine is None or self._m_iLineIndent < iOldContainerIndent:
+         if self._m_sLine is None or self._m_iLineIndent < iOldMapMinIndent:
             # No next line, or the next line is not part of the map.
             break
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
-      self._m_iContainerIndent = iOldContainerIndent
+      self._m_iMapMinIndent = iOldMapMinIndent
       return dictRet
 
    def consume_object(self, bAfterMapKey):
@@ -151,7 +152,7 @@ class YamlParser(object):
       elif ':' in self._m_sLine:
          if bAfterMapKey:
             raise self.parsing_error('map key not expected in map value context')
-         if bWrapped and self._m_iLineIndent < self._m_iContainerIndent:
+         if bWrapped and self._m_iLineIndent < self._m_iMapMinIndent:
             # This line is returning to the containing map’s indent, so this line does not contain a
             # value for the map but a new key.
             return None
@@ -219,33 +220,36 @@ class YamlParser(object):
          Sequence value.
       """
 
-      iOldContainerIndent = self._m_iContainerIndent
+      iOldMapMinIndent = self._m_iMapMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
+      iOldSequenceMinIndent = self._m_iSequenceMinIndent
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
          cchMatched = len(match.group())
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
-         self._m_iContainerIndent = self._m_iLineIndent + cchMatched
-         self._m_iScalarWrapMinIndent = iOldContainerIndent + 1
+         self._m_iMapMinIndent = self._m_iLineIndent + cchMatched
+         self._m_iSequenceMinIndent = self._m_iLineIndent + cchMatched
+         self._m_iScalarWrapMinIndent = iOldSequenceMinIndent + 1
 
          # Parse whatever is left; this may span multiple lines.
          listRet.append(self.consume_object(False))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
-         if self._m_sLine is None or self._m_iLineIndent < iOldContainerIndent:
+         if self._m_sLine is None or self._m_iLineIndent < iOldSequenceMinIndent:
             break
             # No next line, or the next line is not part of the sequence.
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if not match:
             # The next line is not a sequence element.
             break
-         if self._m_iLineIndent > iOldContainerIndent:
+         if self._m_iLineIndent > iOldSequenceMinIndent:
             raise self.parsing_error('excessive indentation for sequence element')
-      self._m_iContainerIndent = iOldContainerIndent
+      self._m_iMapMinIndent = iOldMapMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
+      self._m_iSequenceMinIndent = iOldSequenceMinIndent
       return listRet
 
    def find_and_consume_doc_start(self):
