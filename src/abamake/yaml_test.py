@@ -315,6 +315,79 @@ class SequenceTest(unittest.TestCase):
           - b
       ''')), [['a'], ['b']])
 
+class SequenceInMapTest(unittest.TestCase):
+   def runTest(self):
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: -
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: - b
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: - b
+         c
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: - b
+          c
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: - b
+           c
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: - b
+            c
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+         - b
+      ''')), {'a': ['b']})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+          - b
+      ''')), {'a': ['b']})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+         - b
+         - c
+      ''')), {'a': ['b', 'c']})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+         - b
+         c:
+         - d
+      ''')), {'a': ['b'], 'c': ['d']})
+
 class StringTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
