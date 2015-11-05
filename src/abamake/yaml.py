@@ -92,9 +92,11 @@ class YamlParser(object):
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = sSourceName
 
-   def consume_map_implicit(self):
+   def consume_map_implicit(self, match):
       """Consumes a map.
 
+      re.Match match
+         Matched first key.
       dict(str: object) return
          Parsed map.
       """
@@ -110,9 +112,6 @@ class YamlParser(object):
 
       dictRet = {}
       while True:
-         match = self._smc_reMapKey.match(self._m_sLine)
-         if not match:
-            raise self.parsing_error('map key expected')
          # Grab the key and strip off the whole matched string.
          sKey = match.group('key')
          self._m_sLine = self._m_sLine[len(match.group()):]
@@ -126,6 +125,9 @@ class YamlParser(object):
          if self._m_sLine is None or self._m_iLineIndent < iIndent:
             # No next line, or the next line is not part of the map.
             break
+         match = self._smc_reMapKey.match(self._m_sLine)
+         if not match:
+            raise self.parsing_error('map key expected')
 
       self._m_iMapMinIndent        = iOldMapMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
@@ -156,21 +158,22 @@ class YamlParser(object):
       if match:
          if bAfterMapKey:
             raise self.parsing_error('sequence element not expected in map value context')
-         # Restart parsing this line as a sequence.
          if bWrapped and self._m_iLineIndent < self._m_iSequenceMinIndent:
             # This line is returning to the containing sequence’s indent, so this line does not
             # contain a sequence element but a new sequence.
             return None
+         # Continue parsing this line as a sequence.
          return self.consume_sequence_implicit(match)
-      elif ':' in self._m_sLine:
+      match = self._smc_reMapKey.match(self._m_sLine)
+      if match:
          if bAfterMapKey:
             raise self.parsing_error('map key not expected in map value context')
          if bWrapped and self._m_iLineIndent < self._m_iMapMinIndent:
             # This line is returning to the containing map’s indent, so this line does not contain a
             # value for the map but a new key.
             return None
-         # Restart parsing this line as a map.
-         return self.consume_map_implicit()
+         # Continue parsing this line as a map.
+         return self.consume_map_implicit(match)
       else:
          # Not a sequence and not a map, this line must contain a scalar.
          if bWrapped and self._m_iLineIndent < self._m_iScalarWrapMinIndent:
