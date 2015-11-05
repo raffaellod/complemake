@@ -52,7 +52,25 @@ class MapTest(unittest.TestCase):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
+         a:b
+      ''')), 'a:b')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
          a: b
+      ''')), {'a': 'b'})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a :b
+      ''')), 'a :b')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a : b
       ''')), {'a': 'b'})
 
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
@@ -76,14 +94,26 @@ class MapTest(unittest.TestCase):
            b
       ''')), {'a': 'b'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a:b
          c: d
-         e :f
-         g : h
-      ''')), {'a': 'b', 'c': 'd', 'e': 'f', 'g': 'h'})
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c :d
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c : d
+      ''')), {'a': 'b', 'c': 'd'})
 
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2

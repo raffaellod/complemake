@@ -70,7 +70,7 @@ class YamlParser(object):
    # Matches leading horizontal whitespace.
    _smc_reIndent = re.compile(r'^[\t ]*')
    # Matches a map key and the whitespace around it.
-   _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *: *')
+   _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
 
