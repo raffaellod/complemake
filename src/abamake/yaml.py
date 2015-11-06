@@ -19,6 +19,7 @@
 
 """YAML parser."""
 
+import collections
 import io
 import os
 import re
@@ -65,6 +66,18 @@ class YamlParser(object):
 
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
+   # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
+   _smc_reDefaultTypes = (
+      (re.compile(r'^(~|NULL|[Nn]ull)?$'),                       None),
+      (re.compile(r'^(TRUE|[Tt]rue)$'),                          True),
+      (re.compile(r'^(FALSE|[Ff]alse)$'),                        False),
+      (re.compile(r'^[-+]?\d+$'),                                lambda s: int(s, 10)),
+      (re.compile(r'^0o[0-7]+$'),                                lambda s: int(s,  8)),
+      (re.compile(r'^0x[0-9A-Fa-f]+$'),                          lambda s: int(s, 16)),
+      (re.compile(r'^[-+]?\.(INF|[Ii]nf)$'),                     float('Inf')),
+      (re.compile(r'^\.(N[Aa]N|nan)$'),                          float('NaN')),
+      (re.compile(r'^[-+]?(\.\d+|\d+(\.\d*)?)([Ee][-+]?\d+)?$'), float),
+   )
    # Matches trailing horizontal whitespace.
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    # Matches leading horizontal whitespace.
@@ -183,15 +196,26 @@ class YamlParser(object):
    def consume_scalar(self):
       """Consumes a scalar.
 
-      str return
-         Raw scalar value.
+      object return
+         Parsed scalar, converted to the appropriate type.
       """
 
       sRet = self._m_sLine
+      bMultiline = False
       while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          if ':' in self._m_sLine:
             raise self.parsing_error('map key not expected in scalar context')
          sRet += ' ' + self._m_sLine
+         bMultiline = True
+      if not bMultiline:
+         # Compare consumed string against one of the matchers for stock scalar types.
+         for reMatcher, oConvertor in self._smc_reDefaultTypes:
+            if reMatcher.match(sRet):
+               if isinstance(oConvertor, collections.Callable):
+                  return oConvertor(sRet)
+               else:
+                  return oConvertor
+      # It’s a string.
       return sRet
 
    def consume_string_explicit(self):
