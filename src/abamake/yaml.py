@@ -140,7 +140,7 @@ class YamlParser(object):
             break
          match = self._smc_reMapKey.match(self._m_sLine)
          if not match:
-            raise self.parsing_error('map key expected')
+            self.raise_parsing_error('map key expected')
 
       self._m_iMapMinIndent        = iOldMapMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
@@ -172,7 +172,7 @@ class YamlParser(object):
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if match:
             if bAfterMapKey:
-               raise self.parsing_error('sequence element not expected in map value context')
+               self.raise_parsing_error('sequence element not expected in map value context')
             # Continue parsing this line as a sequence.
             return self.consume_sequence_implicit(match)
 
@@ -180,7 +180,7 @@ class YamlParser(object):
          match = self._smc_reMapKey.match(self._m_sLine)
          if match:
             if bAfterMapKey:
-               raise self.parsing_error('map key not expected in map value context')
+               self.raise_parsing_error('map key not expected in map value context')
             # Continue parsing this line as a map.
             return self.consume_map_implicit(match)
 
@@ -202,7 +202,7 @@ class YamlParser(object):
       bMultiline = False
       while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          if ':' in self._m_sLine:
-            raise self.parsing_error('map key not expected in scalar context')
+            self.raise_parsing_error('map key not expected in scalar context')
          sRet += ' ' + self._m_sLine
          bMultiline = True
       if not bMultiline:
@@ -237,10 +237,10 @@ class YamlParser(object):
                break
             sRet += self._m_sLine
          else:
-            raise self.parsing_error('unexpected end of input while looking for string end quote')
+            self.raise_parsing_error('unexpected end of input while looking for string end quote')
       # Verify that nothing follows the closing quote.
       if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
-         raise self.parsing_error('unexpected characters after string end quote')
+         self.raise_parsing_error('unexpected characters after string end quote')
       # Consume what we’re returning.
       sRet += self._m_sLine[0 if sRet else len(sQuote):ichEndQuote]
       self.next_line()
@@ -285,7 +285,7 @@ class YamlParser(object):
             # The next line is not a sequence element.
             break
          if self._m_iLineIndent > iIndent:
-            raise self.parsing_error('excessive indentation for sequence element')
+            self.raise_parsing_error('excessive indentation for sequence element')
 
       self._m_iMapMinIndent        = iOldMapMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
@@ -297,11 +297,11 @@ class YamlParser(object):
 
       self.next_line()
       if self._m_sLine != '%YAML 1.2':
-         raise self.parsing_error('expected %YAML directive')
+         self.raise_parsing_error('expected %YAML directive')
       if not self.next_line():
-         raise self.parsing_error('missing document start')
+         self.raise_parsing_error('missing document start')
       if self._m_sLine != '---':
-         raise self.parsing_error('unexpected directive')
+         self.raise_parsing_error('unexpected directive')
 
    def next_line(self):
       """Attempts to read a new line from the YAML document, making it available as self._m_sLine
@@ -332,8 +332,14 @@ class YamlParser(object):
          self._m_sLine = sLine
          return sLine is not None
 
-   def parsing_error(self, sMessage):
-      return SyntaxError('{}:{}: {}, found: “{}”'.format(
+   def raise_parsing_error(self, sMessage):
+      """Raises a yaml.SyntaxError the available context information and the provided message.
+
+      str sMessage
+         Error message.
+      """
+
+      raise SyntaxError('{}:{}: {}, found: “{}”'.format(
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
 
@@ -351,5 +357,5 @@ class YamlParser(object):
       o = self.consume_object(False)
       # Verify that there’s nothing left to parse.
       if self._m_sLine is not None:
-         raise self.parsing_error('invalid token')
+         self.raise_parsing_error('invalid token')
       return o
