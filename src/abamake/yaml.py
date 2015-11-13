@@ -165,33 +165,31 @@ class YamlParser(object):
       else:
          bWrapped = False
 
-      if self._m_sLine.startswith('"') or self._m_sLine.startswith('\''):
+      if not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
          return self.consume_string_explicit()
-      match = self._smc_reSequenceDash.match(self._m_sLine)
-      if match:
-         if bAfterMapKey:
-            raise self.parsing_error('sequence element not expected in map value context')
-         if bWrapped and self._m_iLineIndent < self._m_iSequenceMinIndent:
-            # This line is returning to the containing sequence’s indent, so this line does not
-            # contain a sequence element but a new sequence.
-            return None
-         # Continue parsing this line as a sequence.
-         return self.consume_sequence_implicit(match)
-      match = self._smc_reMapKey.match(self._m_sLine)
-      if match:
-         if bAfterMapKey:
-            raise self.parsing_error('map key not expected in map value context')
-         if bWrapped and self._m_iLineIndent < self._m_iMapMinIndent:
-            # This line is returning to the containing map’s indent, so this line does not contain a
-            # value for the map but a new key.
-            return None
-         # Continue parsing this line as a map.
-         return self.consume_map_implicit(match)
-      else:
-         # Not a sequence and not a map, this line must contain a scalar.
-         if bWrapped and self._m_iLineIndent < self._m_iScalarWrapMinIndent:
-            raise self.parsing_error('insufficient indentation for scalar starting on a new line')
+
+      if not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent:
+         match = self._smc_reSequenceDash.match(self._m_sLine)
+         if match:
+            if bAfterMapKey:
+               raise self.parsing_error('sequence element not expected in map value context')
+            # Continue parsing this line as a sequence.
+            return self.consume_sequence_implicit(match)
+
+      if not bWrapped or self._m_iLineIndent >= self._m_iMapMinIndent:
+         match = self._smc_reMapKey.match(self._m_sLine)
+         if match:
+            if bAfterMapKey:
+               raise self.parsing_error('map key not expected in map value context')
+            # Continue parsing this line as a map.
+            return self.consume_map_implicit(match)
+
+      if not bWrapped or self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          return self.consume_scalar()
+
+      # The input was an empty line and the indentation of the next line was incompatible with any
+      # of the options above.
+      return None
 
    def consume_scalar(self):
       """Consumes a scalar.
@@ -348,6 +346,7 @@ class YamlParser(object):
 
       self.find_and_consume_doc_start()
       if not self.next_line():
+         # Nothing follows the prolog.
          return None
       o = self.consume_object(False)
       # Verify that there’s nothing left to parse.
