@@ -68,15 +68,16 @@ class YamlParser(object):
    _smc_reComment = re.compile(r'[\t ]*#.*$')
    # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
    _smc_reDefaultTypes = (
-      (re.compile(r'^(?:~|NULL|[Nn]ull)?$'),                           None),
-      (re.compile(r'^(?:TRUE|[Tt]rue)$'),                              True),
-      (re.compile(r'^(?:FALSE|[Ff]alse)$'),                            False),
-      (re.compile(r'^(?P<s>[-+]?\d+)$'),                               lambda s: int(s, 10)),
-      (re.compile(r'^0o(?P<s>[0-7]+)$'),                               lambda s: int(s,  8)),
-      (re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'),                         lambda s: int(s, 16)),
-      (re.compile(r'^[-+]?\.(?:INF|[Ii]nf)$'),                         float('Inf')),
-      (re.compile(r'^\.(?:N[Aa]N|nan)$'),                              float('NaN')),
-      (re.compile(r'^[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?$'), float),
+      (re.compile(r'^(?:~|NULL|[Nn]ull)?$'),                                  None),
+      (re.compile(r'^(?:TRUE|[Tt]rue)$'),                                     True),
+      (re.compile(r'^(?:FALSE|[Ff]alse)$'),                                   False),
+      (re.compile(r'^(?P<s>[-+]?\d+)$'),                                      lambda s: int(s, 10)),
+      (re.compile(r'^0o(?P<s>[0-7]+)$'),                                      lambda s: int(s,  8)),
+      (re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'),                                lambda s: int(s, 16)),
+      (re.compile(r'^\+?\.(?:INF|[Ii]nf)$'),                                  float('inf')),
+      (re.compile(r'^-\.(?:INF|[Ii]nf)$'),                                    float('-inf')),
+      (re.compile(r'^\.(?:N[Aa]N|nan)$'),                                     float('nan')),
+      (re.compile(r'^(?P<x>[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?)$'), float), # float(x)
    )
    # Matches trailing horizontal whitespace.
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
