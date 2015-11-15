@@ -19,6 +19,7 @@
 
 """Test cases for the YAML parser."""
 
+import math
 import textwrap
 import unittest
 
@@ -666,3 +667,112 @@ class QuotedMultilineStringTest(unittest.TestCase):
          a
          "
       ''')), ' a ')
+
+class ImplicitlyTypedScalarTest(unittest.TestCase):
+   def runTest(self):
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - null
+         - Null
+         - NULL
+         - nULL
+         - NUll
+      ''')), [None, None, None, 'nULL', 'NUll'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - true
+         - True
+         - TRUE
+         - tRUE
+         - TRue
+      ''')), [True, True, True, 'tRUE', 'TRue'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - false
+         - False
+         - FALSE
+         - fALSE
+         - FAlse
+      ''')), [False, False, False, 'fALSE', 'FAlse'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 15
+         - 0o15
+         - 0x15
+         - a15
+         - Oo15
+         - 0a15
+      ''')), [15, 0o15, 0x15, 'a15', 'Oo15', '0a15'])
+
+      fPosInf = float('+Inf')
+      fNegInf = float('+Inf')
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - .inf
+         - .Inf
+         - .INF
+         - .iNF
+         - .INf
+         - +.inf
+         - +.Inf
+         - +.INF
+         - +.iNF
+         - +.INf
+         #- -.inf
+         #- -.Inf
+         #- -.INF
+         #- -.iNF
+         #- -.INf
+         - inf
+         - Inf
+         - INF
+         - iNF
+         - INf
+      ''')), [
+         fPosInf, fPosInf, fPosInf,  '.iNF',  '.INf',
+         fPosInf, fPosInf, fPosInf, '+.iNF', '+.INf',
+         #fNegInf, fNegInf, fNegInf, '-.iNF', '-.INf',
+           'inf',   'Inf',   'INF',   'iNF',   'INf',
+      ])
+
+      def check_nan(o, bNaN):
+         if bNaN:
+            return not isinstance(o, float)
+         else:
+            return math.isnan(o)
+
+      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.nan')))
+      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NaN')))
+      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NAN')))
+      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\n.nAN'), float))
+      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\n.NAn'), float))
+      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nnan'), float))
+      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nNAN'), float))
+      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nNAN'), float))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 1.
+         - 1.0
+         - 1.1
+         - .0
+         - .1
+         - 1.1e0
+         - 1.1e1
+         - 1.1e+1
+         - 1.1e-1
+         - +1.
+         - -1.0
+         - +1.1
+         - -.0
+         - +.1
+      ''')), [1., 1.0, 1.1, .0, .1, 1.1e0, 1.1e1, 1.1e+1, 1.1e-1, +1., -1.0, +1.1, -.0, +.1])
