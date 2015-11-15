@@ -130,7 +130,7 @@ class YamlParser(object):
       while True:
          # Grab the key and strip off the whole matched string.
          sKey = match.group('key')
-         self._m_sLine = self._m_sLine[len(match.group()):]
+         self._m_sLine = self._m_sLine[match.end():]
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
@@ -269,7 +269,7 @@ class YamlParser(object):
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
-         cchMatched = len(match.group())
+         cchMatched = match.end()
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
          self._m_iLineIndent       += cchMatched
