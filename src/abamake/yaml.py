@@ -134,7 +134,7 @@ class YamlParser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
-         dictRet[sKey] = self.consume_object(True)
+         dictRet[sKey] = self.consume_object(False)
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
@@ -150,12 +150,12 @@ class YamlParser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return dictRet
 
-   def consume_object(self, bAfterMapKey):
+   def consume_object(self, bAllowImplicitMapKey):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
       line.
 
-      bool bAfterMapKey
-         True if a map key was read from the current line, or False otherwise.
+      bool bAllowImplicitMapKey
+         True if a map key will be allowed on the initial line, or False otherwise.
       object return
          Parsed object.
       """
@@ -164,7 +164,7 @@ class YamlParser(object):
          # The current container left no characters on the current line, so read another one.
          self.next_line()
          bWrapped = True
-         bAfterMapKey = False
+         bAllowImplicitMapKey = True
       else:
          bWrapped = False
 
@@ -174,7 +174,7 @@ class YamlParser(object):
       if not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent:
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if match:
-            if bAfterMapKey:
+            if not bAllowImplicitMapKey:
                self.raise_parsing_error('sequence element not expected in map value context')
             # Continue parsing this line as a sequence.
             return self.consume_sequence_implicit(match)
@@ -182,7 +182,7 @@ class YamlParser(object):
       if not bWrapped or self._m_iLineIndent >= self._m_iMapMinIndent:
          match = self._smc_reMapKey.match(self._m_sLine)
          if match:
-            if bAfterMapKey:
+            if not bAllowImplicitMapKey:
                self.raise_parsing_error('map key not expected in map value context')
             # Continue parsing this line as a map.
             return self.consume_map_implicit(match)
@@ -277,7 +277,7 @@ class YamlParser(object):
          self._m_iSequenceMinIndent = iIndent + cchMatched
 
          # Parse whatever is left; this may span multiple lines.
-         listRet.append(self.consume_object(False))
+         listRet.append(self.consume_object(True))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
@@ -300,7 +300,8 @@ class YamlParser(object):
       """Consumes and validates the start of the YAML document.
 
       bool return
-         True if parsing should continue, or False if the entire source was consumed.
+         True if the current line was wholly consumed, or False if it still contains characters to be
+         parsed.
       """
 
       self.next_line()
@@ -312,12 +313,12 @@ class YamlParser(object):
       if not match:
          self.raise_parsing_error('expected document start')
       if match.end() == len(self._m_sLine):
-         # The whole line was consumed; read the next one.
-         return self.next_line()
-      else:
-         # Remove the document start from the current line and report to continue.
-         self._m_sLine = self._m_sLine[match.end():]
+         # The whole line was consumed.
          return True
+      else:
+         # Remove the document start from the current line.
+         self._m_sLine = self._m_sLine[match.end():]
+         return False
 
    def next_line(self):
       """Attempts to read a new line from the YAML document, making it available as self._m_sLine
@@ -366,10 +367,15 @@ class YamlParser(object):
          Top-level parsed object.
       """
 
-      if not self.find_and_consume_doc_start():
-         # Nothing follows the document start.
-         return None
-      o = self.consume_object(False)
+      if self.find_and_consume_doc_start():
+         # The whole line was consumed; read the next one.
+         if not self.next_line():
+            # Nothing follows the document start.
+            return None
+         o = self.consume_object(True)
+      else:
+         # Finish reading the line with the document start.
+         o = self.consume_object(False)
       # Verify that there’s nothing left to parse.
       if self._m_sLine is not None:
          self.raise_parsing_error('invalid token')
