@@ -270,25 +270,15 @@ class MapInSequenceTest(unittest.TestCase):
 
 class PrologTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
-      '''))
-
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
-         a
-      '''))
-
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
-         a: b
-      '''))
-
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
-         %YAML 1.2
-      '''))
-
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-      ''')), None)
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '')
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, 'a')
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, 'a: b')
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2')
+      self.assertEqual(yaml.parse_string('%YAML 1.2\n---'), None)
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2\n---a')
+      self.assertEqual(yaml.parse_string('%YAML 1.2\n--- a'), 'a')
+      self.assertEqual(yaml.parse_string('%YAML 1.2\n---  a'), 'a')
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2\n--- a: b')
 
 class SequenceTest(unittest.TestCase):
    def runTest(self):
