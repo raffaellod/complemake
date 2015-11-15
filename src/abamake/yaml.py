@@ -79,6 +79,8 @@ class YamlParser(object):
       (re.compile(r'^\.(?:N[Aa]N|nan)$'),                                     float('nan')),
       (re.compile(r'^(?P<x>[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?)$'), float), # float(x)
    )
+   # Matches a document start mark.
+   _smc_reDocStart = re.compile(r'^---(?: +|$)')
    # Matches trailing horizontal whitespace.
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    # Matches leading horizontal whitespace.
@@ -295,15 +297,27 @@ class YamlParser(object):
       return listRet
 
    def find_and_consume_doc_start(self):
-      """Consumes and validates the start of the YAML document."""
+      """Consumes and validates the start of the YAML document.
+
+      bool return
+         True if parsing should continue, or False if the entire source was consumed.
+      """
 
       self.next_line()
       if self._m_sLine != '%YAML 1.2':
          self.raise_parsing_error('expected %YAML directive')
       if not self.next_line():
          self.raise_parsing_error('missing document start')
-      if self._m_sLine != '---':
-         self.raise_parsing_error('unexpected directive')
+      match = self._smc_reDocStart.match(self._m_sLine)
+      if not match:
+         self.raise_parsing_error('expected document start')
+      if match.end() == len(self._m_sLine):
+         # The whole line was consumed; read the next one.
+         return self.next_line()
+      else:
+         # Remove the document start from the current line and report to continue.
+         self._m_sLine = self._m_sLine[match.end():]
+         return True
 
    def next_line(self):
       """Attempts to read a new line from the YAML document, making it available as self._m_sLine
@@ -352,9 +366,8 @@ class YamlParser(object):
          Top-level parsed object.
       """
 
-      self.find_and_consume_doc_start()
-      if not self.next_line():
-         # Nothing follows the prolog.
+      if not self.find_and_consume_doc_start():
+         # Nothing follows the document start.
          return None
       o = self.consume_object(False)
       # Verify that there’s nothing left to parse.
