@@ -150,12 +150,13 @@ class YamlParser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return dictRet
 
-   def consume_object(self, bAllowImplicitMapKey):
+   def consume_object(self, bAllowImplicitMapOrSequence):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
       line.
 
-      bool bAllowImplicitMapKey
-         True if a map key will be allowed on the initial line, or False otherwise.
+      bool bAllowImplicitMapOrSequence
+         True if a map key or sequence element will be allowed on the initial line, or False
+         otherwise.
       object return
          Parsed object.
       """
@@ -164,7 +165,7 @@ class YamlParser(object):
          # The current container left no characters on the current line, so read another one.
          self.next_line()
          bWrapped = True
-         bAllowImplicitMapKey = True
+         bAllowImplicitMapOrSequence = True
       else:
          bWrapped = False
 
@@ -174,16 +175,16 @@ class YamlParser(object):
       if not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent:
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if match:
-            if not bAllowImplicitMapKey:
-               self.raise_parsing_error('sequence element not expected in map value context')
+            if not bAllowImplicitMapOrSequence:
+               self.raise_parsing_error('sequence element not expected in this context')
             # Continue parsing this line as a sequence.
             return self.consume_sequence_implicit(match)
 
       if not bWrapped or self._m_iLineIndent >= self._m_iMapMinIndent:
          match = self._smc_reMapKey.match(self._m_sLine)
          if match:
-            if not bAllowImplicitMapKey:
-               self.raise_parsing_error('map key not expected in map value context')
+            if not bAllowImplicitMapOrSequence:
+               self.raise_parsing_error('map key not expected in this context')
             # Continue parsing this line as a map.
             return self.consume_map_implicit(match)
 
