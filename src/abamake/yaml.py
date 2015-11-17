@@ -85,8 +85,8 @@ class YamlParser(object):
    _smc_reHorizontalWs = re.compile(r'[\t ]*$')
    # Matches leading horizontal whitespace.
    _smc_reIndent = re.compile(r'^[\t ]*')
-   # Matches a map key and the whitespace around it.
-   _smc_reMapKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
+   # Matches a mapping key and the whitespace around it.
+   _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
 
@@ -103,7 +103,7 @@ class YamlParser(object):
       self._m_sLine = None
       self._m_iLineIndent = 0
       self._m_iterLines = iterLines
-      self._m_iMapMinIndent = 0
+      self._m_iMappingMinIndent = 0
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = sSourceName
@@ -117,12 +117,12 @@ class YamlParser(object):
          Parsed map.
       """
 
-      iOldMapMinIndent        = self._m_iMapMinIndent
+      iOldMappingMinIndent    = self._m_iMappingMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
       iOldSequenceMinIndent   = self._m_iSequenceMinIndent
 
       iIndent = self._m_iLineIndent
-      self._m_iMapMinIndent        = iIndent + 1
+      self._m_iMappingMinIndent    = iIndent + 1
       self._m_iScalarWrapMinIndent = iIndent + 1
       self._m_iSequenceMinIndent   = iIndent
 
@@ -141,21 +141,21 @@ class YamlParser(object):
          if self._m_sLine is None or self._m_iLineIndent < iIndent:
             # No next line, or the next line is not part of the map.
             break
-         match = self._smc_reMapKey.match(self._m_sLine)
+         match = self._smc_reMappingKey.match(self._m_sLine)
          if not match:
-            self.raise_parsing_error('map key expected')
+            self.raise_parsing_error('mapping key expected')
 
-      self._m_iMapMinIndent        = iOldMapMinIndent
+      self._m_iMappingMinIndent    = iOldMappingMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return dictRet
 
-   def consume_object(self, bAllowImplicitMapOrSequence):
+   def consume_object(self, bAllowImplicitMappingOrSequence):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
       line.
 
-      bool bAllowImplicitMapOrSequence
-         True if a map key or sequence element will be allowed on the initial line, or False
+      bool bAllowImplicitMappingOrSequence
+         True if a mapping key or sequence element will be allowed on the initial line, or False
          otherwise.
       object return
          Parsed object.
@@ -165,7 +165,7 @@ class YamlParser(object):
          # The current container left no characters on the current line, so read another one.
          self.next_line()
          bWrapped = True
-         bAllowImplicitMapOrSequence = True
+         bAllowImplicitMappingOrSequence = True
       else:
          bWrapped = False
 
@@ -175,16 +175,16 @@ class YamlParser(object):
       if not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent:
          match = self._smc_reSequenceDash.match(self._m_sLine)
          if match:
-            if not bAllowImplicitMapOrSequence:
+            if not bAllowImplicitMappingOrSequence:
                self.raise_parsing_error('sequence element not expected in this context')
             # Continue parsing this line as a sequence.
             return self.consume_sequence_implicit(match)
 
-      if not bWrapped or self._m_iLineIndent >= self._m_iMapMinIndent:
-         match = self._smc_reMapKey.match(self._m_sLine)
+      if not bWrapped or self._m_iLineIndent >= self._m_iMappingMinIndent:
+         match = self._smc_reMappingKey.match(self._m_sLine)
          if match:
-            if not bAllowImplicitMapOrSequence:
-               self.raise_parsing_error('map key not expected in this context')
+            if not bAllowImplicitMappingOrSequence:
+               self.raise_parsing_error('mapping key not expected in this context')
             # Continue parsing this line as a map.
             return self.consume_map_implicit(match)
 
@@ -206,7 +206,7 @@ class YamlParser(object):
       bMultiline = False
       while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          if ':' in self._m_sLine:
-            self.raise_parsing_error('map key not expected in scalar context')
+            self.raise_parsing_error('mapping key not expected in scalar context')
          sRet += ' ' + self._m_sLine
          bMultiline = True
       if not bMultiline:
@@ -230,7 +230,7 @@ class YamlParser(object):
          Parsed sequence.
       """
 
-      iOldMapMinIndent        = self._m_iMapMinIndent
+      iOldMappingMinIndent    = self._m_iMappingMinIndent
       iOldScalarWrapMinIndent = self._m_iScalarWrapMinIndent
       iOldSequenceMinIndent   = self._m_iSequenceMinIndent
 
@@ -244,7 +244,7 @@ class YamlParser(object):
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
          self._m_iLineIndent       += cchMatched
-         self._m_iMapMinIndent      = iIndent + cchMatched
+         self._m_iMappingMinIndent  = iIndent + cchMatched
          self._m_iSequenceMinIndent = iIndent + cchMatched
 
          # Parse whatever is left; this may span multiple lines.
@@ -262,7 +262,7 @@ class YamlParser(object):
          if self._m_iLineIndent > iIndent:
             self.raise_parsing_error('excessive indentation for sequence element')
 
-      self._m_iMapMinIndent        = iOldMapMinIndent
+      self._m_iMappingMinIndent    = iOldMappingMinIndent
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet

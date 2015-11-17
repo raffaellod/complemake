@@ -175,7 +175,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          'e-1.0', '+1.1e', '-.e', '+e.1',
       ])
 
-class MapInSequenceTest(unittest.TestCase):
+class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -232,7 +232,7 @@ class MapInSequenceTest(unittest.TestCase):
          - c: d
       ''')), [{'a': 'b'}, {'c': 'd'}])
 
-class MapTest(unittest.TestCase):
+class MappingTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -522,7 +522,7 @@ class QuotedStringTest(unittest.TestCase):
          b
       '''))
 
-class SequenceInMapTest(unittest.TestCase):
+class SequenceInMappingTest(unittest.TestCase):
    def runTest(self):
       self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
          %YAML 1.2
