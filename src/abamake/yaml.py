@@ -221,36 +221,6 @@ class YamlParser(object):
       # It’s a string.
       return sRet
 
-   def consume_string_explicit(self):
-      """Consumes an explicit (quoted) string.
-
-      str return
-         Parsed string.
-      """
-
-      sQuote = self._m_sLine[0]
-      ichEndQuote = self._m_sLine.find(sQuote, len(sQuote))
-      if ichEndQuote > 0:
-         sRet = ''
-      else:
-         # The string spans multiple lines; go find its end.
-         sRet = self._m_sLine[len(sQuote):]
-         while self.next_line():
-            sRet += ' '
-            ichEndQuote = self._m_sLine.find(sQuote)
-            if ichEndQuote >= 0:
-               break
-            sRet += self._m_sLine
-         else:
-            self.raise_parsing_error('unexpected end of input while looking for string end quote')
-      # Verify that nothing follows the closing quote.
-      if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
-         self.raise_parsing_error('unexpected characters after string end quote')
-      # Consume what we’re returning.
-      sRet += self._m_sLine[0 if sRet else len(sQuote):ichEndQuote]
-      self.next_line()
-      return sRet
-
    def consume_sequence_implicit(self, match):
       """Consumes a sequence.
 
@@ -296,6 +266,36 @@ class YamlParser(object):
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet
+
+   def consume_string_explicit(self):
+      """Consumes an explicit (quoted) string.
+
+      str return
+         Parsed string.
+      """
+
+      sQuote = self._m_sLine[0]
+      ichEndQuote = self._m_sLine.find(sQuote, len(sQuote))
+      if ichEndQuote > 0:
+         sRet = ''
+      else:
+         # The string spans multiple lines; go find its end.
+         sRet = self._m_sLine[len(sQuote):]
+         while self.next_line():
+            sRet += ' '
+            ichEndQuote = self._m_sLine.find(sQuote)
+            if ichEndQuote >= 0:
+               break
+            sRet += self._m_sLine
+         else:
+            self.raise_parsing_error('unexpected end of input while looking for string end quote')
+      # Verify that nothing follows the closing quote.
+      if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
+         self.raise_parsing_error('unexpected characters after string end quote')
+      # Consume what we’re returning.
+      sRet += self._m_sLine[0 if sRet else len(sQuote):ichEndQuote]
+      self.next_line()
+      return sRet
 
    def find_and_consume_doc_start(self):
       """Consumes and validates the start of the YAML document.
