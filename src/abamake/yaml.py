@@ -36,9 +36,7 @@ def parse_file(sFilePath):
       Python object corresponding to the contents of the file.
    """
 
-   with io.open(sFilePath, 'rt') as fileYaml:
-      yp = YamlParser(sFilePath, fileYaml)
-      return yp.run()
+   return YamlParser().parse_file(sFilePath, fileYaml)
 
 def parse_string(s):
    """Loads and parses a string containing YAML.
@@ -49,8 +47,7 @@ def parse_string(s):
       Python object corresponding to the contents of the string.
    """
 
-   yp = YamlParser('<string>', iter(s.splitlines(True)))
-   return yp.run()
+   return YamlParser().parse_string(s)
 
 ####################################################################################################
 
@@ -89,28 +86,35 @@ class YamlParser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
+   _sm_dictStaticLocalTags = {}
    # Matches a tag. This is intentionally an oversimplification of the relatively complex BNF
    # specified by the standard.
    _smc_reTag = re.compile(r'^!(?:(?P<auto>)|(?P<local>\w+)|!(?P<builtin>\w+))(?: +|$)')
 
-   def __init__(self, sSourceName, iterLines):
-      """Constructor.
-
-      str sSourceName
-         Name of the source for use in diagnostic messages.
-      iterator(str) iterLines
-         Object that yields YAML lines.
-      """
+   def __init__(self):
+      """Constructor."""
 
       self._m_iLine = 0
       self._m_matchLine = None
       self._m_sLine = None
       self._m_iLineIndent = 0
-      self._m_iterLines = iterLines
+      self._m_dictInstanceLocalTags = {}
+      self._m_iterLines = None
       self._m_iMappingMinIndent = 0
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
-      self._m_sSourceName = sSourceName
+      self._m_sSourceName = '<no input>'
+
+   def constructor_from_local_tag(self, sTag):
+      """Returns the constructor associated to the specified local tag, if any.
+
+      str sTag
+         Local tag to look up.
+      callable return
+         Constructor associated to sTag, or None if no such local tag was registered.
+      """
+
+      return self._m_dictInstanceLocalTags.get(sTag) or self._sm_dictStaticLocalTags.get(sTag)
 
    def consume_map_implicit(self):
       """Consumes a map.
@@ -182,7 +186,7 @@ class YamlParser(object):
             # “tag:yaml.org,2002:map”, or “tag:yaml.org,2002:str”, according to their kind.”.
             pass
          elif sType == 'local':
-            fnConstructor = self._m_dictLocalTags.get(self._m_matchLine.group('local'))
+            fnConstructor = self.constructor_from_local_tag(self._m_matchLine.group('local'))
             if not fnConstructor:
                raise_parsing_error('unrecognized local tag')
          elif sType == 'builtin':
@@ -356,6 +360,22 @@ class YamlParser(object):
          # The whole line was consumed.
          return True
 
+   class local_tag(object):
+      """Decorator to associate in YamlParser a tag with a constructor. The constructor can be a
+      class or a function, as long as it’s something that can be called.
+
+      str sTag
+         Tag to associate to the constructor.
+      """
+
+      def __init__(self, sTag):
+         self._m_sTag = sTag
+
+      def __call__(self, fnConstructor):
+         # TODO: check for duplicates.
+         YamlParser._sm_dictStaticLocalTags[self._m_sTag] = fnConstructor
+         return fnConstructor
+
    def match_and_store(self, re, iStart = 0):
       """Performs a match on the current line with the specified regexp, returning True if a match
       was produced and storing the match object for later access via self._m_matchLine.
@@ -401,6 +421,60 @@ class YamlParser(object):
          self._m_sLine = sLine
          return sLine is not None
 
+   def parse(self, sSourceName, iterLines):
+      """Parses the specified source.
+
+      str sSourceName
+         Name of the source for use in diagnostic messages.
+      iterator(str) iterLines
+         Object that yields YAML lines.
+      object return
+         Top-level parsed object.
+      """
+
+      self._m_iterLines = iterLines
+      self._m_sSourceName = sSourceName
+      try:
+         if self.find_and_consume_doc_start():
+            # The whole line was consumed; read the next one.
+            if not self.next_line():
+               # Nothing follows the document start.
+               return None
+            o = self.consume_object(True)
+         else:
+            # Finish reading the line with the document start.
+            o = self.consume_object(False)
+         # Verify that there’s nothing left to parse.
+         if self._m_sLine is not None:
+            self.raise_parsing_error('invalid token')
+      finally:
+         self._m_iterLines = None
+         self._m_sSourceName = '<no input>'
+      return o
+
+   def parse_file(self, sFilePath):
+      """Loads and parses a YAML file.
+
+      str sFilePath
+         Path to the YAML file.
+      object return
+         Python object corresponding to the contents of the file.
+      """
+
+      with io.open(sFilePath, 'rt') as fileYaml:
+         return self.parse(sFilePath, fileYaml)
+
+   def parse_string(self, s):
+      """Parses a string containing YAML.
+
+      str s
+         YAML source.
+      object return
+         Python object corresponding to the contents of the string.
+      """
+
+      return self.parse('<string>', iter(s.splitlines(True)))
+
    def raise_parsing_error(self, sMessage):
       """Raises a yaml.SyntaxError the available context information and the provided message.
 
@@ -423,45 +497,4 @@ class YamlParser(object):
       """
 
       # TODO: check for duplicates.
-      self._m_dictLocalTags[sTag] = fnConstructor
-
-   def reset_local_tag_registry(self):
-      """Clears the parser’s local tag registry."""
-
-      self._m_dictLocalTags = {}
-
-   def run(self):
-      """Parses the source set upon construction.
-
-      object return
-         Top-level parsed object.
-      """
-
-      if self.find_and_consume_doc_start():
-         # The whole line was consumed; read the next one.
-         if not self.next_line():
-            # Nothing follows the document start.
-            return None
-         o = self.consume_object(True)
-      else:
-         # Finish reading the line with the document start.
-         o = self.consume_object(False)
-      # Verify that there’s nothing left to parse.
-      if self._m_sLine is not None:
-         self.raise_parsing_error('invalid token')
-      return o
-
-   class local_tag(object):
-      """Decorator to associate in YamlParser a tag with a constructor. The constructor can be a
-      class or a function, as long as it’s something that can be called.
-
-      str sTag
-         Tag to associate to the constructor.
-      """
-
-      def __init__(self, sTag):
-         self._m_sTag = sTag
-
-      def __call__(self, fnConstructor):
-         YamlParser.register_local_tag(self._m_sTag, fnConstructor)
-         return fnConstructor
+      self._m_dictInstanceLocalTags[sTag] = fnConstructor
