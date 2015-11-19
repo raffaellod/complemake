@@ -94,16 +94,8 @@ class YamlParser(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_iLine = 0
-      self._m_matchLine = None
-      self._m_sLine = None
-      self._m_iLineIndent = 0
       self._m_dictInstanceLocalTags = {}
-      self._m_iterLines = None
-      self._m_iMappingMinIndent = 0
-      self._m_iScalarWrapMinIndent = 0
-      self._m_iSequenceMinIndent = 0
-      self._m_sSourceName = '<no input>'
+      self._reset()
 
    def constructor_from_local_tag(self, sTag):
       """Returns the constructor associated to the specified local tag, if any.
@@ -450,8 +442,7 @@ class YamlParser(object):
          if self._m_sLine is not None:
             self.raise_parsing_error('invalid token')
       finally:
-         self._m_iterLines = None
-         self._m_sSourceName = '<no input>'
+         self._reset()
       return o
 
    def parse_file(self, sFilePath):
@@ -500,3 +491,16 @@ class YamlParser(object):
 
       # TODO: check for duplicates.
       self._m_dictInstanceLocalTags[sTag] = fnConstructor
+
+   def _reset(self):
+      """Reinitializes the internal parser status."""
+
+      self._m_iLine = 0
+      self._m_matchLine = None
+      self._m_sLine = None
+      self._m_iLineIndent = 0
+      self._m_iterLines = None
+      self._m_iMappingMinIndent = 0
+      self._m_iScalarWrapMinIndent = 0
+      self._m_iSequenceMinIndent = 0
+      self._m_sSourceName = '<no input>'
