@@ -233,7 +233,9 @@ class YamlParser(object):
          # any of the options above.
          oParsed = None
 
-      if fnConstructor and not isinstance(oParsed, fnConstructor):
+      if fnConstructor and (
+         isinstance(fnConstructor, collections.Callable) or isinstance(oParsed, fnConstructor)
+      ):
          oParsed = fnConstructor(oParsed)
       return oParsed
 
