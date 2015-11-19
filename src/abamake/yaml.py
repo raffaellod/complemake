@@ -180,7 +180,7 @@ class YamlParser(object):
          elif sType == 'local':
             fnConstructor = self.constructor_from_local_tag(self._m_matchLine.group('local'))
             if not fnConstructor:
-               raise_parsing_error('unrecognized local tag')
+               self.raise_parsing_error('unrecognized local tag')
          elif sType == 'builtin':
             fnConstructor = {
                'map': dict,
@@ -188,7 +188,7 @@ class YamlParser(object):
                'str': str,
             }.get(self._m_matchLine.group('builtin'))
             if not fnConstructor:
-               raise_parsing_error('unrecognized built-in tag')
+               self.raise_parsing_error('unrecognized built-in tag')
 
          # Consume the tag.
          iMatchEnd = self._m_matchLine.end()
