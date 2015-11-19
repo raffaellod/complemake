@@ -100,6 +100,7 @@ class YamlParser(object):
       """
 
       self._m_iLine = 0
+      self._m_matchLine = None
       self._m_sLine = None
       self._m_iLineIndent = 0
       self._m_iterLines = iterLines
@@ -108,11 +109,9 @@ class YamlParser(object):
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = sSourceName
 
-   def consume_map_implicit(self, match):
+   def consume_map_implicit(self):
       """Consumes a map.
 
-      re.Match match
-         Matched first key.
       dict(str: object) return
          Parsed map.
       """
@@ -129,8 +128,8 @@ class YamlParser(object):
       dictRet = {}
       while True:
          # Grab the key and strip off the whole matched string.
-         sKey = match.group('key')
-         self._m_sLine = self._m_sLine[match.end():]
+         sKey = self._m_matchLine.group('key')
+         self._m_sLine = self._m_sLine[self._m_matchLine.end():]
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
@@ -141,8 +140,7 @@ class YamlParser(object):
          if self._m_sLine is None or self._m_iLineIndent < iIndent:
             # No next line, or the next line is not part of the map.
             break
-         match = self._smc_reMappingKey.match(self._m_sLine)
-         if not match:
+         if not self.match_and_store(self._smc_reMappingKey):
             self.raise_parsing_error('mapping key expected')
 
       self._m_iMappingMinIndent    = iOldMappingMinIndent
@@ -170,30 +168,29 @@ class YamlParser(object):
          bWrapped = False
 
       if not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
-         return self.consume_string_explicit()
+         oParsed = self.consume_string_explicit()
+      elif (
+         not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent
+      ) and self.match_and_store(self._smc_reSequenceDash):
+         if not bAllowImplicitMappingOrSequence:
+            self.raise_parsing_error('sequence element not expected in this context')
+         # Continue parsing this line as a sequence.
+         oParsed = self.consume_sequence_implicit()
+      elif (
+         not bWrapped or self._m_iLineIndent >= self._m_iMappingMinIndent
+      ) and self.match_and_store(self._smc_reMappingKey):
+         if not bAllowImplicitMappingOrSequence:
+            self.raise_parsing_error('mapping key not expected in this context')
+         # Continue parsing this line as a map.
+         oParsed = self.consume_map_implicit()
+      elif not bWrapped or self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
+         oParsed = self.consume_scalar()
+      else:
+         # The input was an empty line and the indentation of the next line was incompatible with
+         # any of the options above.
+         oParsed = None
 
-      if not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent:
-         match = self._smc_reSequenceDash.match(self._m_sLine)
-         if match:
-            if not bAllowImplicitMappingOrSequence:
-               self.raise_parsing_error('sequence element not expected in this context')
-            # Continue parsing this line as a sequence.
-            return self.consume_sequence_implicit(match)
-
-      if not bWrapped or self._m_iLineIndent >= self._m_iMappingMinIndent:
-         match = self._smc_reMappingKey.match(self._m_sLine)
-         if match:
-            if not bAllowImplicitMappingOrSequence:
-               self.raise_parsing_error('mapping key not expected in this context')
-            # Continue parsing this line as a map.
-            return self.consume_map_implicit(match)
-
-      if not bWrapped or self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
-         return self.consume_scalar()
-
-      # The input was an empty line and the indentation of the next line was incompatible with any
-      # of the options above.
-      return None
+      return oParsed
 
    def consume_scalar(self):
       """Consumes a scalar.
@@ -221,11 +218,9 @@ class YamlParser(object):
       # It’s a string.
       return sRet
 
-   def consume_sequence_implicit(self, match):
+   def consume_sequence_implicit(self):
       """Consumes a sequence.
 
-      re.Match match
-         Matched sequence element start characters.
       list(object) return
          Parsed sequence.
       """
@@ -240,7 +235,7 @@ class YamlParser(object):
       listRet = []
       while True:
          # Strip the “- ” prefix and any following whitespace.
-         cchMatched = match.end()
+         cchMatched = self._m_matchLine.end()
          self._m_sLine = self._m_sLine[cchMatched:]
          # The indentation of the sequence element includes the dash match.
          self._m_iLineIndent       += cchMatched
@@ -255,11 +250,10 @@ class YamlParser(object):
          if self._m_sLine is None or self._m_iLineIndent < iIndent:
             break
             # No next line, or the next line is not part of the sequence.
-         match = self._smc_reSequenceDash.match(self._m_sLine)
-         if not match:
+         elif not self.match_and_store(self._smc_reSequenceDash):
             # The next line is not a sequence element.
             break
-         if self._m_iLineIndent > iIndent:
+         elif self._m_iLineIndent > iIndent:
             self.raise_parsing_error('excessive indentation for sequence element')
 
       self._m_iMappingMinIndent    = iOldMappingMinIndent
@@ -290,7 +284,7 @@ class YamlParser(object):
          else:
             self.raise_parsing_error('unexpected end of input while looking for string end quote')
       # Verify that nothing follows the closing quote.
-      if not self._smc_reHorizontalWs.match(self._m_sLine, ichEndQuote + len(sQuote)):
+      if not self.match_and_store(self._smc_reHorizontalWs, ichEndQuote + len(sQuote)):
          self.raise_parsing_error('unexpected characters after string end quote')
       # Consume what we’re returning.
       sRet += self._m_sLine[0 if sRet else len(sQuote):ichEndQuote]
@@ -310,16 +304,32 @@ class YamlParser(object):
          self.raise_parsing_error('expected %YAML directive')
       if not self.next_line():
          self.raise_parsing_error('missing document start')
-      match = self._smc_reDocStart.match(self._m_sLine)
-      if not match:
+      if not self.match_and_store(self._smc_reDocStart):
          self.raise_parsing_error('expected document start')
-      if match.end() == len(self._m_sLine):
+      iMatchEnd = self._m_matchLine.end()
+      if iMatchEnd < len(self._m_sLine):
+         # Remove the matched text from the current line.
+         self._m_sLine = self._m_sLine[iMatchEnd:]
+         return False
+      else:
          # The whole line was consumed.
          return True
-      else:
-         # Remove the document start from the current line.
-         self._m_sLine = self._m_sLine[match.end():]
-         return False
+
+   def match_and_store(self, re, iStart = 0):
+      """Performs a match on the current line with the specified regexp, returning True if a match
+      was produced and storing the match object for later access via self._m_matchLine.
+
+      re.RegExp
+         Expression to match.
+      int iStart
+         Character index from which to start the matching; defaults to 0.
+      bool return
+         True if re was matched, or False otherwise.
+      """
+
+      match = re.match(self._m_sLine, iStart)
+      self._m_matchLine = match
+      return match != None
 
    def next_line(self):
       """Attempts to read a new line from the YAML document, making it available as self._m_sLine
