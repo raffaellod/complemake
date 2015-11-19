@@ -176,6 +176,27 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          'e-1.0', '+1.1e', '-.e', '+e.1',
       ])
 
+class LocalTagTest(unittest.TestCase):
+   def runTest(self):
+      yp = yaml.YamlParser()
+
+      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !test1 b
+         - c
+      '''))
+
+      yp.register_local_tag('test1', lambda s: (1, s, 2))
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !test1 b
+         - c
+      ''')), ['a', (1, 'b', 2), 'c'])
+
 class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
