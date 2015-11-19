@@ -32,7 +32,6 @@ import abamake.version
 
 
 ####################################################################################################
-# Tool
 
 class AbstractFlag(object):
    """Declares a unique abstract tool flag."""
@@ -72,7 +71,6 @@ class AbstractFlag(object):
       return None
 
 ####################################################################################################
-# ToolFactory
 
 class ToolFactory(object):
    """Creates and configures Tool instances."""
@@ -119,7 +117,6 @@ class ToolFactory(object):
       return self._m_clsProduct(self._m_sFilePath, self._m_ver, self._m_iterArgs)
 
 ####################################################################################################
-# Tool
 
 class Tool(object):
    """Abstract tool."""
@@ -408,7 +405,6 @@ class Tool(object):
       return sFlag
 
 ####################################################################################################
-# CxxCompiler
 
 class CxxCompiler(Tool):
    """Abstract C++ compiler."""
@@ -505,7 +501,6 @@ class CxxCompiler(Tool):
    object_suffix = None
 
 ####################################################################################################
-# ClangxxCompiler
 
 class ClangxxCompiler(CxxCompiler):
    """Clang C++ compiler."""
@@ -592,7 +587,6 @@ class ClangxxCompiler(CxxCompiler):
    object_suffix = '.o'
 
 ####################################################################################################
-# GxxCompiler
 
 class GxxCompiler(CxxCompiler):
    """GNU C++ compiler (G++)."""
@@ -681,7 +675,6 @@ class GxxCompiler(CxxCompiler):
    object_suffix = '.o'
 
 ####################################################################################################
-# MscCompiler
 
 class MscCompiler(CxxCompiler):
    """Microsoft C/C++ compiler (MSC).
@@ -787,7 +780,6 @@ class MscCompiler(CxxCompiler):
    object_suffix = '.obj'
 
 ####################################################################################################
-# Linker
 
 class Linker(Tool):
    """Abstract object code linker."""
@@ -863,7 +855,6 @@ class Linker(Tool):
       )
 
 ####################################################################################################
-# ClangGnuLdLinker
 
 class ClangGnuLdLinker(Linker):
    """Clang-driven GNU object code linker (LD)."""
@@ -913,7 +904,6 @@ class ClangGnuLdLinker(Linker):
       return ToolFactory(cls, sFilePath, stTarget, ver, ('-target', str(stTarget)))
 
 ####################################################################################################
-# ClangMachOLdLinker
 
 class ClangMachOLdLinker(Linker):
    """Clang++-driven Mach-O object code linker (LD)."""
@@ -1006,7 +996,6 @@ class ClangMachOLdLinker(Linker):
       return ToolFactory(cls, sFilePath, stSupported, ver, ('-target', str(stSupported)))
 
 ####################################################################################################
-# GxxGnuLdLinker
 
 class GxxGnuLdLinker(Linker):
    """G++-driven GNU object code linker (LD)."""
@@ -1064,7 +1053,6 @@ class GxxGnuLdLinker(Linker):
       return ToolFactory(cls, sFilePath, stSupported, ver)
 
 ####################################################################################################
-# MsLinker
 
 class MsLinker(Linker):
    """Microsoft linker (Link).

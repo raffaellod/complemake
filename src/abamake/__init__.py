@@ -82,7 +82,6 @@ FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
 
 
 ####################################################################################################
-# Non-member functions
 
 def derived_classes(clsBase):
    """Iterates over all the classes that derive directly or indirectly from the specified one.
@@ -135,7 +134,6 @@ def makedirs(sPath):
          raise
 
 ####################################################################################################
-# MakefileError
 
 class MakefileError(Exception):
    """Indicates a syntactical or semantical error in a makefile."""
@@ -143,7 +141,6 @@ class MakefileError(Exception):
    pass
 
 ####################################################################################################
-# DependencyCycleError
 
 class DependencyCycleError(MakefileError):
    """Raised when a makefile specifies dependencies among targets in a way that creates circular
@@ -176,7 +173,6 @@ class DependencyCycleError(MakefileError):
       return s
 
 ####################################################################################################
-# MakefileSyntaxError
 
 class MakefileSyntaxError(MakefileError):
    """Indicates a syntactical error in a makefile."""
@@ -184,7 +180,6 @@ class MakefileSyntaxError(MakefileError):
    pass
 
 ####################################################################################################
-# TargetReferenceError
 
 class TargetReferenceError(MakefileError):
    """Raised when a reference to a target can’t be resolved."""
@@ -192,7 +187,6 @@ class TargetReferenceError(MakefileError):
    pass
 
 ####################################################################################################
-# Make
 
 class Make(object):
    """Parses an Abamakefile (.abamk) and exposes a abamake.job.Runner instance that can be used to

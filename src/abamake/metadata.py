@@ -28,7 +28,6 @@ import abamake.target
 
 
 ####################################################################################################
-# FileSignature
 
 class FileSignature(object):
    """Signature metadata for a single file."""
@@ -108,7 +107,6 @@ class FileSignature(object):
       return eltFile
 
 ####################################################################################################
-# TargetSnapshot
 
 class TargetSnapshot(object):
    """Captures information about a target at a specific time. Used to detect changes that should
@@ -273,7 +271,6 @@ class TargetSnapshot(object):
          )
 
 ####################################################################################################
-# MetadataStore
 
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""

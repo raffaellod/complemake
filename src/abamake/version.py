@@ -24,7 +24,6 @@ import re
 
 
 ####################################################################################################
-# InvalidVersionError
 
 class InvalidVersionError(ValueError):
    """Raised upon failure to parse a software version string."""
@@ -32,7 +31,6 @@ class InvalidVersionError(ValueError):
    pass
 
 ####################################################################################################
-# Version
 
 @functools.total_ordering
 class Version(object):

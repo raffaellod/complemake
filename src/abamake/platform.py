@@ -36,7 +36,6 @@ del tpl
 
 
 ####################################################################################################
-# SystemTypeError
 
 class SystemTypeError(Exception):
    """Indicates an error related to system types."""
@@ -44,7 +43,6 @@ class SystemTypeError(Exception):
    pass
 
 ####################################################################################################
-# SystemTypeTupleError
 
 class SystemTypeTupleError(ValueError, SystemTypeError):
    """Raised when an invalid system type tuple is encountered."""
@@ -52,7 +50,6 @@ class SystemTypeTupleError(ValueError, SystemTypeError):
    pass
 
 ####################################################################################################
-# SystemType
 
 class SystemType(object):
    """System type tuple.
@@ -261,7 +258,6 @@ class SystemType(object):
    vendor = property(_get_vendor, doc = """Vendor. Examples: 'unknown'. 'pc', 'sun'.""")
 
 ####################################################################################################
-# Platform
 
 class Platform(object):
    """Generic software platform (OS/runtime environment)."""
@@ -447,7 +443,6 @@ class Platform(object):
       return self._m_st
 
 ####################################################################################################
-# DarwinPlatform
 
 class DarwinPlatform(Platform):
    """Darwin (OS X) platform."""
@@ -487,7 +482,6 @@ class DarwinPlatform(Platform):
          return 0
 
 ####################################################################################################
-# FreeBsdPlatform
 
 class FreeBsdPlatform(Platform):
    """FreeBSD platform."""
@@ -528,7 +522,6 @@ class FreeBsdPlatform(Platform):
          return 0
 
 ####################################################################################################
-# GnuPlatform
 
 class GnuPlatform(Platform):
    """GNU Operating System platform."""
@@ -570,7 +563,6 @@ class GnuPlatform(Platform):
          return 0
 
 ####################################################################################################
-# WinPlatform
 
 class WinPlatform(Platform):
    """Generic Windows platform."""
@@ -617,7 +609,6 @@ class WinPlatform(Platform):
       return '{}.exe'.format(sName)
 
 ####################################################################################################
-# Win32Platform
 
 class Win32Platform(WinPlatform):
    """Win32 platform."""
@@ -634,7 +625,6 @@ class Win32Platform(WinPlatform):
          return 0
 
 ####################################################################################################
-# Win64Platform
 
 class Win64Platform(WinPlatform):
    """Win64 platform."""

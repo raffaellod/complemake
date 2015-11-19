@@ -55,7 +55,6 @@ import abamake
 
 
 ####################################################################################################
-# Job
 
 class Job(object):
    """Job to be executed by a abamake.job.Runner instance. See [DOC:6821 Abamake ‒ Execution of
@@ -103,7 +102,6 @@ class Job(object):
       self._m_fnOnComplete()
 
 ####################################################################################################
-# SynchronousJob
 
 class SynchronousJob(Job):
    """Job that is executed synchronously. Typically this is implemented directly in Python, which
@@ -121,7 +119,6 @@ class SynchronousJob(Job):
       return 0
 
 ####################################################################################################
-# AsynchronousJob
 
 class AsynchronousJob(Job):
    """Job that is executed asynchronously, typically in a separate process."""
@@ -154,7 +151,6 @@ class AsynchronousJob(Job):
       # The default implementation doesn’t start anything.
 
 ####################################################################################################
-# ExternalCmdJob
 
 class ExternalCmdJob(AsynchronousJob):
    """Invokes an external program, capturing stdout and stderr.
@@ -332,7 +328,6 @@ class ExternalCmdJob(AsynchronousJob):
       pass
 
 ####################################################################################################
-# ExternalCmdCapturingJob
 
 class ExternalCmdCapturingJob(ExternalCmdJob):
    """Same as ExternalCmdJob, but captures stdout and stderr of the process to files and allows to
@@ -418,7 +413,6 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
    """)
 
 ####################################################################################################
-# AbacladeTestJob
 
 class AbacladeTestJob(ExternalCmdCapturingJob):
    """External program performing tests using the abc::testing framework. Such a program will
@@ -477,7 +471,6 @@ class AbacladeTestJob(ExternalCmdCapturingJob):
          self._m_log(None, u'{}: {}', self._m_iterQuietCmd[1], sLine)
 
 ####################################################################################################
-# Runner
 
 class Runner(object):
    """Manages the execution of jobs for Abamake. It contains a queue to which jobs are pushed, and

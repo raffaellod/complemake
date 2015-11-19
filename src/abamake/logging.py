@@ -26,7 +26,6 @@ if sys.hexversion < 0x03000000:
 
 
 ####################################################################################################
-# LogGenerator
 
 class LogGenerator(object):
    """Generator of logs. Only one instance of this class exists for each abamake.Make instance."""
@@ -118,7 +117,6 @@ class LogGenerator(object):
          self.write('Test cases: no tests performed')
 
 ####################################################################################################
-# Logger
 
 class Logger(object):
    """Basic logger functor."""
@@ -221,7 +219,6 @@ class Logger(object):
       self._m_lg.write(s)
 
 ####################################################################################################
-# FilteredLogger
 
 class FilteredLogger(Logger):
    """Logger that omits specific lines."""

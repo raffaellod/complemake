@@ -37,7 +37,6 @@ import abamake.tool
 
 
 ####################################################################################################
-# Globals
 
 def main(iterArgs):
    """Implementation of __main__.
