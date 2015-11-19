@@ -89,6 +89,9 @@ class YamlParser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
+   # Matches a tag. This is intentionally an oversimplification of the relatively complex BNF
+   # specified by the standard.
+   _smc_reTag = re.compile(r'^!(?:(?P<auto>)|(?P<local>\w+)|!(?P<builtin>\w+))(?: +|$)')
 
    def __init__(self, sSourceName, iterLines):
       """Constructor.
@@ -167,6 +170,36 @@ class YamlParser(object):
       else:
          bWrapped = False
 
+      # If None, no constructor needs to be called, and the parsed value can be returned as-is.
+      fnConstructor = None
+      if self.match_and_store(self._smc_reTag):
+         # TODO: support more ways of specifying a tag.
+         sType = self._m_matchLine.lastgroup
+         if sType == 'auto':
+            # Nothing to do; this is the same as an omitted tag.
+            # TODO: the YAML specification seems to say something different: “All nodes with the “!”
+            # non-specific tag are resolved, by the standard convention, to “tag:yaml.org,2002:seq”,
+            # “tag:yaml.org,2002:map”, or “tag:yaml.org,2002:str”, according to their kind.”.
+            pass
+         elif sType == 'local':
+            fnConstructor = self.constructor_from_tag(self._m_matchLine.group('local'))
+         elif sType == 'builtin':
+            fnConstructor = {
+               'map': dict,
+               'seq': list,
+               'str': str,
+            }[self._m_matchLine.group('builtin')]
+         iMatchEnd = self._m_matchLine.end()
+         if iMatchEnd < len(self._m_sLine):
+            # Remove the matched text from the current line.
+            self._m_sLine = self._m_sLine[iMatchEnd:]
+            bAllowImplicitMappingOrSequence = False
+         else:
+            # The whole line was consumed; read a new one.
+            self.next_line()
+            bWrapped = True
+            bAllowImplicitMappingOrSequence = True
+
       if not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
          oParsed = self.consume_string_explicit()
       elif (
@@ -190,6 +223,8 @@ class YamlParser(object):
          # any of the options above.
          oParsed = None
 
+      if fnConstructor and not isinstance(oParsed, fnConstructor):
+         oParsed = fnConstructor(oParsed)
       return oParsed
 
    def consume_scalar(self):
