@@ -36,7 +36,7 @@ def parse_file(sFilePath):
       Python object corresponding to the contents of the file.
    """
 
-   return YamlParser().parse_file(sFilePath, fileYaml)
+   return YamlParser().parse_file(sFilePath)
 
 def parse_string(s):
    """Loads and parses a string containing YAML.
