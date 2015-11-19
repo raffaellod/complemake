@@ -182,13 +182,19 @@ class YamlParser(object):
             # “tag:yaml.org,2002:map”, or “tag:yaml.org,2002:str”, according to their kind.”.
             pass
          elif sType == 'local':
-            fnConstructor = self.constructor_from_tag(self._m_matchLine.group('local'))
+            fnConstructor = self._m_dictLocalTags.get(self._m_matchLine.group('local'))
+            if not fnConstructor:
+               raise_parsing_error('unrecognized local tag')
          elif sType == 'builtin':
             fnConstructor = {
                'map': dict,
                'seq': list,
                'str': str,
-            }[self._m_matchLine.group('builtin')]
+            }.get(self._m_matchLine.group('builtin'))
+            if not fnConstructor:
+               raise_parsing_error('unrecognized built-in tag')
+
+         # Consume the tag.
          iMatchEnd = self._m_matchLine.end()
          if iMatchEnd < len(self._m_sLine):
             # Remove the matched text from the current line.
@@ -406,6 +412,24 @@ class YamlParser(object):
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
 
+   def register_local_tag(self, sTag, fnConstructor):
+      """Registers a new local tag, associating it with the specified constructor.
+
+      str sTag
+         Tag to associate to fnConstructor.
+      callable fnConstructor
+         Constuctor. Must be callable with exactly one argument, which will be a parsed object that
+         had its type explicitly set to sTag.
+      """
+
+      # TODO: check for duplicates.
+      self._m_dictLocalTags[sTag] = fnConstructor
+
+   def reset_local_tag_registry(self):
+      """Clears the parser’s local tag registry."""
+
+      self._m_dictLocalTags = {}
+
    def run(self):
       """Parses the source set upon construction.
 
@@ -426,3 +450,18 @@ class YamlParser(object):
       if self._m_sLine is not None:
          self.raise_parsing_error('invalid token')
       return o
+
+   class local_tag(object):
+      """Decorator to associate in YamlParser a tag with a constructor. The constructor can be a
+      class or a function, as long as it’s something that can be called.
+
+      str sTag
+         Tag to associate to the constructor.
+      """
+
+      def __init__(self, sTag):
+         self._m_sTag = sTag
+
+      def __call__(self, fnConstructor):
+         YamlParser.register_local_tag(self._m_sTag, fnConstructor)
+         return fnConstructor
