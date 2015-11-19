@@ -35,18 +35,19 @@ class ComplexTest(unittest.TestCase):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
-         a: b
+         a: true
          c:
 
             d:
-               e: f
+               e:
                g: h
                i:
-               -  j
+               -  1
+               - ~
             k: "
          a"
             l: 'm'
-      ''')), {'a': 'b', 'c': {'d': {'e': 'f', 'g': 'h', 'i': ['j']}, 'k': ' a', 'l': 'm'}})
+      ''')), {'a': True, 'c': {'d': {'e': None, 'g': 'h', 'i': [1, None]}, 'k': ' a', 'l': 'm'}})
 
 class ImplicitlyTypedScalarTest(unittest.TestCase):
    def runTest(self):
