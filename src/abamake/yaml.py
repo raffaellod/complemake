@@ -87,9 +87,17 @@ class YamlParser(object):
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
    _sm_dictStaticLocalTags = {}
+   # Characters allowed in a tag.
+   _smc_sTagCharset = '[-#;/?:@&=+$_.~*\'()0-9A-Za-z]'
    # Matches a tag. This is intentionally an oversimplification of the relatively complex BNF
    # specified by the standard.
-   _smc_reTag = re.compile(r'^!(?:(?P<auto>)|(?P<local>\w+)|!(?P<builtin>\w+))(?: +|$)')
+   _smc_reTag = re.compile(r'''
+      ^!(?:
+         (?P<auto>)|
+         (?P<local>''' + _smc_sTagCharset + '''+)|
+         !(?P<builtin>''' + _smc_sTagCharset + '''+)
+      )(?:[ ]+|$)
+   ''', re.VERBOSE)
 
    def __init__(self):
       """Constructor."""
