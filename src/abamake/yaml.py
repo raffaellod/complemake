@@ -160,10 +160,11 @@ class YamlParser(object):
 
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
-         self.next_line()
+         bEOF = not self.next_line()
          bWrapped = True
          bAllowImplicitMappingOrSequence = True
       else:
+         bEOF = False
          bWrapped = False
 
       # If None, no constructor needs to be called, and the parsed value can be returned as-is.
@@ -198,11 +199,13 @@ class YamlParser(object):
             bAllowImplicitMappingOrSequence = False
          else:
             # The whole line was consumed; read a new one.
-            self.next_line()
+            bEOF = not self.next_line()
             bWrapped = True
             bAllowImplicitMappingOrSequence = True
 
-      if not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
+      if bEOF:
+         oParsed = None
+      elif not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
          oParsed = self.consume_string_explicit()
       elif (
          not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent
