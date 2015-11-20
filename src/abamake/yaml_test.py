@@ -180,8 +180,16 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
 class LocalTagTest(unittest.TestCase):
    def runTest(self):
       yp = yaml.YamlParser()
-      yp.register_local_tag('test_str', lambda s: '<' + (s if isinstance(s, str) else '') + '>')
-      yp.register_local_tag('test_map', lambda o: o.get('k') if isinstance(o, dict) else None)
+      yp.register_local_tag(
+         'test_str',
+         lambda yp, oContext, o:
+            '<' + (o if isinstance(o, str) else '') + '>'
+      )
+      yp.register_local_tag(
+         'test_map',
+         lambda yp, oContext, o:
+            o.get('k') if isinstance(o, dict) else None
+      )
 
       self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2

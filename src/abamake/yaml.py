@@ -61,6 +61,12 @@ class SyntaxError(Exception):
 class YamlParser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments)."""
 
+   # Built-in tags.
+   _smc_dictBuiltinTags = {
+      'map': lambda yp, oContext, o: o if isinstance(o, dict) else dict(o),
+      'seq': lambda yp, oContext, o: o if isinstance(o, list) else list(o),
+      'str': lambda yp, oContext, o: o if isinstance(o, str ) else str (o),
+   }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
    # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
@@ -86,6 +92,7 @@ class YamlParser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
+   # Local tags set for all YamlParser instances.
    _sm_dictStaticLocalTags = {}
    # Characters allowed in a tag.
    _smc_sTagCharset = '[-#;/?:@&=+$_.~*\'()0-9A-Za-z]'
@@ -104,17 +111,6 @@ class YamlParser(object):
 
       self._m_dictInstanceLocalTags = {}
       self._reset()
-
-   def constructor_from_local_tag(self, sTag):
-      """Returns the constructor associated to the specified local tag, if any.
-
-      str sTag
-         Local tag to look up.
-      callable return
-         Constructor associated to sTag, or None if no such local tag was registered.
-      """
-
-      return self._m_dictInstanceLocalTags.get(sTag) or self._sm_dictStaticLocalTags.get(sTag)
 
    def consume_map_implicit(self):
       """Consumes a map.
@@ -187,15 +183,14 @@ class YamlParser(object):
             # “tag:yaml.org,2002:map”, or “tag:yaml.org,2002:str”, according to their kind.”.
             pass
          elif sType == 'local':
-            fnConstructor = self.constructor_from_local_tag(self._m_matchLine.group('local'))
+            sLocalTag = self._m_matchLine.group('local')
+            fnConstructor = self._m_dictInstanceLocalTags.get(sLocalTag)
             if not fnConstructor:
-               self.raise_parsing_error('unrecognized local tag')
+               fnConstructor = self._sm_dictStaticLocalTags.get(sLocalTag)
+               if not fnConstructor:
+                  self.raise_parsing_error('unrecognized local tag')
          elif sType == 'builtin':
-            fnConstructor = {
-               'map': dict,
-               'seq': list,
-               'str': str,
-            }.get(self._m_matchLine.group('builtin'))
+            fnConstructor = self._smc_dictBuiltinTags.get(self._m_matchLine.group('builtin'))
             if not fnConstructor:
                self.raise_parsing_error('unrecognized built-in tag')
 
@@ -236,10 +231,8 @@ class YamlParser(object):
          # any of the options above.
          oParsed = None
 
-      if fnConstructor and (
-         isinstance(fnConstructor, collections.Callable) or isinstance(oParsed, fnConstructor)
-      ):
-         oParsed = fnConstructor(oParsed)
+      if fnConstructor:
+         oParsed = fnConstructor(self, None, oParsed)
       return oParsed
 
    def consume_scalar(self):
