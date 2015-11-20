@@ -29,6 +29,7 @@ import abamake.yaml as yaml
 ####################################################################################################
 
 # (cd src && python -m unittest abamake/yaml.py)
+# @unittest.skip
 
 class ComplexTest(unittest.TestCase):
    def runTest(self):
@@ -179,23 +180,76 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
 class LocalTagTest(unittest.TestCase):
    def runTest(self):
       yp = yaml.YamlParser()
+      yp.register_local_tag('test_str', lambda s: '<' + (s if isinstance(s, str) else '') + '>')
+      yp.register_local_tag('test_map', lambda o: o.get('k') if isinstance(o, dict) else None)
+
+      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !test_unk
+      '''))
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !test_str
+      ''')), '<>')
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !test_str a
+      ''')), '<a>')
 
       self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
-         - !test1 b
+         - !test_unk b
          - c
       '''))
 
-      yp.register_local_tag('test1', lambda s: (1, s, 2))
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
-         - !test1 b
+         - !test_str b
          - c
-      ''')), ['a', (1, 'b', 2), 'c'])
+      ''')), ['a', '<b>', 'c'])
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !test_map
+           k: b
+         - c
+      ''')), ['a', 'b', 'c'])
+
+      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !test_unk d
+         e: f
+      '''))
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !test_str d
+         e: f
+      ''')), {'a': 'b', 'c': '<d>', 'e': 'f'})
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !test_map
+           k: d
+         e: f
+      ''')), {'a': 'b', 'c': 'd', 'e': 'f'})
 
 class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
