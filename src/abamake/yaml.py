@@ -110,6 +110,7 @@ class YamlParser(object):
       """Constructor."""
 
       self._m_dictInstanceLocalTags = {}
+      self._m_oTagContext = None
       self._reset()
 
    def consume_map_implicit(self):
@@ -232,7 +233,7 @@ class YamlParser(object):
          oParsed = None
 
       if fnConstructor:
-         oParsed = fnConstructor(self, None, oParsed)
+         oParsed = fnConstructor(self, self._m_oTagContext, oParsed)
       return oParsed
 
    def consume_scalar(self):
@@ -508,3 +509,12 @@ class YamlParser(object):
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = '<no input>'
+
+   def set_tag_context(self, o):
+      """Assigns an object that will be provided to the constructor of every local tag.
+
+      object o
+         Tag context.
+      """
+
+      self._m_oTagContext = o
