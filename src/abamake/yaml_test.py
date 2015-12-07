@@ -870,3 +870,21 @@ class StringTest(unittest.TestCase):
          a
          b
       ''')), 'a b')
+
+class TagContextTest(unittest.TestCase):
+   def runTest(self):
+      def parse_test_tag(yp, oContext, o):
+         oContext[0] = o['a']
+         return o
+      listContext = [1]
+
+      yp = yaml.YamlParser()
+      yp.set_tag_context(listContext)
+      yp.register_local_tag('test', parse_test_tag)
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !test
+          a: 2
+      ''')), {'a': 2})
+      self.assertEqual([2], listContext)
