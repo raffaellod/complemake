@@ -63,9 +63,9 @@ class YamlParser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': lambda yp, oContext, o: o if isinstance(o, dict) else dict(o),
-      'seq': lambda yp, oContext, o: o if isinstance(o, list) else list(o),
-      'str': lambda yp, oContext, o: o if isinstance(o, str ) else str (o),
+      'map': lambda yp, oContext, sKey, o: o if isinstance(o, dict) else dict(o),
+      'seq': lambda yp, oContext, sKey, o: o if isinstance(o, list) else list(o),
+      'str': lambda yp, oContext, sKey, o: o if isinstance(o, str ) else str (o),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -137,7 +137,7 @@ class YamlParser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
-         dictRet[sKey] = self.consume_object(False)
+         dictRet[sKey] = self.consume_object(sKey, False)
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
@@ -152,10 +152,13 @@ class YamlParser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return dictRet
 
-   def consume_object(self, bAllowImplicitMappingOrSequence):
+   def consume_object(self, sKey, bAllowImplicitMappingOrSequence):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
       line.
 
+      str sKey
+         If the object to be consumed is associated to a map key, this will hold the key, as a
+         string; otherwise this will be None.
       bool bAllowImplicitMappingOrSequence
          True if a mapping key or sequence element will be allowed on the initial line, or False
          otherwise.
@@ -233,7 +236,7 @@ class YamlParser(object):
          oParsed = None
 
       if fnConstructor:
-         oParsed = fnConstructor(self, self._m_oTagContext, oParsed)
+         oParsed = fnConstructor(self, self._m_oTagContext, sKey, oParsed)
       return oParsed
 
    def consume_scalar(self):
@@ -287,7 +290,7 @@ class YamlParser(object):
          self._m_iSequenceMinIndent = iIndent + cchMatched
 
          # Parse whatever is left; this may span multiple lines.
-         listRet.append(self.consume_object(True))
+         listRet.append(self.consume_object(None, True))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
@@ -439,10 +442,10 @@ class YamlParser(object):
             if not self.next_line():
                # Nothing follows the document start.
                return None
-            o = self.consume_object(True)
+            o = self.consume_object(None, True)
          else:
             # Finish reading the line with the document start.
-            o = self.consume_object(False)
+            o = self.consume_object(None, False)
          # Verify that there’s nothing left to parse.
          if self._m_sLine is not None:
             self.raise_parsing_error('invalid token')

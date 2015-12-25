@@ -28,7 +28,7 @@ import abamake.yaml as yaml
 
 ####################################################################################################
 
-# (cd src && python -m unittest abamake/yaml.py)
+# (cd src && python -m unittest abamake/yaml_test.py)
 # @unittest.skip
 
 class ComplexTest(unittest.TestCase):
@@ -182,12 +182,12 @@ class LocalTagTest(unittest.TestCase):
       yp = yaml.YamlParser()
       yp.register_local_tag(
          'test_str',
-         lambda yp, oContext, o:
+         lambda yp, oContext, sKey, o:
             '<' + (o if isinstance(o, str) else '') + '>'
       )
       yp.register_local_tag(
          'test_map',
-         lambda yp, oContext, o:
+         lambda yp, oContext, sKey, o:
             o.get('k') if isinstance(o, dict) else None
       )
 
@@ -873,7 +873,7 @@ class StringTest(unittest.TestCase):
 
 class TagContextTest(unittest.TestCase):
    def runTest(self):
-      def parse_test_tag(yp, oContext, o):
+      def parse_test_tag(yp, oContext, sKey, o):
          oContext[0] = o['a']
          return o
       listContext = [1]
