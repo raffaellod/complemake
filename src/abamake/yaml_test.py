@@ -199,6 +199,22 @@ class LocalTagTest(unittest.TestCase):
 
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
+         --- !test_str
+      ''')), '<>')
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !test_str
+         a
+      ''')), '<a>')
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !test_str a
+      ''')), '<a>')
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
          ---
          !test_str
       ''')), '<>')
