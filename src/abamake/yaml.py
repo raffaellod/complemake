@@ -362,21 +362,26 @@ class YamlParser(object):
          # The whole line was consumed.
          return True
 
-   class local_tag(object):
-      """Decorator to associate in YamlParser a tag with a constructor. The constructor can be a
-      class or a function, as long as it’s something that can be called.
+   @classmethod
+   def local_tag(cls, sTag):
+      """Decorator to associate in YamlParser a tag with a constructor. If the constructor is a
+      static function, it will be called directlyl if it’s a class, its static or class
+      yaml_constructor() method will be called.
 
       str sTag
          Tag to associate to the constructor.
       """
 
-      def __init__(self, sTag):
-         self._m_sTag = sTag
-
-      def __call__(self, fnConstructor):
+      def decorate(oConstructor):
+         if isinstance(oConstructor, type):
+            fnConstructor = oConstructor.yaml_constructor
+         else:
+            fnConstructor = oConstructor
          # TODO: check for duplicates.
-         YamlParser._sm_dictStaticLocalTags[self._m_sTag] = fnConstructor
-         return fnConstructor
+         cls._sm_dictStaticLocalTags[sTag] = fnConstructor
+         return oConstructor
+
+      return decorate
 
    def match_and_store(self, re, iStart = 0):
       """Performs a match on the current line with the specified regexp, returning True if a match
