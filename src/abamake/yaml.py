@@ -467,7 +467,7 @@ class Parser(object):
          Python object corresponding to the contents of the file.
       """
 
-      with io.open(sFilePath, 'rt') as fileYaml:
+      with io.open(sFilePath, 'rt', encoding = 'utf-8') as fileYaml:
          return self.parse(sFilePath, fileYaml)
 
    def parse_string(self, s):
