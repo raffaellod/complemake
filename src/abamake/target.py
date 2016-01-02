@@ -765,7 +765,6 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-#@Target.makefile_type_id('exe')
 @abamake.yaml.YamlParser.local_tag('abamake/target/exe')
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
@@ -787,7 +786,6 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-#@Target.makefile_type_id('dynlib')
 @abamake.yaml.YamlParser.local_tag('abamake/target/dynlib')
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
@@ -833,7 +831,6 @@ class DynLibTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-#@Target.makefile_type_id('tooltest')
 @abamake.yaml.YamlParser.local_tag('abamake/target/tooltest')
 class ToolTestTarget(NamedTargetMixIn, Target):
    """Target that executes a test."""
@@ -1029,7 +1026,6 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
 ####################################################################################################
 
-#@Target.makefile_type_id('exetest')
 @abamake.yaml.YamlParser.local_tag('abamake/target/exetest')
 class ExecutableTestTarget(NamedBinaryTarget):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
