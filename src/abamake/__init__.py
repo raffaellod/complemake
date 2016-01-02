@@ -198,12 +198,27 @@ class MakefileParser(yaml.Parser):
 class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 
-   def __init__(self, yp, sKey, oYaml):
-      """TODO: comment signature"""
+   # List of abamake.target.Target instances parsed from the top-level “targets” attribute.
+   _m_listTargets = None
 
-      # TODO: validate oYaml.
+   def __init__(self, yp, sKey, oYaml):
+      """Constructor.
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      """
+
+      if not isinstance(oYaml, dict):
+         yp.raise_parsing_error(
+            'unexpected object used to construct {}'.format(type(self).__name__)
+         )
       listTargets = oYaml.get('targets')
-      # TODO: validate listTargets.
+      if not isinstance(listTargets, dict):
+         yp.raise_parsing_error('invalid “targets” element; expected mapping')
       self._m_listTargets = listTargets
 
    def _get_targets(self):
@@ -472,14 +487,14 @@ class Make(object):
       # By collecting all targets upfront we allow for Target.render_from_parsed_yaml() to always
       # find a referenced target even it it was defined after the target on which
       # render_from_parsed_yaml() is called.
-      o = yp.parse_file(sFilePath)
+      mkf = yp.parse_file(sFilePath)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
-
-      if not isinstance(o, Makefile):
+      if not isinstance(mkf, Makefile):
          raise MakefileError(
             'the top level object of an Abamake makefile must be of type !abamake/makefile'
          )
-      dictRemaining = o.targets
+
+      dictRemaining = mkf.targets
       while dictRemaining:
          sName, ptgt = dictRemaining.popitem()
          if not isinstance(ptgt, target.TargetYamlPair):
