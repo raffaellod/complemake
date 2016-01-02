@@ -95,7 +95,7 @@ Supported build systems:
    •  binutils (version to be determined – anything from 2010 on should work)
 
 •  GNU toolchain
-   •  GCC 4.7 to 4.9
+   •  GCC 4.7 to 5.2
    •  binutils (version to be determined – anything from 2010 on should work)
 
 •  Microsoft toolchain
@@ -153,8 +153,7 @@ TODO: expand on Abamake arguments.
 
 
 --------------------------------------------------------------------------------
-Copyright 2010, 2011, 2012, 2013, 2014, 2015
-Raffaello D. Di Napoli
+Copyright 2010-2016 Raffaello D. Di Napoli
 
 This file is part of Abamake.
 
