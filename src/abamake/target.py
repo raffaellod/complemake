@@ -354,7 +354,7 @@ class Target(Dependency):
    def render_source_from_parsed_yaml(self, mk, o):
       """TODO: comment signature."""
 
-      if isinstance(o, str):
+      if isinstance(o, (str, unicode)):
          sFilePath = o
          sTool = None
       elif isinstance(o, dict):
@@ -709,7 +709,7 @@ class BinaryTarget(FileTarget):
             )
          for o in iterLibs:
             # For now, only strings representing a library name are supported.
-            if isinstance(o, str):
+            if isinstance(o, (str, unicode)):
                sName = o
             else:
                raise abamake.MakefileError('{}: invalid “libraries” element; {}'.format(self, o))
@@ -892,7 +892,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
       # At this point we expect 0 <= len(listCmpOperands) <= 2, but we’ll check that a few more
       # lines below.
-      if isinstance(listCmpOperands[0], str):
+      if isinstance(listCmpOperands[0], (str, unicode)):
          sCmpV = 'internal:text-compare'
          sCmpQ = 'CMPTXT'
       else:
@@ -938,7 +938,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
       sExpectedOutputFilePath = dictYaml.get('expected output')
       if sExpectedOutputFilePath:
-         if not isinstance(sExpectedOutputFilePath, str):
+         if not isinstance(sExpectedOutputFilePath, (str, unicode)):
             # TODO: this should be detected during parsing, not here.
             raise abamake.MakefileError(
                '{}: invalid “expected output” attribute; expected string'.format(self)
@@ -960,7 +960,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
                   '{}: invalid “output transform” element: {}'.format(self, o)
                )
             if isinstance(o.ot, TargetOutputTransform):
-               if isinstance(o.oYaml, str):
+               if isinstance(o.oYaml, (str, unicode)):
                   sFilter = o.oYaml
                else:
                   raise abamake.MakefileError(
@@ -976,7 +976,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
       if sScriptFilePath:
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-         if not isinstance(sScriptFilePath, str):
+         if not isinstance(sScriptFilePath, (str, unicode)):
             # TODO: this should be detected during parsing, not here.
             raise abamake.MakefileError(
                '{}: invalid “script” attribute; expected string'.format(self)
@@ -1006,7 +1006,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
       # TODO: use an interface/specialization to apply different transformations.
       if self._m_reFilter:
          # This transformation requires that the operand is a string, so convert oCmpOp into one.
-         if not isinstance(oCmpOp, str):
+         if not isinstance(oCmpOp, (str, unicode)):
             oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
          oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
 
@@ -1180,7 +1180,7 @@ class ExecutableTestTarget(NamedBinaryTarget):
          listCmpNames.append(job.stdout_file_path)
          listCmpOperands.append(self._transform_comparison_operand(job.stdout))
 
-         if isinstance(listCmpOperands[0], str):
+         if isinstance(listCmpOperands[0], (str, unicode)):
             sCmpV = 'internal:text-compare'
             sCmpQ = 'CMPTXT'
          else:
@@ -1232,7 +1232,7 @@ class ExecutableTestTarget(NamedBinaryTarget):
                   '{}: invalid “output transform” element: {}'.format(self, o)
                )
             if isinstance(o.ot, TargetOutputTransform):
-               if isinstance(o.oYaml, str):
+               if isinstance(o.oYaml, (str, unicode)):
                   sFilter = o.oYaml
                else:
                   raise abamake.MakefileError(
@@ -1248,7 +1248,7 @@ class ExecutableTestTarget(NamedBinaryTarget):
       if sScriptFilePath:
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-         if not isinstance(sScriptFilePath, str):
+         if not isinstance(sScriptFilePath, (str, unicode)):
             # TODO: this should be detected during parsing, not here.
             raise abamake.MakefileError(
                '{}: invalid “script” attribute; expected string'.format(self)
@@ -1279,7 +1279,7 @@ class ExecutableTestTarget(NamedBinaryTarget):
       # TODO: use an interface/specialization to apply different transformations.
       if self._m_reFilter:
          # This transformation requires that the operand is a string, so convert oCmpOp into one.
-         if not isinstance(oCmpOp, str):
+         if not isinstance(oCmpOp, (str, unicode)):
             oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
          oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
 
