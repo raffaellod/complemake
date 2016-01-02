@@ -63,9 +63,9 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, dict) else dict(oYaml),
-      'seq': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, list) else list(oYaml),
-      'str': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, str ) else str (oYaml),
+      'map': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, dict) else dict(oYaml),
+      'seq': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, list) else list(oYaml),
+      'str': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, str ) else str (oYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -110,7 +110,6 @@ class Parser(object):
       """Constructor."""
 
       self._m_dictInstanceLocalTags = {}
-      self._m_oTagContext = None
       self._reset()
 
    def consume_map_implicit(self):
@@ -236,7 +235,7 @@ class Parser(object):
          oParsed = None
 
       if fnConstructor:
-         oParsed = fnConstructor(self, sKey, oParsed, self._m_oTagContext)
+         oParsed = fnConstructor(self, sKey, oParsed)
       return oParsed
 
    def consume_scalar(self):
@@ -517,12 +516,3 @@ class Parser(object):
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = '<no input>'
-
-   def set_tag_context(self, o):
-      """Assigns an object that will be provided to the constructor of every local tag.
-
-      object o
-         Tag context.
-      """
-
-      self._m_oTagContext = o

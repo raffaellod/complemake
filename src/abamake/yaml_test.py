@@ -186,13 +186,13 @@ class LocalTagTest(unittest.TestCase):
       yp = yaml.Parser()
       yp.register_local_tag(
          'test_str',
-         lambda yp, oContext, sKey, o:
-            '<' + (o if isinstance(o, basestring) else '') + '>'
+         lambda yp, sKey, oYaml:
+            '<' + (oYaml if isinstance(oYaml, basestring) else '') + '>'
       )
       yp.register_local_tag(
          'test_map',
-         lambda yp, oContext, sKey, o:
-            o.get('k') if isinstance(o, dict) else None
+         lambda yp, sKey, oYaml:
+            oYaml.get('k') if isinstance(oYaml, dict) else None
       )
 
       self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
@@ -890,21 +890,3 @@ class StringTest(unittest.TestCase):
          a
          b
       ''')), 'a b')
-
-class TagContextTest(unittest.TestCase):
-   def runTest(self):
-      def parse_test_tag(yp, oContext, sKey, o):
-         oContext[0] = o['a']
-         return o
-      listContext = [1]
-
-      yp = yaml.Parser()
-      yp.set_tag_context(listContext)
-      yp.register_local_tag('test', parse_test_tag)
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
-         %YAML 1.2
-         ---
-         !test
-          a: 2
-      ''')), {'a': 2})
-      self.assertEqual([2], listContext)

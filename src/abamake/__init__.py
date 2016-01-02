@@ -177,11 +177,28 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
+class MakefileParser(yaml.Parser):
+   """Parser of YAML Abamakefiles."""
+
+   def __init__(self, mk):
+      """TODO: comment signature"""
+
+      yaml.Parser.__init__(self)
+
+      self._m_mk = mk
+
+   def _get_mk(self):
+      return self._m_mk
+
+   mk = property(_get_mk, doc = """Returns the Make instance that’s running the parser.""")
+
+####################################################################################################
+
 @yaml.Parser.local_tag('abamake/makefile')
 class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 
-   def __init__(self, yp, sKey, oYaml, oContext):
+   def __init__(self, yp, sKey, oYaml):
       """TODO: comment signature"""
 
       # TODO: validate oYaml.
@@ -197,8 +214,8 @@ class Makefile(object):
    """)
 
    @staticmethod
-   def yaml_constructor(yp, sKey, oYaml, oContext):
-      return Makefile(yp, sKey, oYaml, oContext)
+   def yaml_constructor(yp, sKey, oYaml):
+      return Makefile(yp, sKey, oYaml)
 
 ####################################################################################################
 
@@ -449,8 +466,7 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      yp = yaml.Parser()
-      yp.set_tag_context(self)
+      yp = MakefileParser(self)
       # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
       # By collecting all targets upfront we allow for Target.render_from_parsed_yaml() to always
