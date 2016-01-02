@@ -158,7 +158,7 @@ class DependencyCycleError(MakefileError):
 
       str sMessage
          Exception message.
-      iter(abamake.target.Target) iterTargets
+      iterable(abamake.target.Target) iterTargets
          Targets that create a cycle in the dependency graph.
       iterable(object*) iterArgs
          Other arguments.
@@ -202,6 +202,7 @@ class MakefileYaml(object):
 
 ####################################################################################################
 
+@yaml.Parser.local_tag('abamake/makefile')
 class Make(object):
    """Parses an Abamakefile (.abamk) and exposes an abamake.job.Runner instance that can be used to
    schedule target builds and run them.
@@ -574,7 +575,6 @@ class Make(object):
       setValidatedSubtrees.add(tgtSubRoot)
 
    @staticmethod
-   @yaml.Parser.local_tag('abamake/makefile')
-   def _yaml_constructor(yp, mk, sKey, o):
-      # TODO: validate o.
-      return MakefileYaml(o)
+   def yaml_constructor(yp, sKey, oYaml, oContext):
+      # TODO: validate oYaml.
+      return MakefileYaml(oYaml)

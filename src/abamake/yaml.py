@@ -63,9 +63,9 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': lambda yp, oContext, sKey, o: o if isinstance(o, dict) else dict(o),
-      'seq': lambda yp, oContext, sKey, o: o if isinstance(o, list) else list(o),
-      'str': lambda yp, oContext, sKey, o: o if isinstance(o, str ) else str (o),
+      'map': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, dict) else dict(oYaml),
+      'seq': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, list) else list(oYaml),
+      'str': lambda yp, sKey, oYaml, oContext: oYaml if isinstance(oYaml, str ) else str (oYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -236,7 +236,7 @@ class Parser(object):
          oParsed = None
 
       if fnConstructor:
-         oParsed = fnConstructor(self, self._m_oTagContext, sKey, oParsed)
+         oParsed = fnConstructor(self, sKey, oParsed, self._m_oTagContext)
       return oParsed
 
    def consume_scalar(self):

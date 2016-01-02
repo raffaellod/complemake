@@ -158,7 +158,7 @@ class Logger(object):
          to report errors, for example).
       str sFormat
          Format string.
-      iter(object*) *iterArgs
+      iterable(object*) *iterArgs
          Forwarded to sFormat.format().
       dict(str: object) **dictKwArgs
          Forwarded to sFormat.format().

@@ -178,8 +178,19 @@ class Target(Dependency):
    # If True, the target has been built or at least verified to be up-to-date.
    _m_bUpToDate = False
 
-   def __init__(self, mk):
+   def __init__(self, *iterArgs):
       """Constructor. Automatically registers the target with the specified Make instance.
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+
+      - OR -
 
       abamake.Make mk
          Make instance.
@@ -187,6 +198,12 @@ class Target(Dependency):
 
       Dependency.__init__(self)
 
+      if isinstance(iterArgs[0], abamake.yaml.Parser):
+         yp, sKey, oYaml, mk = iterArgs
+         if not isinstance(oYaml, dict):
+            yp.raise_parsing_error('expected mapping')
+      else:
+         mk, = iterArgs
       self._m_setBlockedDependents = set()
       self._m_cBlockingDependencies = 0
       self._m_bBuilding = False
@@ -345,7 +362,9 @@ class Target(Dependency):
       return {}
 
    def render_source_from_parsed_yaml(self, mk, o):
-      """TODO: comment signature."""
+      """Renders a “sources” YAML element.
+
+      TODO: comment signature."""
 
       if isinstance(o, basestring):
          sFilePath = o
@@ -410,18 +429,29 @@ class Target(Dependency):
       pass
 
    @classmethod
-   def yaml_constructor(cls, yp, mk, sKey, o):
-      tgt = cls(mk)
-      return TargetYamlPair(tgt, o)
+   def yaml_constructor(cls, yp, sKey, oYaml, mk):
+      tgt = cls(yp, sKey, oYaml, mk)
+      return TargetYamlPair(tgt, oYaml)
 
 ####################################################################################################
 
 class NamedTargetMixIn(NamedDependencyMixIn):
    """Mixin that provides a name for a Target subclass."""
 
-   def __init__(self, mk, sName):
+   def __init__(self, *iterArgs):
       """See NamedDependencyMixIn.__init__(). Automatically registers the name => target association
       with the specified Make instance.
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+
+      - OR -
 
       abamake.Make mk
          Make instance.
@@ -429,24 +459,35 @@ class NamedTargetMixIn(NamedDependencyMixIn):
          Dependency name.
       """
 
+      if isinstance(iterArgs[0], abamake.yaml.Parser):
+         yp, sKey, oYaml, mk = iterArgs
+         sName = sKey
+      else:
+         mk, sName = iterArgs
+
       NamedDependencyMixIn.__init__(self, sName)
 
       mk.add_named_target(self, sName)
-
-   @classmethod
-   def yaml_constructor(cls, yp, mk, sKey, o):
-      # TODO: validate sKey.
-      tgt = cls(mk, sKey)
-      return TargetYamlPair(tgt, o)
 
 ####################################################################################################
 
 class FileTarget(FileDependencyMixIn, Target):
    """Target that generates a file."""
 
-   def __init__(self, mk, sFilePath):
+   def __init__(self, *iterArgs):
       """See FileDependencyMixIn.__init__() and Target.__init__(). Automatically registers the path
       => target association with the specified Make instance.
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+
+      - OR -
 
       abamake.Make mk
          Make instance.
@@ -454,8 +495,24 @@ class FileTarget(FileDependencyMixIn, Target):
          Dependency file path.
       """
 
-      FileDependencyMixIn.__init__(self, sFilePath)
-      Target.__init__(self, mk)
+      if isinstance(iterArgs[0], abamake.yaml.Parser):
+         yp, sKey, oYaml, mk = iterArgs
+         if isinstance(oYaml, basestring):
+            sFilePath = oYaml
+         elif isinstance(oYaml, dict):
+            sFilePath = oYaml.get('path')
+         else:
+            yp.raise_parsing_error(
+               'unexpected object used to construct {}'.format(type(self).__name__)
+            )
+
+         FileDependencyMixIn.__init__(self, sFilePath)
+         Target.__init__(self, *iterArgs)
+      else:
+         mk, sFilePath = iterArgs
+
+         FileDependencyMixIn.__init__(self, sFilePath)
+         Target.__init__(self, mk)
 
       mk.add_file_target(self, self._m_sFilePath)
 
@@ -764,14 +821,31 @@ class ExecutableTarget(NamedBinaryTarget):
    the output base directory.
    """
 
-   def __init__(self, mk, sName):
+   def __init__(self, *iterArgs):
       """See NamedBinaryTarget.__init__().
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+
+      - OR -
 
       abamake.Make mk
          Make instance.
       str sName
          Target name.
       """
+
+      if isinstance(iterArgs[0], abamake.yaml.Parser):
+         yp, sKey, oYaml, mk = iterArgs
+         sName = sKey
+      else:
+         mk, sName = iterArgs
 
       NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
@@ -785,14 +859,31 @@ class DynLibTarget(NamedBinaryTarget):
    output base directory.
    """
 
-   def __init__(self, mk, sName):
+   def __init__(self, *iterArgs):
       """See NamedBinaryTarget.__init__().
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+
+      - OR -
 
       abamake.Make mk
          Make instance.
       str sName
          Target name.
       """
+
+      if isinstance(iterArgs[0], abamake.yaml.Parser):
+         yp, sKey, oYaml, mk = iterArgs
+         sName = sKey
+      else:
+         mk, sName = iterArgs
 
       NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(sName)
@@ -824,9 +915,8 @@ class DynLibTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/tooltest')
-class ToolTestTarget(NamedTargetMixIn, Target):
-   """Target that executes a test."""
+class TestTargetMixIn(object):
+   """Mixin that provides functionality useful for all test Target subclasses."""
 
    # True if comparison operands should be treated as amorphous BLOBs, or False if they should be
    # treated as strings.
@@ -834,19 +924,96 @@ class ToolTestTarget(NamedTargetMixIn, Target):
    # Transformations to apply to the output.
    _m_listOutputTransforms = None
 
-   def __init__(self, mk, sName):
-      """See NamedTargetMixIn.__init__() and Target.__init__().
+   def __init__(self, yp, oYaml):
+      """Constructor.
 
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
       abamake.Make mk
          Make instance.
-      str sName
-         Target name.
       """
 
-      NamedTargetMixIn.__init__(self, mk, sName)
-      Target.__init__(self, mk)
+      if not isinstance(oYaml, dict):
+         yp.raise_parsing_error('expected mapping')
 
-      self._m_listOutputTransforms = []
+      sExpectedOutputFilePath = oYaml.get('expected output')
+      if sExpectedOutputFilePath:
+         if not isinstance(sExpectedOutputFilePath, basestring):
+            yp.raise_parsing_error('attribute “expected output” must be a string'.format(self))
+         dep = OutputRerefenceDependency(sExpectedOutputFilePath)
+         self.add_dependency(dep)
+
+      oOutputTransforms = oYaml.get('output transform')
+      if oOutputTransforms is None:
+         self._m_listOutputTransforms = []
+      elif isinstance(oOutputTransforms, FilterOutputTransform):
+         self._m_listOutputTransforms = [o]
+      elif isinstance(oOutputTransforms, list):
+         if any(not isinstance(o, OutputTransform) for o in oOutputTransforms):
+            yp.raise_parsing_error(
+               'elements of “output transform” attribute must be of type ' +
+                  'abamake/target/*-output-transform'.format(self)
+            )
+         self._m_listOutputTransforms = oOutputTransforms
+      else:
+         yp.raise_parsing_error(
+            'attribute “output transform” must be a sequence of, or a single abamake/target/' +
+               'output-filter object'.format(self)
+         )
+
+      sScriptFilePath = oYaml.get('script')
+      if sScriptFilePath:
+         # TODO: support “script” referencing a binary built by the same makefile.
+         # TODO: support “script” being a mapping with more attributes, e.g. command-line args.
+         if not isinstance(sScriptFilePath, basestring):
+            yp.raise_parsing_error('attribute “script” must be a string'.format(self))
+         dep = TestExecScriptDependency(sScriptFilePath)
+         self.add_dependency(self, dep)
+
+   def _transform_comparison_operand(self, o):
+      """Transforms a comparison operand according to any “output transform” attributes specified in
+      the makefile, and returns the result.
+
+      Some transformations require that the operand is a string; this method will convert a bytes
+      instance into a str in a way that mimic what an io.TextIOBase object would do. This allows to
+      automatically adjust to performing text-based comparisons (as opposed to bytes-based).
+
+      object o
+         str or bytes instance to transform.
+      object return
+         Transformed comparison operand.
+      """
+
+      for ot in self._m_listOutputTransforms:
+         o = ot(o)
+      return o
+
+####################################################################################################
+
+@abamake.yaml.Parser.local_tag('abamake/target/tooltest')
+class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
+   """Target that executes a test."""
+
+   def __init__(self, yp, sKey, oYaml, mk):
+      """See NamedTargetMixIn.__init__() and Target.__init__().
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      abamake.Make mk
+         Make instance.
+      """
+
+      NamedTargetMixIn.__init__(self, mk, sKey)
+      Target.__init__(self, mk)
+      TestTargetMixIn.__init__(self, yp, oYaml)
 
    def _build_tool_run(self):
       """See Target._build_tool_run()."""
@@ -928,62 +1095,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
             # TODO: validate the type of tgt?
             self.add_dependency(tgt)
 
-      sExpectedOutputFilePath = dictYaml.get('expected output')
-      if sExpectedOutputFilePath:
-         if not isinstance(sExpectedOutputFilePath, basestring):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “expected output” attribute; expected string'.format(self)
-            )
-         dep = OutputRerefenceDependency(sExpectedOutputFilePath)
-         self.add_dependency(dep)
-
-      iterOutputTransforms = dictYaml.get('output transform')
-      if iterOutputTransforms:
-         if not isinstance(iterOutputTransforms, list):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “output transform” attribute; expected sequence'.format(self)
-            )
-         for o in iterOutputTransforms:
-            if isinstance(o, OutputFilter):
-               self._m_listOutputTransforms.append(o)
-            else:
-               raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
-
-      sScriptFilePath = dictYaml.get('script')
-      if sScriptFilePath:
-         # TODO: support <script name="…"> to refer to a program built by the same makefile.
-         # TODO: support more attributes, such as command-line args for the script.
-         if not isinstance(sScriptFilePath, basestring):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “script” attribute; expected string'.format(self)
-            )
-         dep = TestExecScriptDependency(sScriptFilePath)
-         self.add_dependency(self, dep)
-
       return dictAdditionalToRender
-
-   def _transform_comparison_operand(self, oCmpOp):
-      """Transforms a comparison operand according to any <output-transform> rules specified in the
-      makefile, and returns the result.
-
-      Some transformations require that the operand is a string; this method will convert a bytes
-      instance into a str in a way that mimic what an io.TextIOBase object would do. This allows to
-      automatically adjust to performing text-based comparisons (as opposed to bytes-based).
-
-      object oCmpOp
-         str or bytes instance to transform.
-      object return
-         Transformed comparison operand.
-      """
-
-      # TODO: refactor code shared with ExecutableTestTarget._transform_comparison_operand().
-
-      for ot in self._m_listOutputTransforms:
-         oCmpOp = ot(oCmpOp)
-      return oCmpOp
 
    def validate(self):
       """See Target.validate()."""
@@ -1003,39 +1115,38 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 ####################################################################################################
 
 @abamake.yaml.Parser.local_tag('abamake/target/exetest')
-class ExecutableTestTarget(NamedBinaryTarget):
+class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
    """
 
-   # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
-   # treated as strings.
-   _m_bBinaryCompare = None
-   # Transformations to apply to the output.
-   _m_listOutputTransforms = None
    # True if the test executable uses abc::testing to execute test cases and report their results,
    # making it compatible with being run via AbacladeTestJob, or False if it’s a monolithic single
    # test, executed via ExternalCmdCapturingJob.
    #
-   # TODO: make this a three-state, with True/False meaning explicit declaration, for example by
-   # <test name="my-test" type="abc"> or type="exe", and None (default) meaning False with auto-
-   # detect that can change to True using the current logic in add_dependency().
+   # TODO: make this a three-state, with True/False meaning explicit declaration, for example via a
+   # boolean “use abc::testing” attribute, with true or false mapping to True/False and turning off
+   # auto-detection, and if missing mapped to None to mean False with auto-detection that can change
+   # it to True using the current logic in add_dependency().
    _m_bUsesAbacladeTesting = None
 
-   def __init__(self, mk, sName):
+   def __init__(self, yp, sKey, oYaml, mk):
       """See NamedBinaryTarget.__init__().
 
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
       abamake.Make mk
          Make instance.
-      str sName
-         Target name.
       """
 
-      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
-         mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(sName)
+      NamedBinaryTarget.__init__(self, mk, sKey, os.path.join(
+         mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(sKey)
       ))
-
-      self._m_listOutputTransforms = []
+      TestTargetMixIn.__init__(self, yp, oYaml)
 
    def add_dependency(self, dep):
       """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
@@ -1178,68 +1289,6 @@ class ExecutableTestTarget(NamedBinaryTarget):
 
       NamedBinaryTarget._on_build_tool_run_complete(self)
 
-   def render_from_parsed_yaml(self, dictYaml):
-      """See NamedBinaryTarget.render_from_parsed_yaml()."""
-
-      # TODO: refactor code shared with ToolTestTarget.render_from_parsed_yaml().
-
-      mk = self._m_mk()
-      dictAdditionalToRender = NamedBinaryTarget.render_from_parsed_yaml(self, dictYaml)
-
-      sExpectedOutputFilePath = dictYaml.get('expected output')
-      if sExpectedOutputFilePath:
-         dep = OutputRerefenceDependency(sExpectedOutputFilePath)
-         # Note that we don’t invoke our add_dependency() override.
-         NamedBinaryTarget.add_dependency(self, dep)
-
-      iterOutputTransforms = dictYaml.get('output transform')
-      if iterOutputTransforms:
-         if not isinstance(iterOutputTransforms, list):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “output transform” attribute; expected sequence'.format(self)
-            )
-         for o in iterOutputTransforms:
-            if isinstance(o, OutputFilter):
-               self._m_listOutputTransforms.append(o)
-            else:
-               raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
-
-      sScriptFilePath = dictYaml.get('script')
-      if sScriptFilePath:
-         # TODO: support <script name="…"> to refer to a program built by the same makefile.
-         # TODO: support more attributes, such as command-line args for the script.
-         if not isinstance(sScriptFilePath, basestring):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “script” attribute; expected string'.format(self)
-            )
-         dep = TestExecScriptDependency(sScriptFilePath)
-         # Note that we don’t invoke our add_dependency() override.
-         NamedBinaryTarget.add_dependency(self, dep)
-
-      return dictAdditionalToRender
-
-   def _transform_comparison_operand(self, oCmpOp):
-      """Transforms a comparison operand according to any <output-transform> rules specified in the
-      makefile, and returns the result.
-
-      Some transformations require that the operand is a string; this method will convert a bytes
-      instance into a str in a way that mimic what an io.TextIOBase object would do. This allows to
-      automatically adjust to performing text-based comparisons (as opposed to bytes-based).
-
-      object oCmpOp
-         str or bytes instance to transform.
-      object return
-         Transformed comparison operand.
-      """
-
-      # TODO: refactor code shared with ToolTestTarget._transform_comparison_operand().
-
-      for ot in self._m_listOutputTransforms:
-         oCmpOp = ot(oCmpOp)
-      return oCmpOp
-
    def validate(self):
       """See NamedBinaryTarget.validate()."""
 
@@ -1265,8 +1314,8 @@ class OutputTransform(object):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/output-filter')
-class OutputFilter(OutputTransform):
+@abamake.yaml.Parser.local_tag('abamake/target/filter-output-transform')
+class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a
    specific regular expression.
    """
@@ -1274,14 +1323,24 @@ class OutputFilter(OutputTransform):
    # Filter (regex) to apply.
    _m_re = None
 
-   def __init__(self, re):
+   def __init__(self, yp, sKey, oYaml, oContext):
       """Constructor.
 
-      re.RegExp re
-         Filter regular expression.
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      object oContext
+         Parser context.
       """
 
-      self._m_re = re
+      if isinstance(oYaml, basestring):
+         sFilter = oYaml
+      else:
+         yp.raise_parsing_error('expected string containing a regular expression')
+      self._m_re = re.compile(sFilter, re.DOTALL)
 
    def __call__(self, o):
       """Function call.
@@ -1295,13 +1354,9 @@ class OutputFilter(OutputTransform):
       if isinstance(o, bytes):
          o = str(o, encoding = locale.getpreferredencoding())
       elif not isinstance(o, str):
-         raise Error('cannot transform objects of type {}'.format(type(o).__name__))
+         raise TypeError('cannot transform objects of type {}'.format(type(o).__name__))
       return '\n'.join(self._m_re.findall(o))
 
    @classmethod
-   def yaml_constructor(cls, yp, mk, sKey, o):
-      if isinstance(o, basestring):
-         sFilter = o
-      else:
-         yp.raise_parsing_error('expected string containing a regular expression')
-      return cls(re.compile(sFilter, re.DOTALL))
+   def yaml_constructor(cls, yp, sKey, oYaml, oContext):
+      return cls(yp, sKey, oYaml, oContext)
