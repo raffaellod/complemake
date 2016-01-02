@@ -36,7 +36,7 @@ def parse_file(sFilePath):
       Python object corresponding to the contents of the file.
    """
 
-   return YamlParser().parse_file(sFilePath)
+   return Parser().parse_file(sFilePath)
 
 def parse_string(s):
    """Loads and parses a string containing YAML.
@@ -47,7 +47,7 @@ def parse_string(s):
       Python object corresponding to the contents of the string.
    """
 
-   return YamlParser().parse_string(s)
+   return Parser().parse_string(s)
 
 ####################################################################################################
 
@@ -58,7 +58,7 @@ class SyntaxError(Exception):
 
 ####################################################################################################
 
-class YamlParser(object):
+class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments)."""
 
    # Built-in tags.
@@ -92,7 +92,7 @@ class YamlParser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
-   # Local tags set for all YamlParser instances.
+   # Local tags set for all Parser instances.
    _sm_dictStaticLocalTags = {}
    # Characters allowed in a tag.
    _smc_sTagCharset = '[-#;/?:@&=+$_.~*\'()0-9A-Za-z]'
@@ -364,9 +364,9 @@ class YamlParser(object):
 
    @classmethod
    def local_tag(cls, sTag):
-      """Decorator to associate in YamlParser a tag with a constructor. If the constructor is a
-      static function, it will be called directlyl if it’s a class, its static or class
-      yaml_constructor() method will be called.
+      """Decorator to associate in Parser a tag with a constructor. If the constructor is a static
+      function, it will be called directlyl if it’s a class, its static or class yaml_constructor()
+      method will be called.
 
       str sTag
          Tag to associate to the constructor.

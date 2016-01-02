@@ -179,7 +179,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
 
 class LocalTagTest(unittest.TestCase):
    def runTest(self):
-      yp = yaml.YamlParser()
+      yp = yaml.Parser()
       yp.register_local_tag(
          'test_str',
          lambda yp, oContext, sKey, o:
@@ -894,7 +894,7 @@ class TagContextTest(unittest.TestCase):
          return o
       listContext = [1]
 
-      yp = yaml.YamlParser()
+      yp = yaml.Parser()
       yp.set_tag_context(listContext)
       yp.register_local_tag('test', parse_test_tag)
       self.assertEqual(yp.parse_string(textwrap.dedent('''

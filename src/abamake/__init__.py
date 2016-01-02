@@ -446,7 +446,7 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      yp = yaml.YamlParser()
+      yp = yaml.Parser()
       yp.set_tag_context(self)
       # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
@@ -571,7 +571,7 @@ class Make(object):
       setValidatedSubtrees.add(tgtSubRoot)
 
    @staticmethod
-   @yaml.YamlParser.local_tag('abamake/makefile')
+   @yaml.Parser.local_tag('abamake/makefile')
    def _yaml_constructor(yp, mk, sKey, o):
       # TODO: validate o.
       return MakefileYaml(o)

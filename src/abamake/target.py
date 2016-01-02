@@ -765,7 +765,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.YamlParser.local_tag('abamake/target/exe')
+@abamake.yaml.Parser.local_tag('abamake/target/exe')
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
@@ -786,7 +786,7 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.YamlParser.local_tag('abamake/target/dynlib')
+@abamake.yaml.Parser.local_tag('abamake/target/dynlib')
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
@@ -831,7 +831,7 @@ class DynLibTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.YamlParser.local_tag('abamake/target/tooltest')
+@abamake.yaml.Parser.local_tag('abamake/target/tooltest')
 class ToolTestTarget(NamedTargetMixIn, Target):
    """Target that executes a test."""
 
@@ -1026,7 +1026,7 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
 ####################################################################################################
 
-@abamake.yaml.YamlParser.local_tag('abamake/target/exetest')
+@abamake.yaml.Parser.local_tag('abamake/target/exetest')
 class ExecutableTestTarget(NamedBinaryTarget):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
@@ -1309,7 +1309,7 @@ class TargetOutputTransform(object):
 
 ####################################################################################################
 
-@abamake.yaml.YamlParser.local_tag('abamake/target/output-filter')
+@abamake.yaml.Parser.local_tag('abamake/target/output-filter')
 class TargetOutputFilter(TargetOutputTransform):
    """TODO: comment."""
 
