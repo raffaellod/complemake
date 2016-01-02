@@ -20,10 +20,14 @@
 """Test cases for the YAML parser."""
 
 import math
+import sys
 import textwrap
 import unittest
 
 import abamake.yaml as yaml
+
+if sys.hexversion >= 0x03000000:
+   basestring = str
 
 
 ####################################################################################################
@@ -183,7 +187,7 @@ class LocalTagTest(unittest.TestCase):
       yp.register_local_tag(
          'test_str',
          lambda yp, oContext, sKey, o:
-            '<' + (o if isinstance(o, str) else '') + '>'
+            '<' + (o if isinstance(o, basestring) else '') + '>'
       )
       yp.register_local_tag(
          'test_map',

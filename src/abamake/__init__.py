@@ -70,6 +70,7 @@ TODO: link to documentation for abc::testing support in Abamake.
 
 import os
 import re
+import sys
 import xml.dom.minidom
 
 import abamake.job as job
@@ -80,6 +81,8 @@ import abamake.target as target
 import abamake.yaml as yaml
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
+if sys.hexversion >= 0x03000000:
+   basestring = str
 
 
 ####################################################################################################
@@ -491,7 +494,7 @@ class Make(object):
    def _set_target_platform(self, o):
       if self._m_platformTarget:
          raise Exception('cannot set target platform after it’s already been assigned or detected')
-      if isinstance(o, str):
+      if isinstance(o, basestring):
          o = platform.SystemType.parse_tuple(o)
       if isinstance(o, platform.SystemType):
          o = platform.Platform.from_system_type(o)

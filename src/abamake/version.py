@@ -21,6 +21,10 @@
 
 import functools
 import re
+import sys
+
+if sys.hexversion >= 0x03000000:
+   basestring = str
 
 
 ####################################################################################################
@@ -104,7 +108,7 @@ class Version(object):
 
       if o is None:
          return 0
-      elif isinstance(o, str):
+      elif isinstance(o, basestring):
          if o.isdigit():
             return int(o)
       return o
