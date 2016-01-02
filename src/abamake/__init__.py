@@ -109,21 +109,6 @@ def derived_classes(clsBase):
             setYielded.add(clsDeriv)
             listClassesToScan.append(clsDeriv)
 
-def is_node_whitespace(nd):
-   """Returns True if a node is whitespace or a comment.
-
-   xml.dom.Node nd
-      Node to check.
-   bool return
-      True if nd is a whitespace or comment node, or False otherwise.
-   """
-
-   if nd.nodeType == nd.COMMENT_NODE:
-      return True
-   if nd.nodeType == nd.TEXT_NODE and re.match(r'^\s*$', nd.nodeValue):
-      return True
-   return False
-
 def makedirs(sPath):
    """Implementation of os.makedirs(exists_ok = True) for both Python 2.7 and 3.x.
 
