@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013-2015 Raffaello D. Di Napoli
+# Copyright 2013-2016 Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
 #
@@ -78,7 +78,7 @@ def main(iterArgs):
       help = 'Continue building targets even if other independent targets fail.'
    )
    argparser.add_argument(
-      '-m', '--makefile', metavar = 'PROJECT.ABAMK', nargs = 1,
+      '-m', '--makefile', metavar = 'PROJECT.abamk', nargs = 1,
       help = 'Abamakefile (.abamk) containing instructions on how to build targets. If omitted ' +
              'and the current directory contains a single file matching *.abamk, that file will ' +
              'be used as makefile.'
@@ -131,11 +131,11 @@ def main(iterArgs):
    if not sMakefilePath:
       # Check if the current directory contains a single Abamakefile.
       for sFilePath in os.listdir(os.getcwd()):
-         if sFilePath.endswith('.abamk') and len(sFilePath) > len('.abamk'):
+         if sFilePath.endswith('.abamk'):
             if sMakefilePath:
                sys.stderr.write(
                   'error: multiple makefiles found in the current directory, please specify one ' +
-                  'explicitly with --makefile FILE.ABAMK\n'
+                  'explicitly with --makefile PROJECT.abamk\n'
                )
                return 1
             sMakefilePath = sFilePath
@@ -144,7 +144,7 @@ def main(iterArgs):
       if not sMakefilePath:
          sys.stderr.write(
             'error: no makefiles in current directory, please specify one explicitly with ' +
-            '--makefile FILE.ABAMK\n'
+            '--makefile PROJECT.abamk\n'
          )
          return 1
    # Load the makefile.

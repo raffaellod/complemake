@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013-2015 Raffaello D. Di Napoli
+# Copyright 2013-2016 Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
 #
@@ -77,6 +77,7 @@ import abamake.logging as logging
 import abamake.metadata as metadata
 import abamake.platform as platform
 import abamake.target as target
+import abamake.yaml as yaml
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
 
@@ -188,14 +189,24 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
+class MakefileYaml(object):
+   """Stores the attributes of a YAML abamake/makefile object."""
+
+   def __init__(self, dictYaml):
+      """TODO: comment signature"""
+
+      self.dictYaml = dictYaml
+
+####################################################################################################
+
 class Make(object):
-   """Parses an Abamakefile (.abamk) and exposes a abamake.job.Runner instance that can be used to
+   """Parses an Abamakefile (.abamk) and exposes an abamake.job.Runner instance that can be used to
    schedule target builds and run them.
 
    Example usage:
 
       mk = abamake.Make()
-      mk.parse('project.abamk')
+      mk.parse('project.abamk.yml')
       tgt = mk.get_named_target('projectbin')
       mk.build((tgt, ))
    """
@@ -435,7 +446,32 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      self._parse_doc(xml.dom.minidom.parse(sFilePath))
+      yp = yaml.YamlParser()
+      yp.set_tag_context(self)
+      # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
+      # instances will add themselves to self._m_setTargets on construction.
+      # By collecting all targets upfront we allow for Target.render_from_parsed_yaml() to always
+      # find a referenced target even it it was defined after the target on which
+      # render_from_parsed_yaml() is called.
+      o = yp.parse_file(sFilePath)
+      # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
+
+      if not isinstance(o, MakefileYaml):
+         raise MakefileError(
+            'the top level object of an Abamake makefile must be of type !abamake/makefile'
+         )
+      dictRemaining = o.dictYaml.get('targets')
+      while dictRemaining:
+         sName, ptgt = dictRemaining.popitem()
+         if not isinstance(ptgt, target.TargetYamlPair):
+            # TODO: this should be detected during parsing, not now.
+            raise MakefileError(
+               '{}: invalid attribute “{}”; expected type abamake/target/*'.format(self, sName)
+            )
+         dictAdditionalToRender = ptgt.tgt.render_from_parsed_yaml(ptgt.dictYaml)
+         if dictAdditionalToRender:
+            # No collisions here, since add_named_target() blocks identically-named targets.
+            dictRemaining.update(dictAdditionalToRender)
 
       # Make sure the makefile doesn’t define circular dependencies.
       self.validate_dependency_graph()
@@ -445,77 +481,6 @@ class Make(object):
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
-
-   def _parse_collect_targets(self, eltParent, listTargetsAndNodes, bTopLevel = True):
-      """Recursively parses and collects all the targets defined in the specified XML element.
-
-      xml.dom.Element eltParent
-         Parent XML element to parse.
-      list(tuple(abamake.target.Target, xml.dom.Element)*) listTargetsAndNodes
-         List of parsed targets and their associated XML nodes. This method will add to this list
-         any additional targets parsed.
-      bool bTopLevel
-         If True, this method will raise exceptions in case of non-target XML nodes; otherwise it
-         assumes that a later invocation of Target.parse_makefile_element_child() will validate the
-         contents of eltParent.
-      """
-
-      for elt in eltParent.childNodes:
-         # Skip whitespace/comment nodes (unimportant) and non-top-level-nodes without children
-         # (they’re references, not definitions).
-         if not is_node_whitespace(elt) and (bTopLevel or elt.hasChildNodes()):
-            if elt.nodeType == elt.ELEMENT_NODE:
-               # Pick an abamake.target.Target subclass for this target type.
-               clsTarget = target.Target.select_subclass(elt)
-               if clsTarget:
-                  # Instantiate the Target-derived class, assigning it its name.
-                  tgt = clsTarget.parse_makefile_element(self, elt)
-                  self.add_target(tgt)
-                  listTargetsAndNodes.append((tgt, elt))
-                  # Scan for nested target definitions.
-                  self._parse_collect_targets(elt, listTargetsAndNodes, False)
-               elif bTopLevel:
-                  raise MakefileSyntaxError(
-                     '<{}>: not a target definition XML element'.format(elt.nodeName)
-                  )
-            elif bTopLevel:
-               raise MakefileSyntaxError(
-                  'expected target definition XML element, found: {}'.format(elt.nodeName)
-               )
-
-   def _parse_doc(self, doc):
-      """Parses a DOM representation of an Abamakefile.
-
-      xml.dom.Document doc
-         XML document to parse.
-      """
-
-      doc.documentElement.normalize()
-
-      # Do a first scan of the document to instantiate all the defined targets and associated with
-      # their respective XML elements. By instantiating all targets upfront we allow for
-      # Target.parse_makefile_element_child() to always find a referenced target even it it was
-      # defined after the target on which parse_makefile_element_child() is called, and to determine
-      # on-the-fly whether a referenced <dynlib> is a target we should build or if we should expect
-      # to find it somewhere else.
-      listTargetsAndNodes = []
-      self._parse_collect_targets(doc.documentElement, listTargetsAndNodes)
-
-      # Now that all the targets have been instantiated, we can have them parse their definitions.
-      for tgt, eltTarget in listTargetsAndNodes:
-         for nd in eltTarget.childNodes:
-            # Skip whitespace/comment nodes.
-            if not is_node_whitespace(nd):
-               if nd.nodeType != nd.ELEMENT_NODE:
-                  raise MakefileSyntaxError(
-                     '{}: expected XML element, found: {}'.format(tgt, nd.nodeName)
-                  )
-               if not tgt.parse_makefile_element_child(nd):
-                  # Target.parse_makefile_element_child() returns False when it doesn’t know how to
-                  # handle the specified child element.
-                  raise MakefileSyntaxError(
-                     '{}: unexpected XML element: <{}>'.format(tgt, nd.nodeName)
-                  )
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
@@ -604,3 +569,9 @@ class Make(object):
       # Restore the dependents and mark this subtree as validated.
       del listDependents[len(listDependents) - 1]
       setValidatedSubtrees.add(tgtSubRoot)
+
+   @staticmethod
+   @yaml.YamlParser.local_tag('abamake/makefile')
+   def _yaml_constructor(yp, mk, sKey, o):
+      # TODO: validate o.
+      return MakefileYaml(o)

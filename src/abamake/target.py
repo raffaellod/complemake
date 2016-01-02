@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013-2015 Raffaello D. Di Napoli
+# Copyright 2013-2016 Raffaello D. Di Napoli
 #
 # This file is part of Abamake.
 #
@@ -27,7 +27,30 @@ import weakref
 import abamake
 import abamake.job
 import abamake.tool
+import abamake.yaml
 
+
+####################################################################################################
+
+class TargetYamlPair(object):
+   """Stores a Target and its corresponding source YAML object."""
+
+   def __init__(self, tgt, dictYaml):
+      """TODO: comment signature"""
+
+      self.tgt = tgt
+      self.dictYaml = dictYaml
+
+####################################################################################################
+
+class OutputTransformYamlPair(object):
+   """Stores an output transform class and its corresponding source YAML object."""
+
+   def __init__(self, ot, oYaml):
+      """TODO: comment signature"""
+
+      self.ot = ot
+      self.oYaml = oYaml
 
 ####################################################################################################
 
@@ -159,9 +182,6 @@ class Target(Dependency):
    _m_listDependencies = None
    # Weak ref to the owning make instance.
    _m_mk = None
-   # Mapping between Target subclasses and Abamakefile type IDs (XML element names). To add to this
-   # mapping, decorate a derived class with @Target.makefile_type_id('xml-element-name').
-   _sm_dictTypeIds = {}
    # If True, the target has been built or at least verified to be up-to-date.
    _m_bUpToDate = False
 
@@ -319,70 +339,51 @@ class Target(Dependency):
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
-   class makefile_type_id(object):
-      """Decorator to teach Target.select_subclass() the association of the decorated class with an
-      Abamakefile type IDs (XML element name).
+   def render_from_parsed_yaml(self, dictYaml):
+      """Validates and consumes the specified YAML object representing the target.
 
-      str sNodeName
-         Name of the element to associate with the decorated class.
+      dict(str: object) dictYaml
+         YAML to render.
+      dict(std: abamake.target.TargetYamlPair) return
+         Additional nested targets encountered, that will need to be rendered themselves.
       """
 
-      def __init__(self, sNodeName):
-         self._m_sNodeName = sNodeName
+      # Default implementation: no nested targets found.
+      return {}
 
-      def __call__(self, clsDerived):
-         Target._sm_dictTypeIds[self._m_sNodeName] = clsDerived
-         return clsDerived
+   def render_source_from_parsed_yaml(self, mk, o):
+      """TODO: comment signature."""
 
-   @classmethod
-   def parse_makefile_element(cls, mk, elt):
-      """Validates and processes the specified target XML element, throwing exceptions if any
-      attributes have invalid values or if any required ones are missing. The element name as
-      already been verified, but its attributes have not. Implementations should not descend into
-      the contents of the source element.
+      if isinstance(o, str):
+         sFilePath = o
+         sTool = None
+      elif isinstance(o, dict):
+         sFilePath = o.get('path')
+         if sFilePath is None:
+            raise abamake.MakefileError(
+               '{}: non-string element in “sources” must include “path” '
+                  'attribute'.format(self)
+            )
+         sTool = o.get('tool')
+      else:
+         raise abamake.MakefileError('{}: invalid “sources” element; {}'.format(self, o))
+      # Pick the correct target class based on the file name extension and the tool to use.
+      if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
+         if sTool is None:
+            cls = CxxObjectTarget
+         elif sTool == 'preproc':
+            cls = CxxPreprocessedTarget
+         else:
+            raise abamake.MakefileError(
+               '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
+            )
+      else:
+         raise abamake.MakefileError(
+            '{}: unsupported source file type: {}'.format(self, sFilePath)
+         )
 
-      abamake.Make mk
-         Make instance to associate to the returned Target.
-      xml.dom.Element elt
-         Element to parse.
-      abamake.target.Target
-         New Target instantiated from the contents of elt.
-      """
-
-      # Every target must have a name attribute.
-      sName = elt.getAttribute('name')
-      if not sName:
-         raise MakefileSyntaxError('<{}>: missing “name” attribute'.format(elt.nodeName))
-      # Instantiate the Target-derived class, assigning it its name.
-      return cls(mk, sName)
-
-   def parse_makefile_element_child(self, elt):
-      """Validates and processes the specified child element of the target’s XML element.
-
-      xml.dom.Element elt
-         Element to parse.
-      bool return
-         True if elt was recognized and parsed, or False if it was not expected.
-      """
-
-      # Default implementation: expect no child elements.
-      return False
-
-   @classmethod
-   def select_subclass(cls, eltTarget):
-      """Returns the Target-derived class that should be instantiated to model the specified XML
-      element.
-
-      Subclasses declare their association to an XML element name by using the class decorator
-      @Target.makefile_type_id('xml-element-name').
-
-      xml.dom.Element eltTarget
-         Element to parse.
-      type return
-         Model class for eltTarget.
-      """
-
-      return cls._sm_dictTypeIds.get(eltTarget.nodeName)
+      # Create the target, passing it the file path as its source.
+      return cls(mk, sFilePath, self)
 
    def start_build(self, tgtDependent = None):
       """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
@@ -410,10 +411,15 @@ class Target(Dependency):
 
    def validate(self):
       """Checks that the target doesn’t have invalid settings that were undetectable by
-      Target.parse_makefile_element_child().
+      Target.render_from_parsed_yaml().
       """
 
       pass
+
+   @classmethod
+   def yaml_constructor(cls, yp, mk, sKey, o):
+      tgt = cls(mk)
+      return TargetYamlPair(tgt, o)
 
 ####################################################################################################
 
@@ -433,6 +439,12 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       NamedDependencyMixIn.__init__(self, sName)
 
       mk.add_named_target(self, sName)
+
+   @classmethod
+   def yaml_constructor(cls, yp, mk, sKey, o):
+      # TODO: validate sKey.
+      tgt = cls(mk, sKey)
+      return TargetYamlPair(tgt, o)
 
 ####################################################################################################
 
@@ -474,7 +486,7 @@ class ProcessedSourceTarget(FileTarget):
    # Source from which the target is built.
    _m_sSourceFilePath = None
 
-   def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput):
       """See FileTarget.__init__().
 
       abamake.Make mk
@@ -484,14 +496,13 @@ class ProcessedSourceTarget(FileTarget):
       str sSuffix
          Suffix that is added to sSourceFilePath to generate the target’s file path.
       abamake.target.Target tgtFinalOutput
-         Target that this target’s output will be linked into. If omitted, no output-driven
-         configuration will be applied to the Tool instance generating this output.
+         Target that this target’s output will be linked into.
       """
 
       FileTarget.__init__(self, mk, os.path.join(mk.output_dir, 'int', sSourceFilePath + sSuffix))
 
       self._m_sSourceFilePath = sSourceFilePath
-      self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput) if tgtFinalOutput else None
+      self._m_tgtFinalOutput = weakref.ref(tgtFinalOutput)
       self.add_dependency(ForeignSourceDependency(self._m_sSourceFilePath))
       # TODO: add other external dependencies.
 
@@ -500,7 +511,7 @@ class ProcessedSourceTarget(FileTarget):
 class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
-   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """See ProcessedSourceTarget.__init__()."""
 
       ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, '.i', tgtFinalOutput)
@@ -517,8 +528,10 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       cxx.add_input(self._m_sSourceFilePath)
 
       if self._m_tgtFinalOutput:
-         # Let the final output configure the compiler.
-         self._m_tgtFinalOutput().configure_compiler(cxx)
+         tgtFinalOutput = self._m_tgtFinalOutput()
+         if isinstance(tgtFinalOutput, BinaryTarget):
+            # Let the final output configure the compiler.
+            tgtFinalOutput.configure_compiler(cxx)
 
       # Let the platform configure the compiler.
       mk.target_platform.configure_tool(cxx)
@@ -562,7 +575,7 @@ class ObjectTarget(ProcessedSourceTarget):
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
-   def __init__(self, mk, sSourceFilePath, tgtFinalOutput = None):
+   def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """See ObjectTarget.__init__()."""
 
       ObjectTarget.__init__(
@@ -581,12 +594,14 @@ class CxxObjectTarget(ObjectTarget):
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
-      if False:
+      if True:
          cxx.add_macro('ABAMAKE_USING_VALGRIND')
 
       if self._m_tgtFinalOutput:
-         # Let the final output configure the compiler.
-         self._m_tgtFinalOutput().configure_compiler(cxx)
+         tgtFinalOutput = self._m_tgtFinalOutput()
+         if isinstance(tgtFinalOutput, BinaryTarget):
+            # Let the final output configure the compiler.
+            tgtFinalOutput.configure_compiler(cxx)
 
       # Let the platform configure the compiler.
       mk.target_platform.configure_tool(cxx)
@@ -667,43 +682,67 @@ class BinaryTarget(FileTarget):
 
       return lnk
 
-   def parse_makefile_element_child(self, elt):
-      """See FileTarget.parse_makefile_element_child()."""
+   def render_from_parsed_yaml(self, dictYaml):
+      """See FileTarget.render_from_parsed_yaml()."""
 
       mk = self._m_mk()
-      if elt.nodeName == 'source':
-         # Pick the correct target class based on the file name extension.
-         sFilePath = elt.getAttribute('path')
-         if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
-            clsObjTarget = CxxObjectTarget
-         else:
+      dictAdditionalToRender = FileTarget.render_from_parsed_yaml(self, dictYaml)
+
+      iterSources = dictYaml.get('sources')
+      if iterSources:
+         if not isinstance(iterSources, list):
+            # TODO: this should be detected during parsing, not here.
             raise abamake.MakefileError(
-               '{}: unsupported source file type: {}'.format(self, sFilePath)
+               '{}: invalid “sources” attribute; expected sequence'.format(self)
             )
-         # Create an object target with the file path as its source.
-         tgtObj = clsObjTarget(mk, sFilePath, self)
-         self.add_dependency(tgtObj)
-      elif elt.nodeName == 'dynlib':
-         # Check if this makefile can build this dynamic library.
-         sName = elt.getAttribute('name')
-         # If the library is a known target (i.e. it’s built by this makefile), assign it as a
-         # dependency of self; else just add the library name.
-         dep = mk.get_named_target(sName, None)
-         if not dep:
-            dep = ForeignLibDependency(sName)
-         self.add_dependency(dep)
-      elif elt.nodeName in ('exetest', 'tooltest'):
-         # A test must be built after the target it’s supposed to test.
-         sName = elt.getAttribute('name')
-         tgtTest = mk.get_named_target(sName, None)
-         if not tgtTest:
-            raise abamake.TargetReferenceError(
-               '{}: could not find definition of referenced test: {}'.format(self, sName)
+         for o in iterSources:
+            tgt = self.render_source_from_parsed_yaml(mk, o)
+            # TODO: validate the type of tgt?
+            self.add_dependency(tgt)
+
+      iterLibs = dictYaml.get('libraries')
+      if iterLibs:
+         if not isinstance(iterLibs, list):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “libraries” attribute; expected sequence'.format(self)
             )
-         tgtTest.add_dependency(self)
-      else:
-         return FileTarget.parse_makefile_element_child(self, elt)
-      return True
+         for o in iterLibs:
+            # For now, only strings representing a library name are supported.
+            if isinstance(o, str):
+               sName = o
+            else:
+               raise abamake.MakefileError('{}: invalid “libraries” element; {}'.format(self, o))
+            # If the library is a known target (i.e. it’s built by this makefile), assign the Target
+            # instance as a dependency of self; else add it as a foreign dependency, which is just a
+            # library name for the linker.
+            dep = mk.get_named_target(sName, None)
+            if not dep:
+               dep = ForeignLibDependency(sName)
+            self.add_dependency(dep)
+
+      dictTests = dictYaml.get('tests')
+      if dictTests:
+         if not isinstance(dictTests, dict):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “tests” attribute; expected mapping'.format(self)
+            )
+         for sName, o in dictTests.items():
+            if not isinstance(o, TargetYamlPair) or not isinstance(o.tgt,
+               (ExecutableTestTarget, ToolTestTarget)
+            ):
+               # TODO: this should be detected during parsing, not here.
+               raise abamake.MakefileError(
+                  '{}: invalid “tests” sequence element; expected type '.format(self) +
+                  '!abamake/target/exetest or !abamake/target/tooltest'
+               )
+            # A test must be built after the target it’s supposed to test.
+            o.tgt.add_dependency(self)
+            # Ensure that this target is rendered.
+            dictAdditionalToRender[sName] = o
+
+      return dictAdditionalToRender
 
 ####################################################################################################
 
@@ -726,7 +765,8 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-@Target.makefile_type_id('exe')
+#@Target.makefile_type_id('exe')
+@abamake.yaml.YamlParser.local_tag('abamake/target/exe')
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
@@ -747,7 +787,8 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@Target.makefile_type_id('dynlib')
+#@Target.makefile_type_id('dynlib')
+@abamake.yaml.YamlParser.local_tag('abamake/target/dynlib')
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
@@ -792,7 +833,8 @@ class DynLibTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@Target.makefile_type_id('tooltest')
+#@Target.makefile_type_id('tooltest')
+@abamake.yaml.YamlParser.local_tag('abamake/target/tooltest')
 class ToolTestTarget(NamedTargetMixIn, Target):
    """Target that executes a test."""
 
@@ -874,50 +916,75 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
       self._on_build_tool_output_validated()
 
-   def parse_makefile_element_child(self, elt):
-      """See Target.parse_makefile_element_child()."""
+   def render_from_parsed_yaml(self, dictYaml):
+      """See Target.render_from_parsed_yaml()."""
+
+      # TODO: refactor code shared with ExecutableTestTarget.render_from_parsed_yaml().
 
       mk = self._m_mk()
-      if elt.nodeName in ('exetest', 'tooltest'):
-         raise abamake.MakefileSyntaxError('<test> not allowed in <test>')
-      elif elt.nodeName == 'source' and elt.hasAttribute('tool'):
-         # Due to specifying a non-default tool, this <source> does not generate an object file or
-         # an executable.
-         sFilePath = elt.getAttribute('path')
-         sTool = elt.getAttribute('tool')
-         # Pick the correct target class based on the file name extension and the tool to use.
-         if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
-            if sTool == 'preproc':
-               clsPreprocTarget = CxxPreprocessedTarget
-            else:
-               raise abamake.MakefileError(
-                  '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
-               )
-         else:
+      dictAdditionalToRender = Target.render_from_parsed_yaml(self, dictYaml)
+
+      iterSources = dictYaml.get('sources')
+      if iterSources:
+         if not isinstance(iterSources, list):
+            # TODO: this should be detected during parsing, not here.
             raise abamake.MakefileError(
-               '{}: unsupported source file type: {}'.format(self, sFilePath)
+               '{}: invalid “sources” attribute; expected sequence'.format(self)
             )
-         # Create a preprocessed target with the file path as its source.
-         tgtObj = clsPreprocTarget(mk, sFilePath)
-         # Note that we don’t invoke our add_dependency() override.
-         Target.add_dependency(self, tgtObj)
-      elif elt.nodeName == 'expected-output':
-         dep = OutputRerefenceDependency(elt.getAttribute('path'))
-         # Note that we don’t invoke our add_dependency() override.
-         Target.add_dependency(self, dep)
-      elif elt.nodeName == 'output-transform':
-         sFilter = elt.getAttribute('filter')
-         if sFilter:
-            self._m_reFilter = re.compile(sFilter, re.DOTALL)
-         else:
-            raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
-      elif elt.nodeName == 'script':
-         dep = TestExecScriptDependency(elt.getAttribute('path'))
+         for o in iterSources:
+            tgt = self.render_source_from_parsed_yaml(mk, o)
+            # TODO: validate the type of tgt?
+            self.add_dependency(tgt)
+
+      sExpectedOutputFilePath = dictYaml.get('expected output')
+      if sExpectedOutputFilePath:
+         if not isinstance(sExpectedOutputFilePath, str):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “expected output” attribute; expected string'.format(self)
+            )
+         dep = OutputRerefenceDependency(sExpectedOutputFilePath)
+         self.add_dependency(dep)
+
+      iterOutputTransforms = dictYaml.get('output transform')
+      if iterOutputTransforms:
+         if not isinstance(iterOutputTransforms, list):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “output transform” attribute; expected sequence'.format(self)
+            )
+         for o in iterOutputTransforms:
+            if not isinstance(o, OutputTransformYamlPair):
+               # TODO: this should be detected during parsing, not here.
+               raise abamake.MakefileError(
+                  '{}: invalid “output transform” element: {}'.format(self, o)
+               )
+            if isinstance(o.ot, TargetOutputTransform):
+               if isinstance(o.oYaml, str):
+                  sFilter = o.oYaml
+               else:
+                  raise abamake.MakefileError(
+                     '{}: unsupported format for “output filter” transformation: {}'.format(
+                        self, o.oYaml
+                     )
+                  )
+               self._m_reFilter = re.compile(sFilter, re.DOTALL)
+            else:
+               raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
+
+      sScriptFilePath = dictYaml.get('script')
+      if sScriptFilePath:
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
-         # Note that we don’t invoke our add_dependency() override.
-         Target.add_dependency(self, dep)
-      return True
+         if not isinstance(sScriptFilePath, str):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “script” attribute; expected string'.format(self)
+            )
+         dep = TestExecScriptDependency(sScriptFilePath)
+         self.add_dependency(self, dep)
+
+      return dictAdditionalToRender
 
    def _transform_comparison_operand(self, oCmpOp):
       """Transforms a comparison operand according to any <output-transform> rules specified in the
@@ -962,7 +1029,8 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
 ####################################################################################################
 
-@Target.makefile_type_id('exetest')
+#@Target.makefile_type_id('exetest')
+@abamake.yaml.YamlParser.local_tag('abamake/target/exetest')
 class ExecutableTestTarget(NamedBinaryTarget):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
@@ -1039,7 +1107,7 @@ class ExecutableTestTarget(NamedBinaryTarget):
          if isinstance(dep, TestExecScriptDependency):
             # We also have a “script” to drive the test.
             listArgs = [dep.file_path]
-            # TODO: support more arguments once parse_makefile_element_child() can recognize them.
+            # TODO: support more arguments once render_from_parsed_yaml() can recognize them.
             break
       else:
          listArgs = []
@@ -1136,31 +1204,60 @@ class ExecutableTestTarget(NamedBinaryTarget):
 
       NamedBinaryTarget._on_build_tool_run_complete(self)
 
-   def parse_makefile_element_child(self, elt):
-      """See NamedBinaryTarget.parse_makefile_element_child()."""
+   def render_from_parsed_yaml(self, dictYaml):
+      """See NamedBinaryTarget.render_from_parsed_yaml()."""
+
+      # TODO: refactor code shared with ToolTestTarget.render_from_parsed_yaml().
 
       mk = self._m_mk()
-      if elt.nodeName in ('exetest', 'tooltest'):
-         raise abamake.MakefileSyntaxError('<test> not allowed in <test>')
-      elif elt.nodeName == 'expected-output':
-         dep = OutputRerefenceDependency(elt.getAttribute('path'))
+      dictAdditionalToRender = NamedBinaryTarget.render_from_parsed_yaml(self, dictYaml)
+
+      sExpectedOutputFilePath = dictYaml.get('expected output')
+      if sExpectedOutputFilePath:
+         dep = OutputRerefenceDependency(sExpectedOutputFilePath)
          # Note that we don’t invoke our add_dependency() override.
          NamedBinaryTarget.add_dependency(self, dep)
-      elif elt.nodeName == 'output-transform':
-         sFilter = elt.getAttribute('filter')
-         if sFilter:
-            self._m_reFilter = re.compile(sFilter, re.DOTALL)
-         else:
-            raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
-      elif elt.nodeName == 'script':
-         dep = TestExecScriptDependency(elt.getAttribute('path'))
+
+      iterOutputTransforms = dictYaml.get('output transform')
+      if iterOutputTransforms:
+         if not isinstance(iterOutputTransforms, list):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “output transform” attribute; expected sequence'.format(self)
+            )
+         for o in iterOutputTransforms:
+            if not isinstance(o, OutputTransformYamlPair):
+               # TODO: this should be detected during parsing, not here.
+               raise abamake.MakefileError(
+                  '{}: invalid “output transform” element: {}'.format(self, o)
+               )
+            if isinstance(o.ot, TargetOutputTransform):
+               if isinstance(o.oYaml, str):
+                  sFilter = o.oYaml
+               else:
+                  raise abamake.MakefileError(
+                     '{}: unsupported format for “output filter” transformation: {}'.format(
+                        self, o.oYaml
+                     )
+                  )
+               self._m_reFilter = re.compile(sFilter, re.DOTALL)
+            else:
+               raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
+
+      sScriptFilePath = dictYaml.get('script')
+      if sScriptFilePath:
          # TODO: support <script name="…"> to refer to a program built by the same makefile.
          # TODO: support more attributes, such as command-line args for the script.
+         if not isinstance(sScriptFilePath, str):
+            # TODO: this should be detected during parsing, not here.
+            raise abamake.MakefileError(
+               '{}: invalid “script” attribute; expected string'.format(self)
+            )
+         dep = TestExecScriptDependency(sScriptFilePath)
          # Note that we don’t invoke our add_dependency() override.
          NamedBinaryTarget.add_dependency(self, dep)
-      else:
-         return NamedBinaryTarget.parse_makefile_element_child(self, elt)
-      return True
+
+      return dictAdditionalToRender
 
    def _transform_comparison_operand(self, oCmpOp):
       """Transforms a comparison operand according to any <output-transform> rules specified in the
@@ -1203,3 +1300,21 @@ class ExecutableTestTarget(NamedBinaryTarget):
          raise abamake.MakefileError(
             '{}: can’t compare the test output against more than one file'.format(self)
          )
+
+####################################################################################################
+
+class TargetOutputTransform(object):
+   """TODO: comment."""
+
+   @classmethod
+   def yaml_constructor(cls, yp, mk, sKey, o):
+      ot = cls()
+      return OutputTransformYamlPair(ot, o)
+
+####################################################################################################
+
+@abamake.yaml.YamlParser.local_tag('abamake/target/output-filter')
+class TargetOutputFilter(TargetOutputTransform):
+   """TODO: comment."""
+
+   pass
