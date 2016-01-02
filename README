@@ -86,27 +86,24 @@ time (hopefully expanding).
 
 Supported build systems:
 
-•  Clang + Apple LD
-   •  Clang 3.3 (later versions to be tested)
-   •  LD (version to be determined – anything from OSX 10.8 on should work)
-
-•  Clang + GNU LD
-   •  Clang 3.3 (later versions to be tested)
-   •  binutils (version to be determined – anything from 2010 on should work)
-
 •  GNU toolchain
    •  GCC 4.7 to 5.2
-   •  binutils (version to be determined – anything from 2010 on should work)
+   •  binutils 2.20 or later
 
-•  Microsoft toolchain
-   •  Visual C++ 10 (MSC 16 / Visual Studio 2010)
+•  Microsoft Visual Studio 2010-2013 (Visual C++ 10-12 / MSC 16-18)
+
+•  Clang + GNU LD
+   •  Clang 3.5
+   •  binutils 2.20 or later
+
+•  Apple SDK for OS X 10.10 Yosemite and 10.9 Mavericks (included in Xcode 6)
 
 Supported operating systems:
 
-•  GNU/Linux;
-•  OSX;
-•  FreeBSD;
-•  Microsoft Windows.
+•  GNU/Linux 2.6 or later
+•  Microsoft Windows XP (5.1) or later
+•  FreeBSD 10 or later
+•  OS X 10.9 Mavericks or later
 
 Abamake requires Python 2.7 or 3.2 or later to be installed on the build host
 system.
