@@ -177,17 +177,31 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
-class MakefileYaml(object):
+@yaml.Parser.local_tag('abamake/makefile')
+class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 
-   def __init__(self, dictYaml):
+   def __init__(self, yp, sKey, oYaml, oContext):
       """TODO: comment signature"""
 
-      self.dictYaml = dictYaml
+      # TODO: validate oYaml.
+      listTargets = oYaml.get('targets')
+      # TODO: validate listTargets.
+      self._m_listTargets = listTargets
+
+   def _get_targets(self):
+      return self._m_listTargets
+
+   targets = property(_get_targets, doc = """
+      Returns the top-level targets declared in the makefile.
+   """)
+
+   @staticmethod
+   def yaml_constructor(yp, sKey, oYaml, oContext):
+      return Makefile(yp, sKey, oYaml, oContext)
 
 ####################################################################################################
 
-@yaml.Parser.local_tag('abamake/makefile')
 class Make(object):
    """Parses an Abamakefile (.abamk) and exposes an abamake.job.Runner instance that can be used to
    schedule target builds and run them.
@@ -445,11 +459,11 @@ class Make(object):
       o = yp.parse_file(sFilePath)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
 
-      if not isinstance(o, MakefileYaml):
+      if not isinstance(o, Makefile):
          raise MakefileError(
             'the top level object of an Abamake makefile must be of type !abamake/makefile'
          )
-      dictRemaining = o.dictYaml.get('targets')
+      dictRemaining = o.targets
       while dictRemaining:
          sName, ptgt = dictRemaining.popitem()
          if not isinstance(ptgt, target.TargetYamlPair):
@@ -558,8 +572,3 @@ class Make(object):
       # Restore the dependents and mark this subtree as validated.
       del listDependents[len(listDependents) - 1]
       setValidatedSubtrees.add(tgtSubRoot)
-
-   @staticmethod
-   def yaml_constructor(yp, sKey, oYaml, oContext):
-      # TODO: validate oYaml.
-      return MakefileYaml(oYaml)
