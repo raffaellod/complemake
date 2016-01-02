@@ -47,17 +47,6 @@ class TargetYamlPair(object):
 
 ####################################################################################################
 
-class OutputTransformYamlPair(object):
-   """Stores an output transform class and its corresponding source YAML object."""
-
-   def __init__(self, ot, oYaml):
-      """TODO: comment signature"""
-
-      self.ot = ot
-      self.oYaml = oYaml
-
-####################################################################################################
-
 class Dependency(object):
    """Represents an abstract dependency with no additional information."""
 
@@ -842,8 +831,8 @@ class ToolTestTarget(NamedTargetMixIn, Target):
    # True if comparison operands should be treated as amorphous BLOBs, or False if they should be
    # treated as strings.
    _m_bBinaryCompare = None
-   # Filter (regex) to apply to the comparison operands.
-   _m_reFilter = None
+   # Transformations to apply to the output.
+   _m_listOutputTransforms = None
 
    def __init__(self, mk, sName):
       """See NamedTargetMixIn.__init__() and Target.__init__().
@@ -856,6 +845,8 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
       NamedTargetMixIn.__init__(self, mk, sName)
       Target.__init__(self, mk)
+
+      self._m_listOutputTransforms = []
 
    def _build_tool_run(self):
       """See Target._build_tool_run()."""
@@ -955,21 +946,8 @@ class ToolTestTarget(NamedTargetMixIn, Target):
                '{}: invalid “output transform” attribute; expected sequence'.format(self)
             )
          for o in iterOutputTransforms:
-            if not isinstance(o, OutputTransformYamlPair):
-               # TODO: this should be detected during parsing, not here.
-               raise abamake.MakefileError(
-                  '{}: invalid “output transform” element: {}'.format(self, o)
-               )
-            if isinstance(o.ot, TargetOutputTransform):
-               if isinstance(o.oYaml, basestring):
-                  sFilter = o.oYaml
-               else:
-                  raise abamake.MakefileError(
-                     '{}: unsupported format for “output filter” transformation: {}'.format(
-                        self, o.oYaml
-                     )
-                  )
-               self._m_reFilter = re.compile(sFilter, re.DOTALL)
+            if isinstance(o, OutputFilter):
+               self._m_listOutputTransforms.append(o)
             else:
                raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
 
@@ -1003,14 +981,8 @@ class ToolTestTarget(NamedTargetMixIn, Target):
 
       # TODO: refactor code shared with ExecutableTestTarget._transform_comparison_operand().
 
-      # Apply the only supported filter.
-      # TODO: use an interface/specialization to apply different transformations.
-      if self._m_reFilter:
-         # This transformation requires that the operand is a string, so convert oCmpOp into one.
-         if not isinstance(oCmpOp, basestring):
-            oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
-         oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
-
+      for ot in self._m_listOutputTransforms:
+         oCmpOp = ot(oCmpOp)
       return oCmpOp
 
    def validate(self):
@@ -1039,8 +1011,8 @@ class ExecutableTestTarget(NamedBinaryTarget):
    # True if comparison operands should be treated as amorphous BLOBS, or False if they should be
    # treated as strings.
    _m_bBinaryCompare = None
-   # Filter (regex) to apply to the comparison operands.
-   _m_reFilter = None
+   # Transformations to apply to the output.
+   _m_listOutputTransforms = None
    # True if the test executable uses abc::testing to execute test cases and report their results,
    # making it compatible with being run via AbacladeTestJob, or False if it’s a monolithic single
    # test, executed via ExternalCmdCapturingJob.
@@ -1062,6 +1034,8 @@ class ExecutableTestTarget(NamedBinaryTarget):
       NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
          mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(sName)
       ))
+
+      self._m_listOutputTransforms = []
 
    def add_dependency(self, dep):
       """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
@@ -1226,21 +1200,8 @@ class ExecutableTestTarget(NamedBinaryTarget):
                '{}: invalid “output transform” attribute; expected sequence'.format(self)
             )
          for o in iterOutputTransforms:
-            if not isinstance(o, OutputTransformYamlPair):
-               # TODO: this should be detected during parsing, not here.
-               raise abamake.MakefileError(
-                  '{}: invalid “output transform” element: {}'.format(self, o)
-               )
-            if isinstance(o.ot, TargetOutputTransform):
-               if isinstance(o.oYaml, basestring):
-                  sFilter = o.oYaml
-               else:
-                  raise abamake.MakefileError(
-                     '{}: unsupported format for “output filter” transformation: {}'.format(
-                        self, o.oYaml
-                     )
-                  )
-               self._m_reFilter = re.compile(sFilter, re.DOTALL)
+            if isinstance(o, OutputFilter):
+               self._m_listOutputTransforms.append(o)
             else:
                raise abamake.MakefileError('{}: unsupported output transformation'.format(self))
 
@@ -1275,14 +1236,8 @@ class ExecutableTestTarget(NamedBinaryTarget):
 
       # TODO: refactor code shared with ToolTestTarget._transform_comparison_operand().
 
-      # Apply the only supported filter.
-      # TODO: use an interface/specialization to apply different transformations.
-      if self._m_reFilter:
-         # This transformation requires that the operand is a string, so convert oCmpOp into one.
-         if not isinstance(oCmpOp, basestring):
-            oCmpOp = str(oCmpOp, encoding = locale.getpreferredencoding())
-         oCmpOp = '\n'.join(self._m_reFilter.findall(oCmpOp))
-
+      for ot in self._m_listOutputTransforms:
+         oCmpOp = ot(oCmpOp)
       return oCmpOp
 
    def validate(self):
@@ -1303,18 +1258,50 @@ class ExecutableTestTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-class TargetOutputTransform(object):
-   """TODO: comment."""
+class OutputTransform(object):
+   """Base class for output transformations."""
 
-   @classmethod
-   def yaml_constructor(cls, yp, mk, sKey, o):
-      ot = cls()
-      return OutputTransformYamlPair(ot, o)
+   pass
 
 ####################################################################################################
 
 @abamake.yaml.Parser.local_tag('abamake/target/output-filter')
-class TargetOutputFilter(TargetOutputTransform):
-   """TODO: comment."""
+class OutputFilter(OutputTransform):
+   """Implements a filter output transformation. This works by removing any text not matching a
+   specific regular expression.
+   """
 
-   pass
+   # Filter (regex) to apply.
+   _m_re = None
+
+   def __init__(self, re):
+      """Constructor.
+
+      re.RegExp re
+         Filter regular expression.
+      """
+
+      self._m_re = re
+
+   def __call__(self, o):
+      """Function call.
+
+      object o
+         Object to transform.
+      object return
+         Transformed object.
+      """
+
+      if isinstance(o, bytes):
+         o = str(o, encoding = locale.getpreferredencoding())
+      elif not isinstance(o, str):
+         raise Error('cannot transform objects of type {}'.format(type(o).__name__))
+      return '\n'.join(self._m_re.findall(o))
+
+   @classmethod
+   def yaml_constructor(cls, yp, mk, sKey, o):
+      if isinstance(o, basestring):
+         sFilter = o
+      else:
+         yp.raise_parsing_error('expected string containing a regular expression')
+      return cls(re.compile(sFilter, re.DOTALL))
