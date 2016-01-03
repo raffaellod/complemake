@@ -19,7 +19,6 @@
 
 """YAML parser."""
 
-import collections
 import io
 import os
 import re
@@ -257,7 +256,7 @@ class Parser(object):
          for reMatcher, oConvertor in self._smc_reDefaultTypes:
             match = reMatcher.match(sRet)
             if match:
-               if isinstance(oConvertor, collections.Callable):
+               if callable(oConvertor):
                   return oConvertor(**match.groupdict())
                else:
                   return oConvertor

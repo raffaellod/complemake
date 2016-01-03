@@ -353,7 +353,7 @@ class Target(Dependency):
 
       dict(str: object) dictYaml
          YAML to render.
-      dict(std: abamake.target.TargetYamlPair) return
+      dict(str: abamake.target.TargetYamlPair) return
          Additional nested targets encountered, that will need to be rendered themselves.
       """
 
@@ -1071,7 +1071,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    def render_from_parsed_yaml(self, dictYaml):
       """See Target.render_from_parsed_yaml()."""
 
-      # TODO: refactor code shared with ExecutableTestTarget.render_from_parsed_yaml().
+      # TODO: refactor code shared with BinaryTarget.render_from_parsed_yaml().
 
       mk = self._m_mk()
       dictAdditionalToRender = Target.render_from_parsed_yaml(self, dictYaml)
@@ -1211,6 +1211,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          self._on_test_run_complete, ('TEST', self._m_sName), dictPopenArgs,
          mk.log, self.build_log_path, self.file_path + '.out'
       )
+      # TODO: FIXME? How can this catch an exception if the job is not started synchronously?
       try:
          mk.job_runner.enqueue(job)
          bStarted = True
