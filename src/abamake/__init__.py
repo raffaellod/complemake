@@ -163,13 +163,6 @@ class DependencyCycleError(MakefileError):
 
 ####################################################################################################
 
-class MakefileSyntaxError(MakefileError):
-   """Indicates a syntactical error in a makefile."""
-
-   pass
-
-####################################################################################################
-
 class TargetReferenceError(MakefileError):
    """Raised when a reference to a target can’t be resolved."""
 
