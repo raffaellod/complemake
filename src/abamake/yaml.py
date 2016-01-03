@@ -363,20 +363,17 @@ class Parser(object):
    @classmethod
    def local_tag(cls, sTag):
       """Decorator to associate in Parser a tag with a constructor. If the constructor is a static
-      function, it will be called directlyl if it’s a class, its static or class yaml_constructor()
-      method will be called.
+      function, it will be called directly; if it’s a class, a new instance will be constructed with
+      arguments self, sKey and oYaml, respectively the parser itself, the associated mapping key,
+      and the parsed (but not constructed) YAML object.
 
       str sTag
          Tag to associate to the constructor.
       """
 
       def decorate(oConstructor):
-         if isinstance(oConstructor, type):
-            fnConstructor = oConstructor.yaml_constructor
-         else:
-            fnConstructor = oConstructor
          # TODO: check for duplicates.
-         cls._sm_dictStaticLocalTags[sTag] = fnConstructor
+         cls._sm_dictStaticLocalTags[sTag] = oConstructor
          return oConstructor
 
       return decorate

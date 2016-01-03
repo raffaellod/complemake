@@ -234,10 +234,6 @@ class Makefile(object):
       Returns the top-level targets declared in the makefile.
    """)
 
-   @staticmethod
-   def yaml_constructor(yp, sKey, oYaml):
-      return Makefile(yp, sKey, oYaml)
-
 ####################################################################################################
 
 class Make(object):

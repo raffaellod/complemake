@@ -418,10 +418,6 @@ class Target(Dependency):
 
       pass
 
-   @classmethod
-   def yaml_constructor(cls, yp, sKey, oYaml):
-      return cls(yp, sKey, oYaml)
-
 ####################################################################################################
 
 class NamedTargetMixIn(NamedDependencyMixIn):
@@ -1291,7 +1287,3 @@ class FilterOutputTransform(OutputTransform):
       elif not isinstance(o, unistr):
          raise TypeError('cannot transform objects of type {}'.format(type(o).__name__))
       return '\n'.join(self._m_re.findall(o))
-
-   @classmethod
-   def yaml_constructor(cls, yp, sKey, oYaml):
-      return cls(yp, sKey, oYaml)
