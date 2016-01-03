@@ -1341,9 +1341,13 @@ class FilterOutputTransform(OutputTransform):
          Transformed object.
       """
 
+      if sys.hexversion < 0x03000000:
+         unistr = unicode
+      else:
+         unistr = str
       if isinstance(o, bytes):
-         o = str(o, encoding = locale.getpreferredencoding())
-      elif not isinstance(o, str):
+         o = unistr(o, encoding = locale.getpreferredencoding())
+      elif not isinstance(o, unistr):
          raise TypeError('cannot transform objects of type {}'.format(type(o).__name__))
       return '\n'.join(self._m_re.findall(o))
 
