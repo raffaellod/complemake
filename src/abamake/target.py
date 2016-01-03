@@ -36,17 +36,6 @@ if sys.hexversion >= 0x03000000:
 
 ####################################################################################################
 
-class TargetYamlPair(object):
-   """Stores a Target and its corresponding source YAML object."""
-
-   def __init__(self, tgt, dictYaml):
-      """TODO: comment signature"""
-
-      self.tgt = tgt
-      self.dictYaml = dictYaml
-
-####################################################################################################
-
 class Dependency(object):
    """Represents an abstract dependency with no additional information."""
 
@@ -160,6 +149,15 @@ class TestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
 
 ####################################################################################################
 
+class UndeterminedLibDependency(NamedDependencyMixIn, Dependency):
+   """Foreign or local library dependency; gets replaced by a Target subclass or
+   ForeignLibDependency during Target.validate().
+   """
+
+   pass
+
+####################################################################################################
+
 class Target(Dependency):
    """Abstract build target."""
 
@@ -202,6 +200,7 @@ class Target(Dependency):
             yp.raise_parsing_error('expected mapping')
          mk = yp.mk
       else:
+         oYaml = None
          mk, = iterArgs
       self._m_setBlockedDependents = set()
       self._m_cBlockingDependencies = 0
@@ -210,6 +209,46 @@ class Target(Dependency):
       self._m_mk = weakref.ref(mk)
       self._m_bUpToDate = False
       mk.add_target(self)
+
+      if oYaml:
+         oSources = oYaml.get('sources')
+         if oSources:
+            if not isinstance(oSources, list):
+               yp.raise_parsing_error('attribute “sources” must be a sequence')
+            for i, o in enumerate(oSources):
+               if isinstance(o, basestring):
+                  sFilePath = o
+                  sTool = None
+               elif isinstance(o, dict):
+                  sFilePath = o.get('path')
+                  if sFilePath is None:
+                     yp.raise_parsing_error((
+                        'a mapping in “sources” must specify a “path” attribute, but element ' +
+                        '[{}] does not'
+                     ).format(i))
+                  sTool = o.get('tool')
+               else:
+                  yp.raise_parsing_error((
+                     'elements of the “sources” attribute must be strings or mappings with a ' +
+                     '“path” attribute, but element [{}] does not'
+                  ).format(i))
+               # Pick the correct target class based on the file name extension and the tool to use.
+               if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
+                  if sTool is None:
+                     cls = CxxObjectTarget
+                  elif sTool == 'preproc':
+                     cls = CxxPreprocessedTarget
+                  else:
+                     yp.raise_parsing_error(
+                        'unknown tool “{}” for source file “{}”'.format(sTool, sFilePath)
+                     )
+               else:
+                  yp.raise_parsing_error('unsupported source file type “{}”'.format(sFilePath))
+
+               # Create the target, passing it the file path as its source.
+               tgt = cls(mk, sFilePath, self)
+               # TODO: validate the type of tgt?
+               self.add_dependency(tgt)
 
    def add_dependency(self, dep):
       """Adds a target dependency.
@@ -348,54 +387,6 @@ class Target(Dependency):
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
-   def render_from_parsed_yaml(self, dictYaml):
-      """Validates and consumes the specified YAML object representing the target.
-
-      dict(str: object) dictYaml
-         YAML to render.
-      dict(str: abamake.target.TargetYamlPair) return
-         Additional nested targets encountered, that will need to be rendered themselves.
-      """
-
-      # Default implementation: no nested targets found.
-      return {}
-
-   def render_source_from_parsed_yaml(self, mk, o):
-      """Renders a “sources” YAML element.
-
-      TODO: comment signature."""
-
-      if isinstance(o, basestring):
-         sFilePath = o
-         sTool = None
-      elif isinstance(o, dict):
-         sFilePath = o.get('path')
-         if sFilePath is None:
-            raise abamake.MakefileError(
-               '{}: non-string element in “sources” must include “path” '
-                  'attribute'.format(self)
-            )
-         sTool = o.get('tool')
-      else:
-         raise abamake.MakefileError('{}: invalid “sources” element; {}'.format(self, o))
-      # Pick the correct target class based on the file name extension and the tool to use.
-      if re.search(r'\.c(?:c|pp|xx)$', sFilePath):
-         if sTool is None:
-            cls = CxxObjectTarget
-         elif sTool == 'preproc':
-            cls = CxxPreprocessedTarget
-         else:
-            raise abamake.MakefileError(
-               '{}: unknown tool “{}” for source file: {}'.format(self, sTool, sFilePath)
-            )
-      else:
-         raise abamake.MakefileError(
-            '{}: unsupported source file type: {}'.format(self, sFilePath)
-         )
-
-      # Create the target, passing it the file path as its source.
-      return cls(mk, sFilePath, self)
-
    def start_build(self, tgtDependent = None):
       """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
       them to complete.
@@ -421,47 +412,30 @@ class Target(Dependency):
             self._on_build_started()
 
    def validate(self):
-      """Checks that the target doesn’t have invalid settings that were undetectable by
-      Target.render_from_parsed_yaml().
+      """Checks that the target doesn’t have invalid settings that were undetectable by the
+      constructor.
       """
 
       pass
 
    @classmethod
    def yaml_constructor(cls, yp, sKey, oYaml):
-      tgt = cls(yp, sKey, oYaml)
-      return TargetYamlPair(tgt, oYaml)
+      return cls(yp, sKey, oYaml)
 
 ####################################################################################################
 
 class NamedTargetMixIn(NamedDependencyMixIn):
    """Mixin that provides a name for a Target subclass."""
 
-   def __init__(self, *iterArgs):
-      """See NamedDependencyMixIn.__init__(). Automatically registers the name => target association
-      with the specified Make instance.
-
-      abamake.yaml.Parser yp
-         Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
-      object oYaml
-         Parsed YAML built-in type to be used to construct the new instance.
-
-      - OR -
+   def __init__(self, mk, sName):
+      """Constructor. Automatically registers the name => target association with the specified Make
+      instance.
 
       abamake.Make mk
          Make instance.
       str sName
          Dependency name.
       """
-
-      if isinstance(iterArgs[0], abamake.yaml.Parser):
-         yp, sKey, oYaml = iterArgs
-         sName = sKey
-         mk = yp.mk
-      else:
-         mk, sName = iterArgs
 
       NamedDependencyMixIn.__init__(self, sName)
 
@@ -473,8 +447,8 @@ class FileTarget(FileDependencyMixIn, Target):
    """Target that generates a file."""
 
    def __init__(self, *iterArgs):
-      """See FileDependencyMixIn.__init__() and Target.__init__(). Automatically registers the path
-      => target association with the specified Make instance.
+      """Constructor. Automatically registers the path => target association with the specified Make
+      instance.
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
@@ -488,28 +462,25 @@ class FileTarget(FileDependencyMixIn, Target):
       abamake.Make mk
          Make instance.
       str sFilePath
-         Dependency file path.
+         Target file path.
       """
 
       if isinstance(iterArgs[0], abamake.yaml.Parser):
          yp, sKey, oYaml = iterArgs
-         if isinstance(oYaml, basestring):
-            sFilePath = oYaml
-         elif isinstance(oYaml, dict):
-            sFilePath = oYaml.get('path')
-         else:
-            yp.raise_parsing_error(
-               'unexpected object used to construct {}'.format(type(self).__name__)
-            )
-         mk = yp.mk
 
-         FileDependencyMixIn.__init__(self, sFilePath)
-         Target.__init__(self, *iterArgs)
+         # This also validates that oYaml is a mapping object (dict).
+         Target.__init__(self, yp, sKey, oYaml)
+
+         mk = yp.mk
+         sFilePath = oYaml.get('path')
+         if not sFilePath or not isinstance(sFilePath, basestring):
+            yp.raise_parsing_error('missing or invalid “path” attribute')
       else:
          mk, sFilePath = iterArgs
 
-         FileDependencyMixIn.__init__(self, sFilePath)
          Target.__init__(self, mk)
+
+      FileDependencyMixIn.__init__(self, sFilePath)
 
       mk.add_file_target(self, self._m_sFilePath)
 
@@ -534,7 +505,7 @@ class ProcessedSourceTarget(FileTarget):
    _m_sSourceFilePath = None
 
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput):
-      """See FileTarget.__init__().
+      """Constructor.
 
       abamake.Make mk
          Make instance.
@@ -684,6 +655,52 @@ class CxxObjectTarget(ObjectTarget):
 class BinaryTarget(FileTarget):
    """Base class for binary (executable) target classes."""
 
+   def __init__(self, yp, sKey, oYaml):
+      """Constructor. Automatically registers the path => target association with the specified Make
+      instance.
+
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
+      """
+
+      # This also validates that oYaml is a mapping object (dict).
+      FileTarget.__init__(self, yp, sKey, oYaml)
+
+      oLibs = oYaml.get('libraries')
+      if oLibs:
+         if not isinstance(oLibs, list):
+            yp.raise_parsing_error('attribute “libraries” must be a sequence')
+         for i, o in enumerate(oLibs):
+            # For now, only strings representing a library name are supported.
+            if isinstance(o, basestring):
+               sName = o
+            else:
+               yp.raise_parsing_error((
+                  'elements of the “libraries” attribute must be strings, but element [{}] is not'
+               ).format(i))
+            # The makefile probably hasn’t yet been completely parsed, so we can’t check if the
+            # library is a known target (i.e. it’s built by this makefile). For now, just record the
+            # dependency as one that will need to be resolved later, in validate().
+            dep = UndeterminedLibDependency(sName)
+            self.add_dependency(dep)
+
+      oTests = oYaml.get('tests')
+      if oTests:
+         if not isinstance(oTests, dict):
+            yp.raise_parsing_error('attribute “tests” must be a mapping')
+         for sName, o in oTests.items():
+            if not isinstance(o, (ExecutableTestTarget, ToolTestTarget)):
+               yp.raise_parsing_error((
+                  'elements of the “tests” attribute must be of type !abamake/target/exetest or ' +
+                  '!abamake/target/tooltest, but element “{}” is not'
+               ).format(sName))
+            # A test must be built after the target it’s supposed to test.
+            o.add_dependency(self)
+
    def configure_compiler(self, tool):
       """Configures the specified Tool instance to generate code suitable for linking in this
       target.
@@ -729,86 +746,42 @@ class BinaryTarget(FileTarget):
 
       return lnk
 
-   def render_from_parsed_yaml(self, dictYaml):
-      """See FileTarget.render_from_parsed_yaml()."""
+   def validate(self):
+      """See FileTarget.validate()."""
 
       mk = self._m_mk()
-      dictAdditionalToRender = FileTarget.render_from_parsed_yaml(self, dictYaml)
-
-      iterSources = dictYaml.get('sources')
-      if iterSources:
-         if not isinstance(iterSources, list):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “sources” attribute; expected sequence'.format(self)
-            )
-         for o in iterSources:
-            tgt = self.render_source_from_parsed_yaml(mk, o)
-            # TODO: validate the type of tgt?
-            self.add_dependency(tgt)
-
-      iterLibs = dictYaml.get('libraries')
-      if iterLibs:
-         if not isinstance(iterLibs, list):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “libraries” attribute; expected sequence'.format(self)
-            )
-         for o in iterLibs:
-            # For now, only strings representing a library name are supported.
-            if isinstance(o, basestring):
-               sName = o
+      # Replace any UndeterminedLibDependency instances with either known Target instances or with
+      # ForeignLibDependency instances.
+      for i, dep in enumerate(self._m_listDependencies):
+         if isinstance(dep, UndeterminedLibDependency):
+            tgt = mk.get_named_target(dep.name, None)
+            if tgt:
+               dep = tgt
             else:
-               raise abamake.MakefileError('{}: invalid “libraries” element; {}'.format(self, o))
-            # If the library is a known target (i.e. it’s built by this makefile), assign the Target
-            # instance as a dependency of self; else add it as a foreign dependency, which is just a
-            # library name for the linker.
-            dep = mk.get_named_target(sName, None)
-            if not dep:
-               dep = ForeignLibDependency(sName)
-            self.add_dependency(dep)
+               dep = ForeignLibDependency(dep.name)
+            self._m_listDependencies[i] = dep
+         # TODO: validate the type of all other dependencies.
 
-      dictTests = dictYaml.get('tests')
-      if dictTests:
-         if not isinstance(dictTests, dict):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “tests” attribute; expected mapping'.format(self)
-            )
-         for sName, o in dictTests.items():
-            if not isinstance(o, TargetYamlPair) or not isinstance(o.tgt,
-               (ExecutableTestTarget, ToolTestTarget)
-            ):
-               # TODO: this should be detected during parsing, not here.
-               raise abamake.MakefileError(
-                  '{}: invalid “tests” sequence element; expected type '.format(self) +
-                  '!abamake/target/exetest or !abamake/target/tooltest'
-               )
-            # A test must be built after the target it’s supposed to test.
-            o.tgt.add_dependency(self)
-            # Ensure that this target is rendered.
-            dictAdditionalToRender[sName] = o
-
-      return dictAdditionalToRender
+      FileTarget.validate(self)
 
 ####################################################################################################
 
 class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    """Base for named binary (executable) target classes."""
 
-   def __init__(self, mk, sName, sFilePath):
-      """See NamedTargetMixIn.__init__() and BinaryTarget.__init__().
+   def __init__(self, yp, sKey, oYaml):
+      """Constructor.
 
-      abamake.Make mk
-         Make instance.
-      str sName
-         Target name.
-      str sFilePath
-         Target file path.
+      abamake.yaml.Parser yp
+         Parser instantiating the object.
+      str sKey
+         YAML mapping key associated to the object, or None if the object is not a mapping value.
+      object oYaml
+         Parsed YAML built-in type to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mk, sName)
-      BinaryTarget.__init__(self, mk, sFilePath)
+      NamedTargetMixIn.__init__(self, yp.mk, sKey)
+      BinaryTarget.__init__(self, yp, sKey, oYaml)
 
 ####################################################################################################
 
@@ -818,8 +791,8 @@ class ExecutableTarget(NamedBinaryTarget):
    the output base directory.
    """
 
-   def __init__(self, *iterArgs):
-      """See NamedBinaryTarget.__init__().
+   def __init__(self, yp, sKey, oYaml):
+      """Constructor.
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
@@ -827,25 +800,16 @@ class ExecutableTarget(NamedBinaryTarget):
          YAML mapping key associated to the object, or None if the object is not a mapping value.
       object oYaml
          Parsed YAML built-in type to be used to construct the new instance.
-
-      - OR -
-
-      abamake.Make mk
-         Make instance.
-      str sName
-         Target name.
       """
 
-      if isinstance(iterArgs[0], abamake.yaml.Parser):
-         yp, sKey, oYaml = iterArgs
-         sName = sKey
-         mk = yp.mk
-      else:
-         mk, sName = iterArgs
+      # If the YAML object is a mapping, default its “path” attribute with this; if it’s not a
+      # mapping the base class’ constructor will raise an exception.
+      if isinstance(oYaml, dict):
+         oYaml.setdefault('path', os.path.join(
+            yp.mk.output_dir, 'bin', yp.mk.target_platform.exe_file_name(sKey)
+         ))
 
-      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
-         mk.output_dir, 'bin', mk.target_platform.exe_file_name(sName)
-      ))
+      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
 
 ####################################################################################################
 
@@ -855,8 +819,8 @@ class DynLibTarget(NamedBinaryTarget):
    output base directory.
    """
 
-   def __init__(self, *iterArgs):
-      """See NamedBinaryTarget.__init__().
+   def __init__(self, yp, sKey, oYaml):
+      """Constructor.
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
@@ -864,25 +828,16 @@ class DynLibTarget(NamedBinaryTarget):
          YAML mapping key associated to the object, or None if the object is not a mapping value.
       object oYaml
          Parsed YAML built-in type to be used to construct the new instance.
-
-      - OR -
-
-      abamake.Make mk
-         Make instance.
-      str sName
-         Target name.
       """
 
-      if isinstance(iterArgs[0], abamake.yaml.Parser):
-         yp, sKey, oYaml = iterArgs
-         sName = sKey
-         mk = yp.mk
-      else:
-         mk, sName = iterArgs
+      # If the YAML object is a mapping, default its “path” attribute with this; if it’s not a
+      # mapping the base class’ constructor will raise an exception.
+      if isinstance(oYaml, dict):
+         oYaml.setdefault('path', os.path.join(
+            yp.mk.output_dir, 'lib', yp.mk.target_platform.dynlib_file_name(sKey)
+         ))
 
-      NamedBinaryTarget.__init__(self, mk, sName, os.path.join(
-         mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(sName)
-      ))
+      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
 
    def configure_compiler(self, tool):
       """See NamedBinaryTarget.configure_compiler()."""
@@ -948,16 +903,17 @@ class TestTargetMixIn(object):
       elif isinstance(oOutputTransforms, FilterOutputTransform):
          self._m_listOutputTransforms = [o]
       elif isinstance(oOutputTransforms, list):
-         if any(not isinstance(o, OutputTransform) for o in oOutputTransforms):
-            yp.raise_parsing_error(
-               'elements of “output transform” attribute must be of type ' +
-                  'abamake/target/*-output-transform'.format(self)
-            )
+         for i, o in enumerate(oOutputTransforms):
+            if not isinstance(o, OutputTransform):
+               yp.raise_parsing_error((
+                  'elements of “output transform” attribute must be of type ' +
+                  '!abamake/target/*-output-transform, but element [{}] is not'
+               ).format(i))
          self._m_listOutputTransforms = oOutputTransforms
       else:
          yp.raise_parsing_error(
-            'attribute “output transform” must be a sequence of, or a single abamake/target/' +
-               'output-filter object'.format(self)
+            'attribute “output transform” must be a sequence of, or a single !abamake/target/' +
+            'output-filter object'.format(self)
          )
 
       sScriptFilePath = oYaml.get('script')
@@ -994,7 +950,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
    def __init__(self, yp, sKey, oYaml):
-      """See NamedTargetMixIn.__init__() and Target.__init__().
+      """Constructor.
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
@@ -1005,7 +961,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
       """
 
       NamedTargetMixIn.__init__(self, yp.mk, sKey)
-      Target.__init__(self, yp.mk)
+      Target.__init__(self, yp, sKey, oYaml)
       TestTargetMixIn.__init__(self, yp, oYaml)
 
    def _build_tool_run(self):
@@ -1068,32 +1024,12 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
 
       self._on_build_tool_output_validated()
 
-   def render_from_parsed_yaml(self, dictYaml):
-      """See Target.render_from_parsed_yaml()."""
-
-      # TODO: refactor code shared with BinaryTarget.render_from_parsed_yaml().
-
-      mk = self._m_mk()
-      dictAdditionalToRender = Target.render_from_parsed_yaml(self, dictYaml)
-
-      iterSources = dictYaml.get('sources')
-      if iterSources:
-         if not isinstance(iterSources, list):
-            # TODO: this should be detected during parsing, not here.
-            raise abamake.MakefileError(
-               '{}: invalid “sources” attribute; expected sequence'.format(self)
-            )
-         for o in iterSources:
-            tgt = self.render_source_from_parsed_yaml(mk, o)
-            # TODO: validate the type of tgt?
-            self.add_dependency(tgt)
-
-      return dictAdditionalToRender
-
    def validate(self):
       """See Target.validate()."""
 
       Target.validate(self)
+
+      # TODO: validate the types of self.get_dependencies().
 
       # Count how many non-output (static) comparison operands have been specified for this target.
       cStaticCmpOperands = 0
@@ -1124,7 +1060,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    _m_bUsesAbacladeTesting = None
 
    def __init__(self, yp, sKey, oYaml):
-      """See NamedBinaryTarget.__init__().
+      """Constructor.
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
@@ -1134,9 +1070,14 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          Parsed YAML built-in type to be used to construct the new instance.
       """
 
-      NamedBinaryTarget.__init__(self, yp.mk, sKey, os.path.join(
-         yp.mk.output_dir, 'bin', 'test', yp.mk.target_platform.exe_file_name(sKey)
-      ))
+      # If the YAML object is a mapping, default its “path” attribute with this; if it’s not a
+      # mapping the base class’ constructor will raise an exception.
+      if isinstance(oYaml, dict):
+         oYaml.setdefault('path', os.path.join(
+            yp.mk.output_dir, 'bin', 'test', yp.mk.target_platform.exe_file_name(sKey)
+         ))
+
+      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
       TestTargetMixIn.__init__(self, yp, oYaml)
 
    def add_dependency(self, dep):
@@ -1145,7 +1086,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       """
 
       # Check if this test uses the abaclade-testing framework.
-      if isinstance(dep, (ForeignLibDependency, DynLibTarget)):
+      if isinstance(dep, (UndeterminedLibDependency, ForeignLibDependency, DynLibTarget)):
          if dep.name == 'abaclade-testing':
             self._m_bUsesAbacladeTesting = True
 
@@ -1183,7 +1124,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          if isinstance(dep, TestExecScriptDependency):
             # We also have a “script” to drive the test.
             listArgs = [dep.file_path]
-            # TODO: support more arguments once render_from_parsed_yaml() can recognize them.
+            # TODO: support more arguments once __init__() can recognize them.
             break
       else:
          listArgs = []

@@ -216,10 +216,16 @@ class Makefile(object):
          yp.raise_parsing_error(
             'unexpected object used to construct {}'.format(type(self).__name__)
          )
-      listTargets = oYaml.get('targets')
-      if not isinstance(listTargets, dict):
+      oTargets = oYaml.get('targets')
+      if not isinstance(oTargets, dict):
          yp.raise_parsing_error('invalid “targets” element; expected mapping')
-      self._m_listTargets = listTargets
+      for sKey, o in oTargets.items():
+         if not isinstance(o, target.Target):
+            yp.raise_parsing_error((
+               'elements of the “targets” attribute must be of type !abamake/target/*, but “{}” ' +
+                  'is not'
+            ).format(sKey))
+      self._m_listTargets = oTargets
 
    def _get_targets(self):
       return self._m_listTargets
@@ -484,34 +490,19 @@ class Make(object):
       yp = MakefileParser(self)
       # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
-      # By collecting all targets upfront we allow for Target.render_from_parsed_yaml() to always
-      # find a referenced target even it it was defined after the target on which
-      # render_from_parsed_yaml() is called.
+      # By collecting all targets upfront we allow for Target.validate() to always find a referenced
+      # target even it it was defined after the target on which validate() is called.
       mkf = yp.parse_file(sFilePath)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
       if not isinstance(mkf, Makefile):
-         raise MakefileError(
-            'the top level object of an Abamake makefile must be of type !abamake/makefile'
+         yp.raise_parsing_error(
+            'the top level object of an Abamake makefile must be of type abamake/makefile'
          )
-
-      dictRemaining = mkf.targets
-      while dictRemaining:
-         sName, ptgt = dictRemaining.popitem()
-         if not isinstance(ptgt, target.TargetYamlPair):
-            # TODO: this should be detected during parsing, not now.
-            raise MakefileError(
-               '{}: invalid attribute “{}”; expected type abamake/target/*'.format(self, sName)
-            )
-         dictAdditionalToRender = ptgt.tgt.render_from_parsed_yaml(ptgt.dictYaml)
-         if dictAdditionalToRender:
-            # No collisions here, since add_named_target() blocks identically-named targets.
-            dictRemaining.update(dictAdditionalToRender)
-
-      # Make sure the makefile doesn’t define circular dependencies.
-      self.validate_dependency_graph()
       # Validate each target.
       for tgt in self._m_setTargets:
          tgt.validate()
+      # Make sure the makefile doesn’t define circular dependencies.
+      self.validate_dependency_graph()
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
       self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
