@@ -69,17 +69,7 @@ TODO: link to documentation for abc::testing support in Abamake.
 """
 
 import os
-import re
 import sys
-import xml.dom.minidom
-
-import abamake.job as job
-import abamake.logging as logging
-import abamake.make as make
-import abamake.metadata as metadata
-import abamake.platform as platform
-import abamake.target as target
-import abamake.yaml as yaml
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
 if sys.hexversion >= 0x03000000:

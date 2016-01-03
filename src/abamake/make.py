@@ -71,14 +71,13 @@ TODO: link to documentation for abc::testing support in Abamake.
 import os
 import re
 import sys
-import xml.dom.minidom
 
-import abamake.job as job
-import abamake.logging as logging
-import abamake.metadata as metadata
-import abamake.platform as platform
-import abamake.target as target
-import abamake.yaml as yaml
+import abamake.job
+import abamake.logging
+import abamake.metadata
+import abamake.platform
+import abamake.target
+import abamake.yaml
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
 if sys.hexversion >= 0x03000000:
@@ -133,13 +132,13 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
-class MakefileParser(yaml.Parser):
+class MakefileParser(abamake.yaml.Parser):
    """Parser of YAML Abamakefiles."""
 
    def __init__(self, mk):
       """TODO: comment signature"""
 
-      yaml.Parser.__init__(self)
+      abamake.yaml.Parser.__init__(self)
 
       self._m_mk = mk
 
@@ -150,7 +149,7 @@ class MakefileParser(yaml.Parser):
 
 ####################################################################################################
 
-@yaml.Parser.local_tag('abamake/makefile')
+@abamake.yaml.Parser.local_tag('abamake/makefile')
 class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 
@@ -176,7 +175,7 @@ class Makefile(object):
       if not isinstance(oTargets, dict):
          yp.raise_parsing_error('invalid “targets” element; expected mapping')
       for sKey, o in oTargets.items():
-         if not isinstance(o, target.Target):
+         if not isinstance(o, abamake.target.Target):
             yp.raise_parsing_error((
                'elements of the “targets” attribute must be of type !abamake/target/*, but “{}” ' +
                   'is not'
@@ -246,10 +245,10 @@ class Make(object):
       self._m_dictFileTargets = {}
       self._m_bForceBuild = False
       self._m_bForceTest = False
-      self._m_platformHost = platform.Platform.detect_host()
-      self._m_jr = job.Runner(self)
+      self._m_platformHost = abamake.platform.Platform.detect_host()
+      self._m_jr = abamake.job.Runner(self)
       self._m_bKeepGoing = False
-      self._m_log = logging.Logger(logging.LogGenerator())
+      self._m_log = abamake.logging.Logger(abamake.logging.LogGenerator())
       self._m_mds = None
       self._m_dictNamedTargets = {}
       self._m_sOutputDir = ''
@@ -457,11 +456,11 @@ class Make(object):
       self.validate_dependency_graph()
 
       sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
-      self._m_mds = metadata.MetadataStore(self, sMetadataFilePath)
+      self._m_mds = abamake.metadata.MetadataStore(self, sMetadataFilePath)
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
-         self._m_platformTarget = platform.Platform.detect_host()
+         self._m_platformTarget = abamake.platform.Platform.detect_host()
          self._m_bCrossBuild = False
       return self._m_platformTarget
 
@@ -469,10 +468,10 @@ class Make(object):
       if self._m_platformTarget:
          raise Exception('cannot set target platform after it’s already been assigned or detected')
       if isinstance(o, basestring):
-         o = platform.SystemType.parse_tuple(o)
-      if isinstance(o, platform.SystemType):
-         o = platform.Platform.from_system_type(o)
-      if not isinstance(o, platform.Platform):
+         o = abamake.platform.SystemType.parse_tuple(o)
+      if isinstance(o, abamake.platform.SystemType):
+         o = abamake.platform.Platform.from_system_type(o)
+      if not isinstance(o, abamake.platform.Platform):
          raise TypeError((
             'cannot set target platform from object of type {}; expected one of ' +
             'str, abamake.platform.SystemType, abamake.platform.Platform'
