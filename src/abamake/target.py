@@ -27,6 +27,7 @@ import weakref
 
 import abamake
 import abamake.job
+import abamake.make
 import abamake.tool
 import abamake.yaml
 
@@ -58,7 +59,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not sName:
-         raise abamake.MakefileError('missing target name')
+         raise abamake.make.MakefileError('missing target name')
       self._m_sName = sName
 
    def __str__(self):
@@ -85,7 +86,7 @@ class FileDependencyMixIn(object):
       """
 
       if not sFilePath:
-         raise abamake.MakefileError('missing target file path')
+         raise abamake.make.MakefileError('missing target file path')
       self._m_sFilePath = os.path.normpath(sFilePath)
 
    def __str__(self):
@@ -188,7 +189,7 @@ class Target(Dependency):
 
       - OR -
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       """
 
@@ -427,7 +428,7 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       """Constructor. Automatically registers the name => target association with the specified Make
       instance.
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       str sName
          Dependency name.
@@ -455,7 +456,7 @@ class FileTarget(FileDependencyMixIn, Target):
 
       - OR -
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       str sFilePath
          Target file path.
@@ -503,7 +504,7 @@ class ProcessedSourceTarget(FileTarget):
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput):
       """Constructor.
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
@@ -528,7 +529,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """Constructor.
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
@@ -600,7 +601,7 @@ class CxxObjectTarget(ObjectTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """Constructor.
 
-      abamake.Make mk
+      abamake.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
@@ -1045,7 +1046,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             cStaticCmpOperands += 1
       if cStaticCmpOperands != 2:
-         raise abamake.MakefileError(
+         raise abamake.make.MakefileError(
             '{}: need exactly two files/outputs to compare'.format(self)
          )
 
@@ -1242,7 +1243,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
             cStaticCmpOperands += 1
       if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
          # Expected a file against which to compare the test’s output.
-         raise abamake.MakefileError(
+         raise abamake.make.MakefileError(
             '{}: can’t compare the test output against more than one file'.format(self)
          )
 

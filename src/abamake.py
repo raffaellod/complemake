@@ -32,7 +32,7 @@
 import os
 import sys
 
-import abamake
+import abamake.make
 import abamake.tool
 
 
@@ -108,7 +108,7 @@ def main(iterArgs):
 
    args = argparser.parse_args()
 
-   mk = abamake.Make()
+   mk = abamake.make.Make()
    mk.dry_run = args.dry_run
    mk.force_build = args.force_build
    mk.force_test = args.force_test
