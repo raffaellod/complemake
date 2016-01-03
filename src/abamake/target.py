@@ -526,7 +526,15 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
-      """See ProcessedSourceTarget.__init__()."""
+      """Constructor.
+
+      abamake.Make mk
+         Make instance.
+      str sSourceFilePath
+         Source from which the target is built.
+      abamake.target.Target tgtFinalOutput
+         Target that this target’s output will be linked into.
+      """
 
       ProcessedSourceTarget.__init__(self, mk, sSourceFilePath, '.i', tgtFinalOutput)
 
@@ -590,7 +598,15 @@ class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
-      """See ObjectTarget.__init__()."""
+      """Constructor.
+
+      abamake.Make mk
+         Make instance.
+      str sSourceFilePath
+         Source from which the target is built.
+      abamake.target.Target tgtFinalOutput
+         Target that this target’s output will be linked into.
+      """
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
@@ -875,12 +891,8 @@ class TestTargetMixIn(object):
 
       abamake.yaml.Parser yp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object oYaml
          Parsed YAML built-in type to be used to construct the new instance.
-      abamake.Make mk
-         Make instance.
       """
 
       if not isinstance(oYaml, dict):
