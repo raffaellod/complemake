@@ -43,10 +43,10 @@ class BuiltinTagsTest(unittest.TestCase):
          !!unk
       '''))
 
-#      self.assertEqual(yaml.parse_string(textwrap.dedent('''
-#         %YAML 1.2
-#         --- !!str
-#      ''')), '')
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!str
+      ''')), '')
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -59,11 +59,11 @@ class BuiltinTagsTest(unittest.TestCase):
          --- !!str a
       ''')), 'a')
 
-#      self.assertEqual(yaml.parse_string(textwrap.dedent('''
-#         %YAML 1.2
-#         ---
-#         !!str
-#      ''')), '')
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!str
+      ''')), '')
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
