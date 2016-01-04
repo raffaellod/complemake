@@ -98,8 +98,8 @@ class Parser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
-   # Local tags set for all Parser instances.
-   _sm_dictStaticLocalTags = {}
+   # Stores local tags for each Parser subclass.
+   _sm_dictLocalTagsByParserType = {}
    # Characters allowed in a tag.
    _smc_sTagCharset = '[-#;/?:@&=+$_.~*\'()0-9A-Za-z]'
    # Matches a tag. This is intentionally an oversimplification of the relatively complex BNF
@@ -115,7 +115,6 @@ class Parser(object):
    def __init__(self):
       """Constructor."""
 
-      self._m_dictInstanceLocalTags = {}
       self._reset()
 
    def consume_map_implicit(self):
@@ -193,11 +192,11 @@ class Parser(object):
             pass
          elif sType == 'local':
             sLocalTag = self._m_matchLine.group('local')
-            fnConstructor = self._m_dictInstanceLocalTags.get(sLocalTag)
+            fnConstructor = Parser._sm_dictLocalTagsByParserType.get(
+               type(self).__name__, {}
+            ).get(sLocalTag)
             if not fnConstructor:
-               fnConstructor = self._sm_dictStaticLocalTags.get(sLocalTag)
-               if not fnConstructor:
-                  self.raise_parsing_error('unrecognized local tag')
+               self.raise_parsing_error('unrecognized local tag')
          elif sType == 'builtin':
             fnConstructor = self._smc_dictBuiltinTags.get(self._m_matchLine.group('builtin'))
             if not fnConstructor:
@@ -379,7 +378,8 @@ class Parser(object):
       """
 
       def decorate(oConstructor):
-         if cls._sm_dictStaticLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
+         dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
+         if dictLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
             raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
          return oConstructor
 
@@ -494,7 +494,8 @@ class Parser(object):
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
 
-   def register_local_tag(self, sTag, oConstructor):
+   @classmethod
+   def register_local_tag(cls, sTag, oConstructor):
       """Registers a new local tag, associating it with the specified constructor. If the
       constructor is a static function, it will be called directly; if it’s a class, a new instance
       will be constructed with arguments self, sKey and oYaml, respectively the parser itself, the
@@ -506,7 +507,8 @@ class Parser(object):
          Constuctor. Must be callable with the signature described above.
       """
 
-      if self._m_dictInstanceLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
+      dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
+      if dictLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
          raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
 
    def _reset(self):
