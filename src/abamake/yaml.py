@@ -78,7 +78,7 @@ class Parser(object):
    _smc_dictBuiltinTags = {
       'map': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, dict) else dict(oYaml),
       'seq': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, list) else list(oYaml),
-      'str': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, str ) else str (oYaml),
+      'str': lambda yp, sKey, oYaml: oYaml if oYaml else '',
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
