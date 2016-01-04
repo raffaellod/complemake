@@ -35,6 +35,92 @@ if sys.hexversion >= 0x03000000:
 # (cd src && python -m unittest abamake/yaml_test.py)
 # @unittest.skip
 
+class BuiltinTagsTest(unittest.TestCase):
+   def runTest(self):
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!unk
+      '''))
+
+#      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+#         %YAML 1.2
+#         --- !!str
+#      ''')), '')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!str
+         a
+      ''')), 'a')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!str a
+      ''')), 'a')
+
+#      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+#         %YAML 1.2
+#         ---
+#         !!str
+#      ''')), '')
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!str a
+      ''')), 'a')
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !!unk b
+         - c
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !!str b
+         - c
+      ''')), ['a', 'b', 'c'])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - a
+         - !!map
+           k: b
+         - c
+      ''')), ['a', {'k': 'b'}, 'c'])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !!unk d
+         e: f
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !!str d
+         e: f
+      ''')), {'a': 'b', 'c': 'd', 'e': 'f'})
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a: b
+         c: !!map
+           k: d
+         e: f
+      ''')), {'a': 'b', 'c': {'k': 'd'}, 'e': 'f'})
+
 class ComplexTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
