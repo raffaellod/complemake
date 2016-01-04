@@ -375,19 +375,17 @@ class Parser(object):
 
    @classmethod
    def local_tag(cls, sTag):
-      """Decorator to associate in Parser a tag with a constructor. If the constructor is a static
-      function, it will be called directly; if it’s a class, a new instance will be constructed with
-      arguments self, sKey and oYaml, respectively the parser itself, the associated mapping key,
-      and the parsed (but not constructed) YAML object.
+      """Decorator to associate a tag with a constructor. If the constructor is a static function,
+      it will be called directly; if it’s a class, a new instance will be constructed with arguments
+      self, sKey and oYaml, respectively the parser itself, the associated mapping key, and the
+      parsed (but not constructed) YAML object.
 
       str sTag
          Tag to associate to the constructor.
       """
 
       def decorate(oConstructor):
-         dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
-         if dictLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
-            raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
+         cls.register_local_tag(sTag, oConstructor)
          return oConstructor
 
       return decorate
@@ -514,6 +512,11 @@ class Parser(object):
          Constuctor. Must be callable with the signature described above.
       """
 
+      if cls is Parser:
+         raise Exception(
+            'do not declare/register local tags directly on the Parser class; use a subclass ' +
+            'instead'
+         )
       dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
       if dictLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
          raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
