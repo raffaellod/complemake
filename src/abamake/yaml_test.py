@@ -195,6 +195,8 @@ class LocalTagTest(unittest.TestCase):
             oYaml.get('k') if isinstance(oYaml, dict) else None
       )
 
+      self.assertRaises(yaml.DuplicateTagError, yp.register_local_tag, 'test_map', None)
+
       self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---

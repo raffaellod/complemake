@@ -50,6 +50,13 @@ def parse_string(s):
 
 ####################################################################################################
 
+class DuplicateTagError(Exception):
+   """Raised when attempting to register a tag with a name that’s already taken."""
+
+   pass
+
+####################################################################################################
+
 class SyntaxError(Exception):
    """Indicates a syntactical or semantical error in a YAML source."""
 
@@ -372,8 +379,8 @@ class Parser(object):
       """
 
       def decorate(oConstructor):
-         # TODO: check for duplicates.
-         cls._sm_dictStaticLocalTags[sTag] = oConstructor
+         if cls._sm_dictStaticLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
+            raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
          return oConstructor
 
       return decorate
@@ -487,18 +494,20 @@ class Parser(object):
          self._m_sSourceName, self._m_iLine, sMessage, self._m_sLine
       ))
 
-   def register_local_tag(self, sTag, fnConstructor):
-      """Registers a new local tag, associating it with the specified constructor.
+   def register_local_tag(self, sTag, oConstructor):
+      """Registers a new local tag, associating it with the specified constructor. If the
+      constructor is a static function, it will be called directly; if it’s a class, a new instance
+      will be constructed with arguments self, sKey and oYaml, respectively the parser itself, the
+      associated mapping key, and the parsed (but not constructed) YAML object.
 
       str sTag
-         Tag to associate to fnConstructor.
-      callable fnConstructor
-         Constuctor. Must be callable with exactly one argument, which will be a parsed object that
-         had its type explicitly set to sTag.
+         Tag to associate to the constructor.
+      callable oConstructor
+         Constuctor. Must be callable with the signature described above.
       """
 
-      # TODO: check for duplicates.
-      self._m_dictInstanceLocalTags[sTag] = fnConstructor
+      if self._m_dictInstanceLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
+         raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
 
    def _reset(self):
       """Reinitializes the internal parser status."""
