@@ -28,6 +28,7 @@ import weakref
 import abamake
 import abamake.job
 import abamake.make
+import abamake.makefileparser
 import abamake.tool
 import abamake.yaml
 
@@ -180,7 +181,7 @@ class Target(Dependency):
    def __init__(self, *iterArgs):
       """Constructor. Automatically registers the target with the specified Make instance.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -195,7 +196,7 @@ class Target(Dependency):
 
       Dependency.__init__(self)
 
-      if isinstance(iterArgs[0], abamake.yaml.Parser):
+      if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
          yp, sKey, oYaml = iterArgs
          if not isinstance(oYaml, dict):
             yp.raise_parsing_error('expected mapping')
@@ -447,7 +448,7 @@ class FileTarget(FileDependencyMixIn, Target):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -462,7 +463,7 @@ class FileTarget(FileDependencyMixIn, Target):
          Target file path.
       """
 
-      if isinstance(iterArgs[0], abamake.yaml.Parser):
+      if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
          yp, sKey, oYaml = iterArgs
 
          # This also validates that oYaml is a mapping object (dict).
@@ -672,7 +673,7 @@ class BinaryTarget(FileTarget):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -785,7 +786,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -798,7 +799,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/exe')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exe')
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
@@ -807,7 +808,7 @@ class ExecutableTarget(NamedBinaryTarget):
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -826,7 +827,7 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/dynlib')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/dynlib')
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
@@ -835,7 +836,7 @@ class DynLibTarget(NamedBinaryTarget):
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -890,7 +891,7 @@ class TestTargetMixIn(object):
    def __init__(self, yp, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       object oYaml
          Parsed YAML built-in type to be used to construct the new instance.
@@ -954,14 +955,14 @@ class TestTargetMixIn(object):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/tooltest')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/tooltest')
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -1052,7 +1053,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/exetest')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exetest')
 class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
@@ -1071,7 +1072,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -1256,7 +1257,7 @@ class OutputTransform(object):
 
 ####################################################################################################
 
-@abamake.yaml.Parser.local_tag('abamake/target/filter-output-transform')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/filter-output-transform')
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a
    specific regular expression.
@@ -1268,7 +1269,7 @@ class FilterOutputTransform(OutputTransform):
    def __init__(self, yp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser yp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.

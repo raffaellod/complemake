@@ -17,56 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""This module contains the implementation of Abamake (short for “Abaclade Make”).
-
-This file contains Abamake and other core classes.
-
-See [DOC:6931 Abamake] for more information.
-"""
-
-"""DOC:6931 Abamake
-
-Abamake (short for “Abaclade Make”) was created to satisfy these requirements:
-
-•  Cross-platform enough to no longer need to separately maintain a GNU makefile and a Visual Studio
-   solution and projects to build Abaclade; this is especially important when thinking of Abaclade
-   as a framework that should simplify building projects with/on top of it;
-
-•  Allow a single makefile per project (this was just impossible with MSBuild);
-
-•  Simplified syntax for a very shallow learning curve, just like Abaclade itself aims to be easier
-   to use than other C++ frameworks;
-
-•  Minimal-to-no build instructions required in each makefile, and no toolchain-specific commands/
-   flags (this was getting difficult with GNU make);
-
-•  Implicit definition of intermediate targets, so that each makefile needs only mention sources and
-   outputs (this had already been achieved via Makefile.inc for GNU make, and was not required for
-   MSBuild);
-
-•  Trivial test declaration and execution (this had been implemented in both GNU make and MSBuild,
-   but at the cost of a lot of made-up conventions);
-
-•  Integration with abc::testing framework (this had already been accomplished for GNU make, but was
-   still only planned for MSBuild);
-
-•  Default parallel building of independent targets;
-
-•  Command-line options generally compatible with GNU make, to be immediately usable by GNU make
-   users.
-
-
-Abamake loads an Abamakefile (short for “Abamake makefile”, a fairly simple XML file; see [DOC:5581
-Abamakefiles]), creating a list of named and unnamed (file path-only) targets; these are then
-scheduled for build, and the resulting build is started, proceeding in the necessary order.
-
-Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 Abamake ‒
-Execution of external commands] for more information. Multiple non-dependent external commands are
-executed in parallel, depending on the multiprocessing capability of the host system and command-
-line options used.
-
-TODO: link to documentation for abc::testing support in Abamake.
-"""
+"""Implementation of the main Abamake class, Make."""
 
 import os
 import re
@@ -74,20 +25,16 @@ import sys
 
 import abamake.job
 import abamake.logging
+import abamake.makefileparser
 import abamake.metadata
 import abamake.platform
 import abamake.target
-import abamake.yaml
-
-FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
-if sys.hexversion >= 0x03000000:
-   basestring = str
 
 
 ####################################################################################################
 
 class MakefileError(Exception):
-   """Indicates a syntactical or semantical error in a makefile."""
+   """Indicates a semantical error in a makefile."""
 
    pass
 
@@ -132,24 +79,7 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
-class MakefileParser(abamake.yaml.Parser):
-   """Parser of YAML Abamakefiles."""
-
-   def __init__(self, mk):
-      """TODO: comment signature"""
-
-      abamake.yaml.Parser.__init__(self)
-
-      self._m_mk = mk
-
-   def _get_mk(self):
-      return self._m_mk
-
-   mk = property(_get_mk, doc = """Returns the Make instance that’s running the parser.""")
-
-####################################################################################################
-
-@abamake.yaml.Parser.local_tag('abamake/makefile')
+@abamake.makefileparser.MakefileParser.local_tag('abamake/makefile')
 class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 
@@ -438,7 +368,7 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      yp = MakefileParser(self)
+      yp = abamake.makefileparser.MakefileParser(self)
       # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
       # By collecting all targets upfront we allow for Target.validate() to always find a referenced
