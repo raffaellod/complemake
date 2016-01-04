@@ -86,10 +86,10 @@ class Makefile(object):
    # List of abamake.target.Target instances parsed from the top-level “targets” attribute.
    _m_listTargets = None
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.yaml.Parser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -98,15 +98,15 @@ class Makefile(object):
       """
 
       if not isinstance(oYaml, dict):
-         yp.raise_parsing_error(
+         mp.raise_parsing_error(
             'unexpected object used to construct {}'.format(type(self).__name__)
          )
       oTargets = oYaml.get('targets')
       if not isinstance(oTargets, dict):
-         yp.raise_parsing_error('invalid “targets” element; expected mapping')
+         mp.raise_parsing_error('invalid “targets” element; expected mapping')
       for sKey, o in oTargets.items():
          if not isinstance(o, abamake.target.Target):
-            yp.raise_parsing_error((
+            mp.raise_parsing_error((
                'elements of the “targets” attribute must be of type !abamake/target/*, but “{}” ' +
                   'is not'
             ).format(sKey))
@@ -368,15 +368,15 @@ class Make(object):
          Path to the makefile to parse.
       """
 
-      yp = abamake.makefileparser.MakefileParser(self)
-      # yp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
+      mp = abamake.makefileparser.MakefileParser(self)
+      # mp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
       # By collecting all targets upfront we allow for Target.validate() to always find a referenced
       # target even it it was defined after the target on which validate() is called.
-      mkf = yp.parse_file(sFilePath)
+      mkf = mp.parse_file(sFilePath)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
       if not isinstance(mkf, Makefile):
-         yp.raise_parsing_error(
+         mp.raise_parsing_error(
             'the top level object of an Abamake makefile must be of type abamake/makefile'
          )
       # Validate each target.

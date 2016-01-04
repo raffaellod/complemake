@@ -181,7 +181,7 @@ class Target(Dependency):
    def __init__(self, *iterArgs):
       """Constructor. Automatically registers the target with the specified Make instance.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -197,10 +197,10 @@ class Target(Dependency):
       Dependency.__init__(self)
 
       if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
-         yp, sKey, oYaml = iterArgs
+         mp, sKey, oYaml = iterArgs
          if not isinstance(oYaml, dict):
-            yp.raise_parsing_error('expected mapping')
-         mk = yp.mk
+            mp.raise_parsing_error('expected mapping')
+         mk = mp.mk
       else:
          oYaml = None
          mk, = iterArgs
@@ -216,7 +216,7 @@ class Target(Dependency):
          oSources = oYaml.get('sources')
          if oSources:
             if not isinstance(oSources, list):
-               yp.raise_parsing_error('attribute “sources” must be a sequence')
+               mp.raise_parsing_error('attribute “sources” must be a sequence')
             for i, o in enumerate(oSources):
                if isinstance(o, basestring):
                   sFilePath = o
@@ -224,13 +224,13 @@ class Target(Dependency):
                elif isinstance(o, dict):
                   sFilePath = o.get('path')
                   if sFilePath is None:
-                     yp.raise_parsing_error((
+                     mp.raise_parsing_error((
                         'a mapping in “sources” must specify a “path” attribute, but element ' +
                         '[{}] does not'
                      ).format(i))
                   sTool = o.get('tool')
                else:
-                  yp.raise_parsing_error((
+                  mp.raise_parsing_error((
                      'elements of the “sources” attribute must be strings or mappings with a ' +
                      '“path” attribute, but element [{}] does not'
                   ).format(i))
@@ -241,11 +241,11 @@ class Target(Dependency):
                   elif sTool == 'preproc':
                      cls = CxxPreprocessedTarget
                   else:
-                     yp.raise_parsing_error(
+                     mp.raise_parsing_error(
                         'unknown tool “{}” for source file “{}”'.format(sTool, sFilePath)
                      )
                else:
-                  yp.raise_parsing_error('unsupported source file type “{}”'.format(sFilePath))
+                  mp.raise_parsing_error('unsupported source file type “{}”'.format(sFilePath))
 
                # Create the target, passing it the file path as its source.
                tgt = cls(mk, sFilePath, self)
@@ -448,7 +448,7 @@ class FileTarget(FileDependencyMixIn, Target):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -464,15 +464,15 @@ class FileTarget(FileDependencyMixIn, Target):
       """
 
       if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
-         yp, sKey, oYaml = iterArgs
+         mp, sKey, oYaml = iterArgs
 
          # This also validates that oYaml is a mapping object (dict).
-         Target.__init__(self, yp, sKey, oYaml)
+         Target.__init__(self, mp, sKey, oYaml)
 
-         mk = yp.mk
+         mk = mp.mk
          sFilePath = oYaml.get('path')
          if not sFilePath or not isinstance(sFilePath, basestring):
-            yp.raise_parsing_error('missing or invalid “path” attribute')
+            mp.raise_parsing_error('missing or invalid “path” attribute')
       else:
          mk, sFilePath = iterArgs
 
@@ -669,11 +669,11 @@ class CxxObjectTarget(ObjectTarget):
 class BinaryTarget(FileTarget):
    """Base class for binary (executable) target classes."""
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -682,18 +682,18 @@ class BinaryTarget(FileTarget):
       """
 
       # This also validates that oYaml is a mapping object (dict).
-      FileTarget.__init__(self, yp, sKey, oYaml)
+      FileTarget.__init__(self, mp, sKey, oYaml)
 
       oLibs = oYaml.get('libraries')
       if oLibs:
          if not isinstance(oLibs, list):
-            yp.raise_parsing_error('attribute “libraries” must be a sequence')
+            mp.raise_parsing_error('attribute “libraries” must be a sequence')
          for i, o in enumerate(oLibs):
             # For now, only strings representing a library name are supported.
             if isinstance(o, basestring):
                sName = o
             else:
-               yp.raise_parsing_error((
+               mp.raise_parsing_error((
                   'elements of the “libraries” attribute must be strings, but element [{}] is not'
                ).format(i))
             # The makefile probably hasn’t yet been completely parsed, so we can’t check if the
@@ -705,10 +705,10 @@ class BinaryTarget(FileTarget):
       oTests = oYaml.get('tests')
       if oTests:
          if not isinstance(oTests, dict):
-            yp.raise_parsing_error('attribute “tests” must be a mapping')
+            mp.raise_parsing_error('attribute “tests” must be a mapping')
          for sName, o in oTests.items():
             if not isinstance(o, (ExecutableTestTarget, ToolTestTarget)):
-               yp.raise_parsing_error((
+               mp.raise_parsing_error((
                   'elements of the “tests” attribute must be of type !abamake/target/exetest or ' +
                   '!abamake/target/tooltest, but element “{}” is not'
                ).format(sName))
@@ -783,10 +783,10 @@ class BinaryTarget(FileTarget):
 class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    """Base for named binary (executable) target classes."""
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -794,8 +794,8 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
          Parsed YAML built-in type to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, yp.mk, sKey)
-      BinaryTarget.__init__(self, yp, sKey, oYaml)
+      NamedTargetMixIn.__init__(self, mp.mk, sKey)
+      BinaryTarget.__init__(self, mp, sKey, oYaml)
 
 ####################################################################################################
 
@@ -805,10 +805,10 @@ class ExecutableTarget(NamedBinaryTarget):
    the output base directory.
    """
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -820,10 +820,10 @@ class ExecutableTarget(NamedBinaryTarget):
       # mapping the base class’ constructor will raise an exception.
       if isinstance(oYaml, dict):
          oYaml.setdefault('path', os.path.join(
-            yp.mk.output_dir, 'bin', yp.mk.target_platform.exe_file_name(sKey)
+            mp.mk.output_dir, 'bin', mp.mk.target_platform.exe_file_name(sKey)
          ))
 
-      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
+      NamedBinaryTarget.__init__(self, mp, sKey, oYaml)
 
 ####################################################################################################
 
@@ -833,10 +833,10 @@ class DynLibTarget(NamedBinaryTarget):
    output base directory.
    """
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -848,10 +848,10 @@ class DynLibTarget(NamedBinaryTarget):
       # mapping the base class’ constructor will raise an exception.
       if isinstance(oYaml, dict):
          oYaml.setdefault('path', os.path.join(
-            yp.mk.output_dir, 'lib', yp.mk.target_platform.dynlib_file_name(sKey)
+            mp.mk.output_dir, 'lib', mp.mk.target_platform.dynlib_file_name(sKey)
          ))
 
-      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
+      NamedBinaryTarget.__init__(self, mp, sKey, oYaml)
 
    def configure_compiler(self, tool):
       """See NamedBinaryTarget.configure_compiler()."""
@@ -888,22 +888,22 @@ class TestTargetMixIn(object):
    # Transformations to apply to the output.
    _m_listOutputTransforms = None
 
-   def __init__(self, yp, oYaml):
+   def __init__(self, mp, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object oYaml
          Parsed YAML built-in type to be used to construct the new instance.
       """
 
       if not isinstance(oYaml, dict):
-         yp.raise_parsing_error('expected mapping')
+         mp.raise_parsing_error('expected mapping')
 
       sExpectedOutputFilePath = oYaml.get('expected output')
       if sExpectedOutputFilePath:
          if not isinstance(sExpectedOutputFilePath, basestring):
-            yp.raise_parsing_error('attribute “expected output” must be a string'.format(self))
+            mp.raise_parsing_error('attribute “expected output” must be a string'.format(self))
          dep = OutputRerefenceDependency(sExpectedOutputFilePath)
          self.add_dependency(dep)
 
@@ -915,13 +915,13 @@ class TestTargetMixIn(object):
       elif isinstance(oOutputTransforms, list):
          for i, o in enumerate(oOutputTransforms):
             if not isinstance(o, OutputTransform):
-               yp.raise_parsing_error((
+               mp.raise_parsing_error((
                   'elements of “output transform” attribute must be of type ' +
                   '!abamake/target/*-output-transform, but element [{}] is not'
                ).format(i))
          self._m_listOutputTransforms = oOutputTransforms
       else:
-         yp.raise_parsing_error(
+         mp.raise_parsing_error(
             'attribute “output transform” must be a sequence of, or a single !abamake/target/' +
             'output-filter object'.format(self)
          )
@@ -931,7 +931,7 @@ class TestTargetMixIn(object):
          # TODO: support “script” referencing a binary built by the same makefile.
          # TODO: support “script” being a mapping with more attributes, e.g. command-line args.
          if not isinstance(sScriptFilePath, basestring):
-            yp.raise_parsing_error('attribute “script” must be a string'.format(self))
+            mp.raise_parsing_error('attribute “script” must be a string'.format(self))
          dep = TestExecScriptDependency(sScriptFilePath)
          self.add_dependency(self, dep)
 
@@ -959,10 +959,10 @@ class TestTargetMixIn(object):
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -970,9 +970,9 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          Parsed YAML built-in type to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, yp.mk, sKey)
-      Target.__init__(self, yp, sKey, oYaml)
-      TestTargetMixIn.__init__(self, yp, oYaml)
+      NamedTargetMixIn.__init__(self, mp.mk, sKey)
+      Target.__init__(self, mp, sKey, oYaml)
+      TestTargetMixIn.__init__(self, mp, oYaml)
 
    def _build_tool_run(self):
       """See Target._build_tool_run()."""
@@ -1069,10 +1069,10 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    # it to True using the current logic in add_dependency().
    _m_bUsesAbacladeTesting = None
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -1084,11 +1084,11 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       # mapping the base class’ constructor will raise an exception.
       if isinstance(oYaml, dict):
          oYaml.setdefault('path', os.path.join(
-            yp.mk.output_dir, 'bin', 'test', yp.mk.target_platform.exe_file_name(sKey)
+            mp.mk.output_dir, 'bin', 'test', mp.mk.target_platform.exe_file_name(sKey)
          ))
 
-      NamedBinaryTarget.__init__(self, yp, sKey, oYaml)
-      TestTargetMixIn.__init__(self, yp, oYaml)
+      NamedBinaryTarget.__init__(self, mp, sKey, oYaml)
+      TestTargetMixIn.__init__(self, mp, oYaml)
 
    def add_dependency(self, dep):
       """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
@@ -1266,10 +1266,10 @@ class FilterOutputTransform(OutputTransform):
    # Filter (regex) to apply.
    _m_re = None
 
-   def __init__(self, yp, sKey, oYaml):
+   def __init__(self, mp, sKey, oYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser yp
+      abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
@@ -1280,7 +1280,7 @@ class FilterOutputTransform(OutputTransform):
       if isinstance(oYaml, basestring):
          sFilter = oYaml
       else:
-         yp.raise_parsing_error('expected string containing a regular expression')
+         mp.raise_parsing_error('expected string containing a regular expression')
       self._m_re = re.compile(sFilter, re.DOTALL)
 
    def __call__(self, o):
