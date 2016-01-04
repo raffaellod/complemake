@@ -28,7 +28,11 @@ class MakefileParser(abamake.yaml.Parser):
    """Parser of YAML Abamakefiles."""
 
    def __init__(self, mk):
-      """TODO: comment signature"""
+      """Constructor.
+
+      abamake.make.Make mk
+         Make instance to make accessible via self.mk .
+      """
 
       abamake.yaml.Parser.__init__(self)
 

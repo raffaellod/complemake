@@ -65,7 +65,14 @@ class SyntaxError(Exception):
 ####################################################################################################
 
 class Parser(object):
-   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments)."""
+   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments).
+
+   This implementation supports local tags (!tag_name); new local tags can be added using the
+   decorator @yaml.Parser.local_tag('tag_name') or by calling Parser.register_local_tag() instance.
+   To prevent mixing up local tags from parsers for different schemas, it’s best to derive a new
+   class from yaml.Parser for each schema, and use @DerivedClass.local_tag() or
+   DerivedClass.register_local_tag() instead.
+   """
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
