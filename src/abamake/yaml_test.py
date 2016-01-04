@@ -181,57 +181,61 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          'e-1.0', '+1.1e', '-.e', '+e.1',
       ])
 
-class LocalTagTest(unittest.TestCase):
+class LocalTagsTest(unittest.TestCase):
    def runTest(self):
-      yp = yaml.Parser()
-      yp.register_local_tag(
+      class TestParser1(yaml.Parser):
+         pass
+
+      TestParser1.register_local_tag(
          'test_str',
          lambda yp, sKey, oYaml:
             '<' + (oYaml if isinstance(oYaml, basestring) else '') + '>'
       )
-      yp.register_local_tag(
+      TestParser1.register_local_tag(
          'test_map',
          lambda yp, sKey, oYaml:
             oYaml.get('k') if isinstance(oYaml, dict) else None
       )
 
-      self.assertRaises(yaml.DuplicateTagError, yp.register_local_tag, 'test_map', None)
+      self.assertRaises(yaml.DuplicateTagError, TestParser1.register_local_tag, 'test_map', None)
 
-      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+      tp = TestParser1()
+
+      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !test_unk
       '''))
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !test_str
       ''')), '<>')
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !test_str
          a
       ''')), '<a>')
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !test_str a
       ''')), '<a>')
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          !test_str
       ''')), '<>')
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          !test_str a
       ''')), '<a>')
 
-      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -239,7 +243,7 @@ class LocalTagTest(unittest.TestCase):
          - c
       '''))
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -247,7 +251,7 @@ class LocalTagTest(unittest.TestCase):
          - c
       ''')), ['a', '<b>', 'c'])
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -256,7 +260,7 @@ class LocalTagTest(unittest.TestCase):
          - c
       ''')), ['a', 'b', 'c'])
 
-      self.assertRaises(yaml.SyntaxError, yp.parse_string, textwrap.dedent('''
+      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -264,7 +268,7 @@ class LocalTagTest(unittest.TestCase):
          e: f
       '''))
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -272,7 +276,7 @@ class LocalTagTest(unittest.TestCase):
          e: f
       ''')), {'a': 'b', 'c': '<d>', 'e': 'f'})
 
-      self.assertEqual(yp.parse_string(textwrap.dedent('''
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -280,6 +284,28 @@ class LocalTagTest(unittest.TestCase):
            k: d
          e: f
       ''')), {'a': 'b', 'c': 'd', 'e': 'f'})
+
+class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
+   def runTest(self):
+      class TestParser1(yaml.Parser):
+         pass
+
+      @TestParser1.local_tag('same_tag')
+      class LocalTag1(object):
+         def __init__(self, yp, sKey, oYaml):
+            pass
+
+      class TestParser2(yaml.Parser):
+         pass
+
+      @TestParser2.local_tag('same_tag')
+      class LocalTag2(object):
+         def __init__(self, yp, sKey, oYaml):
+            pass
+
+      sYaml = '%YAML 1.2\n--- !same_tag'
+      self.assertIsInstance(TestParser1().parse_string(sYaml), LocalTag1)
+      self.assertIsInstance(TestParser2().parse_string(sYaml), LocalTag2)
 
 class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
