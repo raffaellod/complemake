@@ -79,33 +79,22 @@ class Kind(object):
    SEQUENCE = None
 
    _m_sName = None
-   _m_clsPy = None
 
-   def __init__(self, sName, clsPy):
+   def __init__(self, sName):
       """Constructor.
 
       str sName
          Name of the kind.
-      clsPy
-         Python class used to implement the kind.
       """
 
       self._m_sName = sName
-      self._m_clsPy = clsPy
 
    def __str__(self):
       return self._m_sName
 
-   def _get_python_type(self):
-      return self._m_clsPy
-
-   python_type = property(_get_python_type, doc = """
-      Returns the top-level targets declared in the makefile.
-   """)
-
-Kind.MAPPING  = Kind('mapping' , dict)
-Kind.SCALAR   = Kind('scalar'  , str )
-Kind.SEQUENCE = Kind('sequence', list)
+Kind.MAPPING  = Kind('mapping')
+Kind.SCALAR   = Kind('scalar')
+Kind.SEQUENCE = Kind('sequence')
 
 ####################################################################################################
 
