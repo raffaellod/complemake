@@ -64,21 +64,58 @@ class SyntaxError(Exception):
 
 ####################################################################################################
 
+class Kind(object):
+   """YAML raw object type."""
+
+   MAPPING  = None
+   SEQUENCE = None
+   STRING   = None
+
+   _m_sName = None
+   _m_clsPy = None
+
+   def __init__(self, sName, clsPy):
+      """Constructor.
+
+      str sName
+         Name of the kind.
+      clsPy
+         Python class used to implement the kind.
+      """
+
+      self._m_sName = sName
+      self._m_clsPy = clsPy
+
+   def __str__(self):
+      return self._m_sName
+
+   def _get_python_type(self):
+      return self._m_clsPy
+
+   python_type = property(_get_python_type, doc = """
+      Returns the top-level targets declared in the makefile.
+   """)
+
+Kind.MAPPING  = Kind('mapping' , dict)
+Kind.SEQUENCE = Kind('sequence', list)
+Kind.STRING   = Kind('string'  , str )
+
+####################################################################################################
+
 class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments).
 
-   This implementation supports local tags (!tag_name); new local tags can be added using the
-   decorator @yaml.Parser.local_tag('tag_name') or by calling Parser.register_local_tag() instance.
-   To prevent mixing up local tags from parsers for different schemas, it’s best to derive a new
-   class from yaml.Parser for each schema, and use @DerivedClass.local_tag() or
-   DerivedClass.register_local_tag() instead.
+   This implementation supports local tags (!tag_name); new local tags can be added by deriving a
+   parser class from yaml.Parser, and then using the decorator @DerivedParser.local_tag('tag_name',
+   yaml.Kind.STRING) or by calling DerivedParser.register_local_tag('tag_name', yaml.Kind.STRING,
+   consturctor).
    """
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, dict) else dict(oYaml),
-      'seq': lambda yp, sKey, oYaml: oYaml if isinstance(oYaml, list) else list(oYaml),
-      'str': lambda yp, sKey, oYaml: oYaml if oYaml else '',
+      'map': (Kind.MAPPING , lambda yp, sKey, dictYaml: dictYaml),
+      'seq': (Kind.SEQUENCE, lambda yp, sKey, listYaml: listYaml),
+      'str': (Kind.STRING  , lambda yp, sKey,    sYaml:    sYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -177,6 +214,9 @@ class Parser(object):
          Parsed object.
       """
 
+      # Save this in case we need to raise errors about the beginning of the object, not its end.
+      iLineInitial = self._m_iLine
+
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
          bEOF = not self.next_line()
@@ -186,9 +226,12 @@ class Parser(object):
          bEOF = False
          bWrapped = False
 
+      sTag = None
+      kindExpected = None
       # If None, no constructor needs to be called, and the parsed value can be returned as-is.
-      fnConstructor = None
+      oConstructor = None
       if self.match_and_store(self._smc_reTag):
+         sTag = self._m_matchLine.group()
          # TODO: support more ways of specifying a tag.
          sType = self._m_matchLine.lastgroup
          if sType == 'auto':
@@ -199,15 +242,16 @@ class Parser(object):
             pass
          elif sType == 'local':
             sLocalTag = self._m_matchLine.group('local')
-            fnConstructor = Parser._sm_dictLocalTagsByParserType.get(
-               type(self).__name__, {}
-            ).get(sLocalTag)
-            if not fnConstructor:
+            tpl = Parser._sm_dictLocalTagsByParserType.get(type(self).__name__, {}).get(sLocalTag)
+            if not tpl:
                self.raise_parsing_error('unrecognized local tag')
+            kindExpected, oConstructor = tpl
          elif sType == 'builtin':
-            fnConstructor = self._smc_dictBuiltinTags.get(self._m_matchLine.group('builtin'))
-            if not fnConstructor:
+            sBuiltinTag = self._m_matchLine.group('builtin')
+            tpl = self._smc_dictBuiltinTags.get(sBuiltinTag)
+            if not tpl:
                self.raise_parsing_error('unrecognized built-in tag')
+            kindExpected, oConstructor = tpl
 
          # Consume the tag.
          iMatchEnd = self._m_matchLine.end()
@@ -246,8 +290,15 @@ class Parser(object):
          # any of the options above.
          oParsed = None
 
-      if fnConstructor:
-         oParsed = fnConstructor(self, sKey, oParsed)
+      if oConstructor:
+         if kindExpected is Kind.STRING and oParsed is None:
+            # None can be implicitly converted to an empty string.
+            oParsed = ''
+         if not isinstance(oParsed, kindExpected.python_type):
+            raise SyntaxError('{}:{}: expected {} to construct tag “{}”'.format(
+               self._m_sSourceName, iLineInitial, kindExpected, sTag
+            ))
+         oParsed = oConstructor(self, sKey, oParsed)
       return oParsed
 
    def consume_scalar(self):
@@ -374,7 +425,7 @@ class Parser(object):
          return True
 
    @classmethod
-   def local_tag(cls, sTag):
+   def local_tag(cls, sTag, kind):
       """Decorator to associate a tag with a constructor. If the constructor is a static function,
       it will be called directly; if it’s a class, a new instance will be constructed with arguments
       self, sKey and oYaml, respectively the parser itself, the associated mapping key, and the
@@ -382,10 +433,13 @@ class Parser(object):
 
       str sTag
          Tag to associate to the constructor.
+      abamake.yaml.Kind kind
+         Kind expected by the tag’s constructor. If the object being constructed is not of this
+         kind, a syntax error will be raised.
       """
 
       def decorate(oConstructor):
-         cls.register_local_tag(sTag, oConstructor)
+         cls.register_local_tag(sTag, kind, oConstructor)
          return oConstructor
 
       return decorate
@@ -500,7 +554,7 @@ class Parser(object):
       ))
 
    @classmethod
-   def register_local_tag(cls, sTag, oConstructor):
+   def register_local_tag(cls, sTag, kind, oConstructor):
       """Registers a new local tag, associating it with the specified constructor. If the
       constructor is a static function, it will be called directly; if it’s a class, a new instance
       will be constructed with arguments self, sKey and oYaml, respectively the parser itself, the
@@ -508,6 +562,9 @@ class Parser(object):
 
       str sTag
          Tag to associate to the constructor.
+      abamake.yaml.Kind kind
+         Kind expected by the tag’s constructor. If the object being constructed is not of this
+         kind, a syntax error will be raised.
       callable oConstructor
          Constuctor. Must be callable with the signature described above.
       """
@@ -518,7 +575,8 @@ class Parser(object):
             'instead'
          )
       dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
-      if dictLocalTags.setdefault(sTag, oConstructor) is not oConstructor:
+      tpl = kind, oConstructor
+      if dictLocalTags.setdefault(sTag, tpl) is not tpl:
          raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
 
    def _reset(self):

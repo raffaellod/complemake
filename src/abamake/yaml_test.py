@@ -273,17 +273,15 @@ class LocalTagsTest(unittest.TestCase):
          pass
 
       TestParser1.register_local_tag(
-         'test_str',
-         lambda yp, sKey, oYaml:
-            '<' + (oYaml if isinstance(oYaml, basestring) else '') + '>'
+         'test_str', yaml.Kind.STRING, lambda yp, sKey, sYaml: '<' + sYaml + '>'
       )
       TestParser1.register_local_tag(
-         'test_map',
-         lambda yp, sKey, oYaml:
-            oYaml.get('k') if isinstance(oYaml, dict) else None
+         'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml.get('k')
       )
 
-      self.assertRaises(yaml.DuplicateTagError, TestParser1.register_local_tag, 'test_map', None)
+      self.assertRaises(
+         yaml.DuplicateTagError, TestParser1.register_local_tag, 'test_map', None, None
+      )
 
       tp = TestParser1()
 
@@ -376,7 +374,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
       class TestParser1(yaml.Parser):
          pass
 
-      @TestParser1.local_tag('same_tag')
+      @TestParser1.local_tag('same_tag', yaml.Kind.STRING)
       class LocalTag1(object):
          def __init__(self, yp, sKey, oYaml):
             pass
@@ -384,7 +382,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
       class TestParser2(yaml.Parser):
          pass
 
-      @TestParser2.local_tag('same_tag')
+      @TestParser2.local_tag('same_tag', yaml.Kind.STRING)
       class LocalTag2(object):
          def __init__(self, yp, sKey, oYaml):
             pass
