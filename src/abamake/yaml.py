@@ -64,6 +64,13 @@ class SyntaxError(Exception):
 
 ####################################################################################################
 
+class TagKindMismatchError(Exception):
+   """Raised when a tag is applied to a YAML object of a kind not suitable to construct the tag."""
+
+   pass
+
+####################################################################################################
+
 class Kind(object):
    """YAML raw object type."""
 
@@ -295,7 +302,7 @@ class Parser(object):
             # None can be implicitly converted to an empty string.
             oParsed = ''
          if not isinstance(oParsed, kindExpected.python_type):
-            raise SyntaxError('{}:{}: expected {} to construct tag “{}”'.format(
+            raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”'.format(
                self._m_sSourceName, iLineInitial, kindExpected, sTag
             ))
          oParsed = oConstructor(self, sKey, oParsed)
