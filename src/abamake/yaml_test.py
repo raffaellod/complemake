@@ -376,7 +376,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @TestParser1.local_tag('same_tag', yaml.Kind.STRING)
       class LocalTag1(object):
-         def __init__(self, yp, sKey, oYaml):
+         def __init__(self, yp, sKey, sYaml):
             pass
 
       class TestParser2(yaml.Parser):
@@ -384,7 +384,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @TestParser2.local_tag('same_tag', yaml.Kind.STRING)
       class LocalTag2(object):
-         def __init__(self, yp, sKey, oYaml):
+         def __init__(self, yp, sKey, sYaml):
             pass
 
       sYaml = '%YAML 1.2\n--- !same_tag'

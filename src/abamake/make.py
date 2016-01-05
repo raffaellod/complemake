@@ -87,22 +87,18 @@ class Makefile(object):
    # List of abamake.target.Target instances parsed from the top-level “targets” attribute.
    _m_listTargets = None
 
-   def __init__(self, mp, sKey, oYaml):
+   def __init__(self, mp, sKey, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
       str sKey
          YAML mapping key associated to the object, or None if the object is not a mapping value.
-      object oYaml
-         Parsed YAML built-in type to be used to construct the new instance.
+      object dictYaml
+         Parsed YAML object to be used to construct the new instance.
       """
 
-      if not isinstance(oYaml, dict):
-         mp.raise_parsing_error(
-            'unexpected object used to construct {}'.format(type(self).__name__)
-         )
-      oTargets = oYaml.get('targets')
+      oTargets = dictYaml.get('targets')
       if not isinstance(oTargets, dict):
          mp.raise_parsing_error('invalid “targets” element; expected mapping')
       for sKey, o in oTargets.items():
