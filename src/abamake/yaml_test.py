@@ -1002,3 +1002,62 @@ class StringTest(unittest.TestCase):
          a
          b
       ''')), 'a b')
+
+class TagKindValidationTest(unittest.TestCase):
+   def runTest(self):
+      class TagKindValidationTestParser(yaml.Parser):
+         pass
+
+      TagKindValidationTestParser.register_local_tag(
+         'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml
+      )
+      TagKindValidationTestParser.register_local_tag(
+         'test_str', yaml.Kind.STRING, lambda yp, sKey, sYaml: sYaml
+      )
+
+      tp = TagKindValidationTestParser()
+
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map')
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map a')
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!map
+         a: b
+      ''')), {'a': 'b'})
+
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq')
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq a')
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!seq
+         - a
+      ''')), ['a'])
+
+      self.assertEqual(tp.parse_string('%YAML 1.2\n---\n!!str'), '')
+      self.assertEqual(tp.parse_string('%YAML 1.2\n---\n!!str a'), 'a')
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !!str
+         a
+      ''')), 'a')
+
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map')
+      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map a')
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !test_map
+         a: b
+      ''')), {'a': 'b'})
+
+      self.assertEqual(tp.parse_string('%YAML 1.2\n---\n!test_str'), '')
+      self.assertEqual(tp.parse_string('%YAML 1.2\n---\n!test_str a'), 'a')
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         --- !test_str
+         a
+      ''')), 'a')
