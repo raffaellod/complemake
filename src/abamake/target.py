@@ -1249,7 +1249,7 @@ class OutputTransform(object):
 ####################################################################################################
 
 @abamake.makefileparser.MakefileParser.local_tag(
-   'abamake/target/filter-output-transform', abamake.yaml.Kind.STRING
+   'abamake/target/filter-output-transform', abamake.yaml.Kind.SCALAR
 )
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a

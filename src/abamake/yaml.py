@@ -75,8 +75,8 @@ class Kind(object):
    """YAML raw object type."""
 
    MAPPING  = None
+   SCALAR   = None
    SEQUENCE = None
-   STRING   = None
 
    _m_sName = None
    _m_clsPy = None
@@ -104,17 +104,17 @@ class Kind(object):
    """)
 
 Kind.MAPPING  = Kind('mapping' , dict)
+Kind.SCALAR   = Kind('scalar'  , str )
 Kind.SEQUENCE = Kind('sequence', list)
-Kind.STRING   = Kind('string'  , str )
 
 ####################################################################################################
 
 class Parser(object):
-   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, strings, comments).
+   """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, scalars, comments).
 
    This implementation supports local tags (!tag_name); new local tags can be added by deriving a
    parser class from yaml.Parser, and then using the decorator @DerivedParser.local_tag('tag_name',
-   yaml.Kind.STRING) or by calling DerivedParser.register_local_tag('tag_name', yaml.Kind.STRING,
+   yaml.Kind.SCALAR) or by calling DerivedParser.register_local_tag('tag_name', yaml.Kind.SCALAR,
    consturctor).
    """
 
@@ -122,7 +122,7 @@ class Parser(object):
    _smc_dictBuiltinTags = {
       'map': (Kind.MAPPING , lambda yp, sKey, dictYaml: dictYaml),
       'seq': (Kind.SEQUENCE, lambda yp, sKey, listYaml: listYaml),
-      'str': (Kind.STRING  , lambda yp, sKey,    sYaml:    sYaml),
+      'str': (Kind.SCALAR  , lambda yp, sKey,    sYaml:    sYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -298,7 +298,7 @@ class Parser(object):
          oParsed = None
 
       if oConstructor:
-         if kindExpected is Kind.STRING and oParsed is None:
+         if kindExpected is Kind.SCALAR and oParsed is None:
             # None can be implicitly converted to an empty string.
             oParsed = ''
          if not isinstance(oParsed, kindExpected.python_type):

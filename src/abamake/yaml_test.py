@@ -273,7 +273,7 @@ class LocalTagsTest(unittest.TestCase):
          pass
 
       TestParser1.register_local_tag(
-         'test_str', yaml.Kind.STRING, lambda yp, sKey, sYaml: '<' + sYaml + '>'
+         'test_str', yaml.Kind.SCALAR, lambda yp, sKey, sYaml: '<' + sYaml + '>'
       )
       TestParser1.register_local_tag(
          'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml.get('k')
@@ -374,7 +374,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
       class TestParser1(yaml.Parser):
          pass
 
-      @TestParser1.local_tag('same_tag', yaml.Kind.STRING)
+      @TestParser1.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag1(object):
          def __init__(self, yp, sKey, sYaml):
             pass
@@ -382,7 +382,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
       class TestParser2(yaml.Parser):
          pass
 
-      @TestParser2.local_tag('same_tag', yaml.Kind.STRING)
+      @TestParser2.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag2(object):
          def __init__(self, yp, sKey, sYaml):
             pass
@@ -1012,7 +1012,7 @@ class TagKindValidationTest(unittest.TestCase):
          'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml
       )
       TagKindValidationTestParser.register_local_tag(
-         'test_str', yaml.Kind.STRING, lambda yp, sKey, sYaml: sYaml
+         'test_str', yaml.Kind.SCALAR, lambda yp, sKey, sYaml: sYaml
       )
 
       tp = TagKindValidationTestParser()
