@@ -128,7 +128,7 @@ class Parser(object):
    _smc_reComment = re.compile(r'[\t ]*#.*$')
    # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
    _smc_reDefaultTypes = (
-      (re.compile(r'^(?:~|NULL|[Nn]ull)?$'),                                  None),
+      (re.compile(r'^(?:|~|NULL|[Nn]ull)$'),                                  None),
       (re.compile(r'^(?:TRUE|[Tt]rue)$'),                                     True),
       (re.compile(r'^(?:FALSE|[Ff]alse)$'),                                   False),
       (re.compile(r'^(?P<s>[-+]?\d+)$'),                                      lambda s: int(s, 10)),
@@ -233,6 +233,7 @@ class Parser(object):
          bEOF = False
          bWrapped = False
 
+      kind = Kind.SCALAR
       sTag = None
       kindExpected = None
       # If None, no constructor needs to be called, and the parsed value can be returned as-is.
@@ -259,6 +260,8 @@ class Parser(object):
             if not tpl:
                self.raise_parsing_error('unrecognized built-in tag')
             kindExpected, oConstructor = tpl
+         else:
+            assert(False)
 
          # Consume the tag.
          iMatchEnd = self._m_matchLine.end()
@@ -271,9 +274,15 @@ class Parser(object):
             bEOF = not self.next_line()
             bWrapped = True
             bAllowImplicitMappingOrSequence = True
+         # Default the parsed object to an empty string.
+         oParsed = ''
+      else:
+         # Default to None instead of defaulting to '' and then converting that into None via
+         # default conversion.
+         oParsed = None
 
       if bEOF:
-         oParsed = None
+         pass
       elif not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
          oParsed = self.consume_string_explicit()
       elif (
@@ -283,6 +292,7 @@ class Parser(object):
             self.raise_parsing_error('sequence element not expected in this context')
          # Continue parsing this line as a sequence.
          oParsed = self.consume_sequence_implicit()
+         kind = Kind.SEQUENCE
       elif (
          not bWrapped or self._m_iLineIndent >= self._m_iMappingMinIndent
       ) and self.match_and_store(self._smc_reMappingKey):
@@ -290,20 +300,18 @@ class Parser(object):
             self.raise_parsing_error('mapping key not expected in this context')
          # Continue parsing this line as a map.
          oParsed = self.consume_map_implicit()
+         kind = Kind.MAPPING
       elif not bWrapped or self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          oParsed = self.consume_scalar()
       else:
          # The input was an empty line and the indentation of the next line was incompatible with
          # any of the options above.
-         oParsed = None
+         pass
 
       if oConstructor:
-         if kindExpected is Kind.SCALAR and oParsed is None:
-            # None can be implicitly converted to an empty string.
-            oParsed = ''
-         if not isinstance(oParsed, kindExpected.python_type):
-            raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”'.format(
-               self._m_sSourceName, iLineInitial, kindExpected, sTag
+         if kind is not kindExpected:
+            raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”; found {}'.format(
+               self._m_sSourceName, iLineInitial, kindExpected, sTag, kind
             ))
          oParsed = oConstructor(self, sKey, oParsed)
       return oParsed
