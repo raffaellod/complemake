@@ -116,7 +116,7 @@ class Parser(object):
    This implementation supports local tags (!tag_name); new local tags can be added by deriving a
    parser class from yaml.Parser, and then using the decorator @DerivedParser.local_tag('tag_name',
    yaml.Kind.SCALAR) or by calling DerivedParser.register_local_tag('tag_name', yaml.Kind.SCALAR,
-   consturctor).
+   constructor).
    """
 
    # Built-in tags.

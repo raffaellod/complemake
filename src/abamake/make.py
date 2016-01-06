@@ -229,7 +229,7 @@ class Make(object):
       iterable(abamake.target.Target*) iterTargets
          Targets to be built.
       bool return
-         True if all the targets were built successfuly, or False otherwise.
+         True if all the targets were built successfully, or False otherwise.
       """
 
       try:
