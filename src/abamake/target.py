@@ -183,8 +183,6 @@ class Target(Dependency):
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       dict(object: object) dictYaml
          Parsed YAML object to be used to construct the new instance.
 
@@ -197,7 +195,7 @@ class Target(Dependency):
       Dependency.__init__(self)
 
       if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
-         mp, sKey, dictYaml = iterArgs
+         mp, dictYaml = iterArgs
          mk = mp.mk
       else:
          dictYaml = None
@@ -448,8 +446,6 @@ class FileTarget(FileDependencyMixIn, Target):
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
 
@@ -462,9 +458,9 @@ class FileTarget(FileDependencyMixIn, Target):
       """
 
       if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
-         mp, sKey, dictYaml = iterArgs
+         mp, dictYaml = iterArgs
 
-         Target.__init__(self, mp, sKey, dictYaml)
+         Target.__init__(self, mp, dictYaml)
 
          mk = mp.mk
          sFilePath = dictYaml.get('path')
@@ -666,19 +662,17 @@ class CxxObjectTarget(ObjectTarget):
 class BinaryTarget(FileTarget):
    """Base class for binary (executable) target classes."""
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
 
-      FileTarget.__init__(self, mp, sKey, dictYaml)
+      FileTarget.__init__(self, mp, dictYaml)
 
       oLibs = dictYaml.get('libraries')
       if oLibs:
@@ -779,19 +773,17 @@ class BinaryTarget(FileTarget):
 class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    """Base for named binary (executable) target classes."""
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
 
       NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(str))
-      BinaryTarget.__init__(self, mp, sKey, dictYaml)
+      BinaryTarget.__init__(self, mp, dictYaml)
 
 ####################################################################################################
 
@@ -801,13 +793,11 @@ class ExecutableTarget(NamedBinaryTarget):
    the output base directory.
    """
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
@@ -818,7 +808,7 @@ class ExecutableTarget(NamedBinaryTarget):
          mk.output_dir, 'bin', mk.target_platform.exe_file_name(mp.get_current_mapping_key(str))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, sKey, dictYaml)
+      NamedBinaryTarget.__init__(self, mp, dictYaml)
 
 ####################################################################################################
 
@@ -828,13 +818,11 @@ class DynLibTarget(NamedBinaryTarget):
    output base directory.
    """
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
@@ -845,7 +833,7 @@ class DynLibTarget(NamedBinaryTarget):
          mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(mp.get_current_mapping_key(str))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, sKey, dictYaml)
+      NamedBinaryTarget.__init__(self, mp, dictYaml)
 
    def configure_compiler(self, tool):
       """See NamedBinaryTarget.configure_compiler()."""
@@ -952,19 +940,17 @@ class TestTargetMixIn(object):
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
 
       NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(str))
-      Target.__init__(self, mp, sKey, dictYaml)
+      Target.__init__(self, mp, dictYaml)
       TestTargetMixIn.__init__(self, mp, dictYaml)
 
    def _build_tool_run(self):
@@ -1064,13 +1050,11 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    # it to True using the current logic in add_dependency().
    _m_bUsesAbacladeTesting = None
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """
@@ -1082,7 +1066,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          mk.target_platform.exe_file_name(mp.get_current_mapping_key(str))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, sKey, dictYaml)
+      NamedBinaryTarget.__init__(self, mp, dictYaml)
       TestTargetMixIn.__init__(self, mp, dictYaml)
 
    def add_dependency(self, dep):
@@ -1263,13 +1247,11 @@ class FilterOutputTransform(OutputTransform):
    # Filter (regex) to apply.
    _m_re = None
 
-   def __init__(self, mp, sKey, sYaml):
+   def __init__(self, mp, sYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object sYaml
          Parsed YAML object to be used to construct the new instance.
       """

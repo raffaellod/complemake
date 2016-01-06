@@ -121,9 +121,9 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': (Kind.MAPPING , lambda yp, sKey, dictYaml: dictYaml),
-      'seq': (Kind.SEQUENCE, lambda yp, sKey, listYaml: listYaml),
-      'str': (Kind.SCALAR  , lambda yp, sKey,    sYaml:    sYaml),
+      'map': (Kind.MAPPING , lambda yp, dictYaml: dictYaml),
+      'seq': (Kind.SEQUENCE, lambda yp, listYaml: listYaml),
+      'str': (Kind.SCALAR  , lambda yp,    sYaml:    sYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -321,7 +321,7 @@ class Parser(object):
             raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”; found {}'.format(
                self._m_sSourceName, self._m_iLine, kindExpected, sTag, kind
             ))
-         oParsed = oConstructor(self, sKey, oParsed)
+         oParsed = oConstructor(self, oParsed)
          # Restore the line number.
          self._m_iLine = iLineFinal
       return oParsed
@@ -480,8 +480,8 @@ class Parser(object):
    def local_tag(cls, sTag, kind):
       """Decorator to associate a tag with a constructor. If the constructor is a static function,
       it will be called directly; if it’s a class, a new instance will be constructed with arguments
-      self, sKey and oYaml, respectively the parser itself, the associated mapping key, and the
-      parsed (but not constructed) YAML object.
+      self and oYaml, respectively the parser itself and the parsed (but not constructed) YAML
+      object.
 
       str sTag
          Tag to associate to the constructor.
@@ -609,8 +609,8 @@ class Parser(object):
    def register_local_tag(cls, sTag, kind, oConstructor):
       """Registers a new local tag, associating it with the specified constructor. If the
       constructor is a static function, it will be called directly; if it’s a class, a new instance
-      will be constructed with arguments self, sKey and oYaml, respectively the parser itself, the
-      associated mapping key, and the parsed (but not constructed) YAML object.
+      will be constructed with arguments self and oYaml, respectively the parser itself and the
+      parsed (but not constructed) YAML object.
 
       str sTag
          Tag to associate to the constructor.

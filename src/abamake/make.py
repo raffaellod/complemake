@@ -87,13 +87,11 @@ class Makefile(object):
    # List of abamake.target.Target instances parsed from the top-level “targets” attribute.
    _m_listTargets = None
 
-   def __init__(self, mp, sKey, dictYaml):
+   def __init__(self, mp, dictYaml):
       """Constructor.
 
       abamake.makefileparser.MakefileParser mp
          Parser instantiating the object.
-      str sKey
-         YAML mapping key associated to the object, or None if the object is not a mapping value.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
       """

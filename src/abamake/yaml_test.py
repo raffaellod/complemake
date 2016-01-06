@@ -273,10 +273,10 @@ class LocalTagsTest(unittest.TestCase):
          pass
 
       TestParser1.register_local_tag(
-         'test_str', yaml.Kind.SCALAR, lambda yp, sKey, sYaml: '<' + sYaml + '>'
+         'test_str', yaml.Kind.SCALAR, lambda yp, sYaml: '<' + sYaml + '>'
       )
       TestParser1.register_local_tag(
-         'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml.get('k')
+         'test_map', yaml.Kind.MAPPING, lambda yp, dictYaml: dictYaml.get('k')
       )
 
       self.assertRaises(
@@ -376,7 +376,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @TestParser1.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag1(object):
-         def __init__(self, yp, sKey, sYaml):
+         def __init__(self, yp, sYaml):
             pass
 
       class TestParser2(yaml.Parser):
@@ -384,7 +384,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @TestParser2.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag2(object):
-         def __init__(self, yp, sKey, sYaml):
+         def __init__(self, yp, sYaml):
             pass
 
       sYaml = '%YAML 1.2\n--- !same_tag'
@@ -397,17 +397,17 @@ class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
          pass
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('just_a_map', yaml.Kind.MAPPING)
-      def just_a_map(yp, sKey, sYaml):
+      def just_a_map(yp, sYaml):
          yp.get_current_mapping_key(str)
          return sYaml
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('need_str_key', yaml.Kind.SCALAR)
-      def need_str_key(yp, sKey, sYaml):
+      def need_str_key(yp, sYaml):
          yp.get_current_mapping_key(str)
          return sYaml
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('okay_with_no_key', yaml.Kind.SCALAR)
-      def okay_with_no_key(yp, sKey, sYaml):
+      def okay_with_no_key(yp, sYaml):
          yp.get_current_mapping_key(str, None)
          return sYaml
 
@@ -1074,10 +1074,10 @@ class TagKindValidationTest(unittest.TestCase):
          pass
 
       TagKindValidationTestParser.register_local_tag(
-         'test_map', yaml.Kind.MAPPING, lambda yp, sKey, dictYaml: dictYaml
+         'test_map', yaml.Kind.MAPPING, lambda yp, dictYaml: dictYaml
       )
       TagKindValidationTestParser.register_local_tag(
-         'test_str', yaml.Kind.SCALAR, lambda yp, sKey, sYaml: sYaml
+         'test_str', yaml.Kind.SCALAR, lambda yp, sYaml: sYaml
       )
 
       tp = TagKindValidationTestParser()
