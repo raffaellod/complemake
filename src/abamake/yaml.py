@@ -64,7 +64,16 @@ class SyntaxError(Exception):
 
 ####################################################################################################
 
-class TagKindMismatchError(Exception):
+class MappingKeyError(SyntaxError):
+   """Raised when a tag is applied to a YAML object that’s expected to be used in a mapping and
+   associated to keys of a certain type.
+   """
+
+   pass
+
+####################################################################################################
+
+class TagKindMismatchError(SyntaxError):
    """Raised when a tag is applied to a YAML object of a kind not suitable to construct the tag."""
 
    pass
@@ -97,6 +106,9 @@ Kind.SCALAR   = Kind('scalar')
 Kind.SEQUENCE = Kind('sequence')
 
 ####################################################################################################
+
+# Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
+_NO_MAPPING_KEY_DEFAULT = object()
 
 class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, scalars, comments).
@@ -181,7 +193,9 @@ class Parser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
+         self._m_oCurrMappingKey = sKey
          dictRet[sKey] = self.consume_object(sKey, False)
+         self._m_oCurrMappingKey = None
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
@@ -298,11 +312,17 @@ class Parser(object):
          pass
 
       if oConstructor:
+         # Swap the current line number (which potentially does not refer to oParsed anymore) with
+         # the initial line number, to provide meaningful error messages.
+         iLineFinal = self._m_iLine
+         self._m_iLine = iLineInitial
          if kind is not kindExpected:
             raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”; found {}'.format(
-               self._m_sSourceName, iLineInitial, kindExpected, sTag, kind
+               self._m_sSourceName, self._m_iLine, kindExpected, sTag, kind
             ))
          oParsed = oConstructor(self, sKey, oParsed)
+         # Restore the line number.
+         self._m_iLine = iLineFinal
       return oParsed
 
    def consume_scalar(self):
@@ -427,6 +447,33 @@ class Parser(object):
       else:
          # The whole line was consumed.
          return True
+
+   def get_current_mapping_key(self, clsExpected, oDefault = _NO_MAPPING_KEY_DEFAULT):
+      """Returns the mapping key associated to the tagged object being constructed. If the type of
+      the key is not an instance of the expected class, an exception will be raised; if the object
+      being constructed is not in a mapping object, an exception will be raised unless a default
+      value is provided via oDefault, in which case the return value will be oDefault.
+
+      type clsExpected
+         Expected Python type for the mapping key.
+      object oDefault
+         Value to be returned if the current object was not a value in a mapping object. If omitted,
+         this condition will result in an exception.
+      object return
+         Mapping key associated to the current object, or oDefault if a value was provided for
+         oDefault.
+      """
+
+      if isinstance(self._m_oCurrMappingKey, clsExpected):
+         return self._m_oCurrMappingKey
+      elif oDefault is not _NO_MAPPING_KEY_DEFAULT:
+         return oDefault
+      else:
+         raise MappingKeyError(
+            '{}:{}: object expects to be associated with key of type {}'.format(
+               self._m_sSourceName, self._m_iLine, clsExpected.__name__
+            )
+         )
 
    @classmethod
    def local_tag(cls, sTag, kind):
@@ -591,6 +638,7 @@ class Parser(object):
       self._m_sLine = None
       self._m_iLineIndent = 0
       self._m_iterLines = None
+      self._m_oCurrMappingKey = None
       self._m_iMappingMinIndent = 0
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
