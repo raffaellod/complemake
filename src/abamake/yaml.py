@@ -195,7 +195,7 @@ class Parser(object):
          # TODO: reject non-explicit sequences or maps.
          oPrevMappingKey = self._m_oCurrMappingKey
          self._m_oCurrMappingKey = sKey
-         dictRet[sKey] = self.consume_object(sKey, False)
+         dictRet[sKey] = self.consume_object(False)
          self._m_oCurrMappingKey = oPrevMappingKey
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
@@ -211,13 +211,10 @@ class Parser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return dictRet
 
-   def consume_object(self, sKey, bAllowImplicitMappingOrSequence):
+   def consume_object(self, bAllowImplicitMappingOrSequence):
       """Dispatches a call to any of the other consume_*() functions, after inspecting the current
       line.
 
-      str sKey
-         If the object to be consumed is associated to a map key, this will hold the key, as a
-         string; otherwise this will be None.
       bool bAllowImplicitMappingOrSequence
          True if a mapping key or sequence element will be allowed on the initial line, or False
          otherwise.
@@ -377,7 +374,7 @@ class Parser(object):
          self._m_iSequenceMinIndent = iIndent + cchMatched
 
          # Parse whatever is left; this may span multiple lines.
-         listRet.append(self.consume_object(None, True))
+         listRet.append(self.consume_object(True))
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the sequence.
@@ -560,10 +557,10 @@ class Parser(object):
             if not self.next_line():
                # Nothing follows the document start.
                return None
-            o = self.consume_object(None, True)
+            o = self.consume_object(True)
          else:
             # Finish reading the line with the document start.
-            o = self.consume_object(None, False)
+            o = self.consume_object(False)
          # Verify that there’s nothing left to parse.
          if self._m_sLine is not None:
             self.raise_parsing_error('invalid token')
