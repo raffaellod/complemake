@@ -234,11 +234,13 @@ class Parser(object):
          bEOF = False
          bWrapped = False
 
+      oParsed = ''
       kind = Kind.SCALAR
       sTag = None
       kindExpected = None
       # If None, no constructor needs to be called, and the parsed value can be returned as-is.
       oConstructor = None
+
       if self.match_and_store(self._smc_reTag):
          sTag = self._m_matchLine.group()
          # TODO: support more ways of specifying a tag.
@@ -275,17 +277,11 @@ class Parser(object):
             bEOF = not self.next_line()
             bWrapped = True
             bAllowImplicitMappingOrSequence = True
-         # Default the parsed object to an empty string.
-         oParsed = ''
-      else:
-         # Default to None instead of defaulting to '' and then converting that into None via
-         # default conversion.
-         oParsed = None
 
       if bEOF:
          pass
       elif not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
-         oParsed = self.consume_string_explicit()
+         oParsed = self.consume_quoted_scalar()
       elif (
          not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent
       ) and self.match_and_store(self._smc_reSequenceDash):
@@ -321,32 +317,30 @@ class Parser(object):
          oParsed = oConstructor(self, oParsed)
          # Restore the line number.
          self._m_iLine = iLineFinal
+      elif kind is Kind.SCALAR:
+         # Compare the consumed scalar against one of the matchers for stock scalar types.
+         for reMatcher, oConvertor in self._smc_reDefaultTypes:
+            match = reMatcher.match(oParsed)
+            if match:
+               if callable(oConvertor):
+                  oParsed = oConvertor(**match.groupdict())
+               else:
+                  oParsed = oConvertor
+               break
       return oParsed
 
    def consume_scalar(self):
       """Consumes a scalar.
 
-      object return
-         Parsed scalar, converted to the appropriate type.
+      str return
+         Parsed scalar.
       """
 
       sRet = self._m_sLine
-      bMultiline = False
       while self.next_line() and self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          if ':' in self._m_sLine:
             self.raise_parsing_error('mapping key not expected in scalar context')
          sRet += ' ' + self._m_sLine
-         bMultiline = True
-      if not bMultiline:
-         # Compare the consumed string against one of the matchers for stock scalar types.
-         for reMatcher, oConvertor in self._smc_reDefaultTypes:
-            match = reMatcher.match(sRet)
-            if match:
-               if callable(oConvertor):
-                  return oConvertor(**match.groupdict())
-               else:
-                  return oConvertor
-      # It’s a string.
       return sRet
 
    def consume_sequence_implicit(self):
@@ -392,11 +386,11 @@ class Parser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet
 
-   def consume_string_explicit(self):
-      """Consumes an explicit (quoted) string.
+   def consume_quoted_scalar(self):
+      """Consumes a quoted scalar.
 
       str return
-         Parsed string.
+         Parsed scalar.
       """
 
       sQuote = self._m_sLine[0]
