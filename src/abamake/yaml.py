@@ -110,6 +110,39 @@ Kind.SEQUENCE = Kind('sequence')
 # Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
 _NO_MAPPING_KEY_DEFAULT = object()
 
+def _scalar_to_bool(yp, sYaml):
+   for i in 1, 2:
+      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
+      match = reMatcher.match(sYaml)
+      if match:
+         if callable(oConvertor):
+            return oConvertor(**match.groupdict())
+         else:
+            return oConvertor
+   yp.raise_parsing_error('expected “true” or “false”, case-insensitive')
+
+def _scalar_to_float(yp, sYaml):
+   for i in 6, 7, 8, 9:
+      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
+      match = reMatcher.match(sYaml)
+      if match:
+         if callable(oConvertor):
+            return oConvertor(**match.groupdict())
+         else:
+            return oConvertor
+   yp.raise_parsing_error('expected a floating point value')
+
+def _scalar_to_int(yp, sYaml):
+   for i in 3, 4, 5:
+      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
+      match = reMatcher.match(sYaml)
+      if match:
+         if callable(oConvertor):
+            return oConvertor(**match.groupdict())
+         else:
+            return oConvertor
+   yp.raise_parsing_error('expected an integer value')
+
 class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, scalars, comments).
 
@@ -121,9 +154,13 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'map': (Kind.MAPPING , lambda yp, dictYaml: dictYaml),
-      'seq': (Kind.SEQUENCE, lambda yp, listYaml: listYaml),
-      'str': (Kind.SCALAR  , lambda yp,    sYaml:    sYaml),
+      'bool' : (Kind.SCALAR  , _scalar_to_bool),
+      'float': (Kind.SCALAR  , _scalar_to_float),
+      'int'  : (Kind.SCALAR  , _scalar_to_int),
+      'map'  : (Kind.MAPPING , lambda yp, dictYaml: dictYaml),
+      'null' : (Kind.SCALAR  , lambda yp,    sYaml:     None),
+      'seq'  : (Kind.SEQUENCE, lambda yp, listYaml: listYaml),
+      'str'  : (Kind.SCALAR  , lambda yp,    sYaml:    sYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
