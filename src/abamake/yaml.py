@@ -195,7 +195,7 @@ class Parser(object):
    # specified by the standard.
    _smc_reTag = re.compile(r'''
       ^!(?:
-         (?P<auto>)|
+         (?P<disable>)|
          (?P<local>''' + _smc_sTagCharset + '''+)|
          !(?P<builtin>''' + _smc_sTagCharset + '''+)
       )(?:[ ]+|$)
@@ -273,6 +273,7 @@ class Parser(object):
 
       oParsed = ''
       kind = Kind.SCALAR
+      bResolveScalar = True
       sTag = None
       kindExpected = None
       # If None, no constructor needs to be called, and the parsed value can be returned as-is.
@@ -282,12 +283,10 @@ class Parser(object):
          sTag = self._m_matchLine.group()
          # TODO: support more ways of specifying a tag.
          sType = self._m_matchLine.lastgroup
-         if sType == 'auto':
-            # Nothing to do; this is the same as an omitted tag.
-            # TODO: the YAML specification seems to say something different: “All nodes with the “!”
-            # non-specific tag are resolved, by the standard convention, to “tag:yaml.org,2002:seq”,
-            # “tag:yaml.org,2002:map”, or “tag:yaml.org,2002:str”, according to their kind.”.
-            pass
+         if sType == 'disable':
+            # “!” disables tag resolution, forcing tags to be vanilla (map, seq or str). See YAML
+            # 1.2 § 6.9.1. “Node Tags”).
+            bResolveScalar = False
          elif sType == 'local':
             sLocalTag = self._m_matchLine.group('local')
             tpl = Parser._sm_dictLocalTagsByParserType.get(type(self).__name__, {}).get(sLocalTag)
@@ -319,6 +318,8 @@ class Parser(object):
          pass
       elif not bWrapped and (self._m_sLine.startswith('"') or self._m_sLine.startswith('\'')):
          oParsed = self.consume_quoted_scalar()
+         # According to YAML 1.2 § 6.9.1. “Node Tags”, a quoted scalar is always a string.
+         bResolveScalar = False
       elif (
          not bWrapped or self._m_iLineIndent >= self._m_iSequenceMinIndent
       ) and self.match_and_store(self._smc_reSequenceDash):
@@ -354,7 +355,7 @@ class Parser(object):
          oParsed = oConstructor(self, oParsed)
          # Restore the line number.
          self._m_iLine = iLineFinal
-      elif kind is Kind.SCALAR:
+      elif kind is Kind.SCALAR and bResolveScalar:
          # Compare the consumed scalar against one of the matchers for stock scalar types.
          for reMatcher, oConvertor in self._smc_reDefaultTypes:
             match = reMatcher.match(oParsed)
