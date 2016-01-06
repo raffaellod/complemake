@@ -231,7 +231,8 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - NULL
          - nULL
          - NUll
-      ''')), [None, None, None, 'nULL', 'NUll'])
+         - "null"
+      ''')), [None, None, None, 'nULL', 'NUll', 'null'])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -241,7 +242,8 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - TRUE
          - tRUE
          - TRue
-      ''')), [True, True, True, 'tRUE', 'TRue'])
+         - 'true'
+      ''')), [True, True, True, 'tRUE', 'TRue', 'true'])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -251,7 +253,8 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - FALSE
          - fALSE
          - FAlse
-      ''')), [False, False, False, 'fALSE', 'FAlse'])
+         - "false"
+      ''')), [False, False, False, 'fALSE', 'FAlse', 'false'])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -262,7 +265,8 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - a15
          - Oo15
          - 0a15
-      ''')), [15, 0o15, 0x15, 'a15', 'Oo15', '0a15'])
+         - '15'
+      ''')), [15, 0o15, 0x15, 'a15', 'Oo15', '0a15', '15'])
 
       fPosInf = float('+Inf')
       fNegInf = float('+Inf')
@@ -336,10 +340,11 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - +1.1e
          - -.e
          - +e.1
+         - "1."
       ''')), [
          1., 1.0, 1.1, .0, .1, 1.1e0, 1.1e1, 1.1e+1, 1.1e-1, +1., -1.0, +1.1, -.0, +.1,
          '1.e', '1.0e', '1.1e', 'e.0', '.1e', '1.1e0e', '1.1ee1', '1.1e+1e', 'e1.1e-1', '+1.e',
-         'e-1.0', '+1.1e', '-.e', '+e.1',
+         'e-1.0', '+1.1e', '-.e', '+e.1', '1.',
       ])
 
 class LocalTagsTest(unittest.TestCase):
