@@ -396,13 +396,18 @@ class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
       class LocalTagsWithMandatoryMappingKeyTestParser(yaml.Parser):
          pass
 
+      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('just_a_map', yaml.Kind.MAPPING)
+      def just_a_map(yp, sKey, sYaml):
+         yp.get_current_mapping_key(str)
+         return sYaml
+
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('need_str_key', yaml.Kind.SCALAR)
-      def some_tag(yp, sKey, sYaml):
+      def need_str_key(yp, sKey, sYaml):
          yp.get_current_mapping_key(str)
          return sYaml
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('okay_with_no_key', yaml.Kind.SCALAR)
-      def some_tag(yp, sKey, sYaml):
+      def okay_with_no_key(yp, sKey, sYaml):
          yp.get_current_mapping_key(str, None)
          return sYaml
 
@@ -425,6 +430,13 @@ class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
          ---
          k: !need_str_key a
       ''')), {'k': 'a'})
+
+      self.assertEqual(tp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         k1: !just_a_map
+           k2: a
+      ''')), {'k1': {'k2': 'a'}})
 
       self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2

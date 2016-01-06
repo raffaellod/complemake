@@ -193,9 +193,10 @@ class Parser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
+         oPrevMappingKey = self._m_oCurrMappingKey
          self._m_oCurrMappingKey = sKey
          dictRet[sKey] = self.consume_object(sKey, False)
-         self._m_oCurrMappingKey = None
+         self._m_oCurrMappingKey = oPrevMappingKey
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
