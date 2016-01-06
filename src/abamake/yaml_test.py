@@ -215,12 +215,6 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
            'inf',   'Inf',   'INF',   'iNF',   'INf',
       ])
 
-      def check_nan(o, bNaN):
-         if bNaN:
-            return not isinstance(o, float)
-         else:
-            return math.isnan(o)
-
       self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.nan')))
       self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NaN')))
       self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NAN')))
@@ -269,21 +263,21 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
 
 class LocalTagsTest(unittest.TestCase):
    def runTest(self):
-      class TestParser1(yaml.Parser):
+      class LocalTagsTestParser(yaml.Parser):
          pass
 
-      TestParser1.register_local_tag(
+      LocalTagsTestParser.register_local_tag(
          'test_str', yaml.Kind.SCALAR, lambda yp, sYaml: '<' + sYaml + '>'
       )
-      TestParser1.register_local_tag(
+      LocalTagsTestParser.register_local_tag(
          'test_map', yaml.Kind.MAPPING, lambda yp, dictYaml: dictYaml.get('k')
       )
 
       self.assertRaises(
-         yaml.DuplicateTagError, TestParser1.register_local_tag, 'test_map', None, None
+         yaml.DuplicateTagError, LocalTagsTestParser.register_local_tag, 'test_map', None, None
       )
 
-      tp = TestParser1()
+      tp = LocalTagsTestParser()
 
       self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
@@ -371,25 +365,28 @@ class LocalTagsTest(unittest.TestCase):
 
 class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
    def runTest(self):
-      class TestParser1(yaml.Parser):
+      class LocalTagsInDifferentSubclassesTestParser1(yaml.Parser):
          pass
 
-      @TestParser1.local_tag('same_tag', yaml.Kind.SCALAR)
+      @LocalTagsInDifferentSubclassesTestParser1.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag1(object):
          def __init__(self, yp, sYaml):
             pass
 
-      class TestParser2(yaml.Parser):
+      class LocalTagsInDifferentSubclassesTestParser2(yaml.Parser):
          pass
 
-      @TestParser2.local_tag('same_tag', yaml.Kind.SCALAR)
+      @LocalTagsInDifferentSubclassesTestParser2.local_tag('same_tag', yaml.Kind.SCALAR)
       class LocalTag2(object):
          def __init__(self, yp, sYaml):
             pass
 
+      tp1 = LocalTagsInDifferentSubclassesTestParser1()
+      tp2 = LocalTagsInDifferentSubclassesTestParser2()
+
       sYaml = '%YAML 1.2\n--- !same_tag'
-      self.assertIsInstance(TestParser1().parse_string(sYaml), LocalTag1)
-      self.assertIsInstance(TestParser2().parse_string(sYaml), LocalTag2)
+      self.assertIsInstance(tp1.parse_string(sYaml), LocalTag1)
+      self.assertIsInstance(tp2.parse_string(sYaml), LocalTag2)
 
 class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
    def runTest(self):
