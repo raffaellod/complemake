@@ -140,6 +140,87 @@ class ComplexTest(unittest.TestCase):
             l: 'm'
       ''')), {'a': True, 'c': {'d': {'e': None, 'g': 'h', 'i': [1, None]}, 'k': ' a', 'l': 'm'}})
 
+class ExplicitlyTypedScalarTest(unittest.TestCase):
+   def runTest(self):
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - !!null
+         - !!null a
+      ''')), [None, None])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - !!bool true
+         - !!bool false
+      ''')), [True, False])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!bool a
+      '''))
+
+      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!bool
+         - a
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - !!int 1
+         - !!int 0x10
+      ''')), [1, 16])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!int
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!int a
+      '''))
+
+      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!int
+         - a
+      '''))
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - !!float .1
+         - !!float 1e1
+      ''')), [0.1, 10])
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!float
+      '''))
+
+      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!float a
+      '''))
+
+      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+         %YAML 1.2
+         ---
+         !!float
+         - a
+      '''))
+
 class ImplicitlyTypedScalarTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
