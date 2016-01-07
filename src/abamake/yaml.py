@@ -316,6 +316,36 @@ class Parser(object):
 
       self._reset()
 
+   def _construct_builtin_tag(self, iApplicableScalarTypes, sExpectedTag, sParsed):
+      """Constructs a built-in tag by finding a matching pattern in _smc_tplScalarTagConversions and
+      applying the corresponding conversion.
+
+      int iApplicableScalarTypes
+         One or more _SCALAR_* constants, activating the matching elements in
+         _smc_tplScalarTagConversions.
+      str sExpectedTag
+         Only used if no patterns in the selected _smc_tplScalarTagConversions elements apply: if
+         non-None, this string will be reported in the exception raised; if None, sParsed will be
+         returned without any errors.
+      str sParsed
+         Parsed scalar to be converted.
+      object return
+         Converted scalar.
+      """
+
+      for iScalarType, reMatcher, oConvertor in self._smc_tplScalarTagConversions:
+         if iScalarType & iApplicableScalarTypes:
+            match = reMatcher.match(sParsed)
+            if match:
+               if callable(oConvertor):
+                  return oConvertor(**match.groupdict())
+               else:
+                  return oConvertor
+      if sExpectedTag:
+         self.raise_parsing_error('expected scalar of type {}'.format(sExpectedTag))
+      else:
+         return sParsed
+
    def consume_map_implicit(self):
       """Consumes a map.
 
@@ -555,36 +585,6 @@ class Parser(object):
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet
-
-   def _construct_builtin_tag(self, iApplicableScalarTypes, sExpectedTag, sParsed):
-      """Constructs a built-in tag by finding a matching pattern in _smc_tplScalarTagConversions and
-      applying the corresponding conversion.
-
-      int iApplicableScalarTypes
-         One or more _SCALAR_* constants, activating the matching elements in
-         _smc_tplScalarTagConversions.
-      str sExpectedTag
-         Only used if no patterns in the selected _smc_tplScalarTagConversions elements apply: if
-         non-None, this string will be reported in the exception raised; if None, sParsed will be
-         returned without any errors.
-      str sParsed
-         Parsed scalar to be converted.
-      object return
-         Converted scalar.
-      """
-
-      for iScalarType, reMatcher, oConvertor in self._smc_tplScalarTagConversions:
-         if iScalarType & iApplicableScalarTypes:
-            match = reMatcher.match(sParsed)
-            if match:
-               if callable(oConvertor):
-                  return oConvertor(**match.groupdict())
-               else:
-                  return oConvertor
-      if sExpectedTag:
-         self.raise_parsing_error('expected scalar of type {}'.format(sExpectedTag))
-      else:
-         return sParsed
 
    def find_and_consume_doc_start(self):
       """Consumes and validates the start of the YAML document.
