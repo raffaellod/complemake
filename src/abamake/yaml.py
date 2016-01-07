@@ -110,38 +110,11 @@ Kind.SEQUENCE = Kind('sequence')
 # Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
 _NO_MAPPING_KEY_DEFAULT = object()
 
-def _scalar_to_bool(yp, sYaml):
-   for i in 1, 2:
-      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
-      match = reMatcher.match(sYaml)
-      if match:
-         if callable(oConvertor):
-            return oConvertor(**match.groupdict())
-         else:
-            return oConvertor
-   yp.raise_parsing_error('expected “true” or “false”, case-insensitive')
-
-def _scalar_to_float(yp, sYaml):
-   for i in 6, 7, 8, 9:
-      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
-      match = reMatcher.match(sYaml)
-      if match:
-         if callable(oConvertor):
-            return oConvertor(**match.groupdict())
-         else:
-            return oConvertor
-   yp.raise_parsing_error('expected a floating point value')
-
-def _scalar_to_int(yp, sYaml):
-   for i in 3, 4, 5:
-      reMatcher, oConvertor = Parser._smc_reDefaultTypes[i]
-      match = reMatcher.match(sYaml)
-      if match:
-         if callable(oConvertor):
-            return oConvertor(**match.groupdict())
-         else:
-            return oConvertor
-   yp.raise_parsing_error('expected an integer value')
+_SCALAR_NULL  = 0b0001
+_SCALAR_BOOL  = 0b0010
+_SCALAR_INT   = 0b0100
+_SCALAR_FLOAT = 0b1000
+_SCALAR_ALL   = 0b1111
 
 class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, scalars, comments).
@@ -154,29 +127,16 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'bool' : (Kind.SCALAR  , _scalar_to_bool),
-      'float': (Kind.SCALAR  , _scalar_to_float),
-      'int'  : (Kind.SCALAR  , _scalar_to_int),
+      'bool' : (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_BOOL , 'bool' , sYaml)),
+      'float': (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_FLOAT, 'float', sYaml)),
+      'int'  : (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_INT  , 'int'  , sYaml)),
       'map'  : (Kind.MAPPING , lambda yp, dictYaml: dictYaml),
-      'null' : (Kind.SCALAR  , lambda yp,    sYaml:     None),
+      'null' : (Kind.SCALAR  , lambda yp, sYaml: None),
       'seq'  : (Kind.SEQUENCE, lambda yp, listYaml: listYaml),
-      'str'  : (Kind.SCALAR  , lambda yp,    sYaml:    sYaml),
+      'str'  : (Kind.SCALAR  , lambda yp, sYaml: sYaml),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
-   # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
-   _smc_reDefaultTypes = (
-      (re.compile(r'^(?:|~|NULL|[Nn]ull)$'),                                  None),
-      (re.compile(r'^(?:TRUE|[Tt]rue)$'),                                     True),
-      (re.compile(r'^(?:FALSE|[Ff]alse)$'),                                   False),
-      (re.compile(r'^(?P<s>[-+]?\d+)$'),                                      lambda s: int(s, 10)),
-      (re.compile(r'^0o(?P<s>[0-7]+)$'),                                      lambda s: int(s,  8)),
-      (re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'),                                lambda s: int(s, 16)),
-      (re.compile(r'^\+?\.(?:INF|[Ii]nf)$'),                                  float('inf')),
-      (re.compile(r'^-\.(?:INF|[Ii]nf)$'),                                    float('-inf')),
-      (re.compile(r'^\.(?:N[Aa]N|nan)$'),                                     float('nan')),
-      (re.compile(r'^(?P<x>[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?)$'), float), # float(x)
-   )
    # Matches a document start mark.
    _smc_reDocStart = re.compile(r'^---(?: +|$)')
    # Matches trailing horizontal whitespace.
@@ -185,6 +145,19 @@ class Parser(object):
    _smc_reIndent = re.compile(r'^[\t ]*')
    # Matches a mapping key and the whitespace around it.
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
+   # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
+   _smc_tplScalarTagConversions = (
+      (_SCALAR_NULL , re.compile(r'^(?:|~|NULL|[Nn]ull)$'  ), None),
+      (_SCALAR_BOOL , re.compile(r'^(?:TRUE|[Tt]rue)$'     ), True),
+      (_SCALAR_BOOL , re.compile(r'^(?:FALSE|[Ff]alse)$'   ), False),
+      (_SCALAR_INT  , re.compile(r'^(?P<s>[-+]?\d+)$'      ), lambda s: int(s, 10)),
+      (_SCALAR_INT  , re.compile(r'^0o(?P<s>[0-7]+)$'      ), lambda s: int(s,  8)),
+      (_SCALAR_INT  , re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'), lambda s: int(s, 16)),
+      (_SCALAR_FLOAT, re.compile(r'^\+?\.(?:INF|[Ii]nf)$'  ), float('inf')),
+      (_SCALAR_FLOAT, re.compile(r'^-\.(?:INF|[Ii]nf)$'    ), float('-inf')),
+      (_SCALAR_FLOAT, re.compile(r'^\.(?:N[Aa]N|nan)$'     ), float('nan')),
+      (_SCALAR_FLOAT, re.compile(r'^(?P<x>[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?)$'), float),
+   )
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
    # Stores local tags for each Parser subclass.
@@ -356,15 +329,7 @@ class Parser(object):
          # Restore the line number.
          self._m_iLine = iLineFinal
       elif kind is Kind.SCALAR and bResolveScalar:
-         # Compare the consumed scalar against one of the matchers for stock scalar types.
-         for reMatcher, oConvertor in self._smc_reDefaultTypes:
-            match = reMatcher.match(oParsed)
-            if match:
-               if callable(oConvertor):
-                  oParsed = oConvertor(**match.groupdict())
-               else:
-                  oParsed = oConvertor
-               break
+         oParsed = self._builtin_tag(_SCALAR_ALL, None, oParsed)
       return oParsed
 
    def consume_quoted_scalar(self):
@@ -453,6 +418,36 @@ class Parser(object):
       self._m_iScalarWrapMinIndent = iOldScalarWrapMinIndent
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet
+
+   def _builtin_tag(self, iApplicableScalarTypes, sExpectedTag, sParsed):
+      """Constructs a built-in tag by finding a matching pattern in _smc_tplScalarTagConversions and
+      applying the corresponding conversion.
+
+      int iApplicableScalarTypes
+         One or more _SCALAR_* constants, activating the matching elements in
+         _smc_tplScalarTagConversions.
+      str sExpectedTag
+         Only used if no patterns in the selected _smc_tplScalarTagConversions elements apply: if
+         non-None, this string will be reported in the exception raised; if None, sParsed will be
+         returned without any errors.
+      str sParsed
+         Parsed scalar to be converted.
+      object return
+         Converted scalar.
+      """
+
+      for iScalarType, reMatcher, oConvertor in self._smc_tplScalarTagConversions:
+         if iScalarType & iApplicableScalarTypes:
+            match = reMatcher.match(sParsed)
+            if match:
+               if callable(oConvertor):
+                  return oConvertor(**match.groupdict())
+               else:
+                  return oConvertor
+      if sExpectedTag:
+         self.raise_parsing_error('expected scalar of type {}'.format(sExpectedTag))
+      else:
+         return sParsed
 
    def find_and_consume_doc_start(self):
       """Consumes and validates the start of the YAML document.
