@@ -19,6 +19,7 @@
 
 """YAML parser."""
 
+import datetime
 import io
 import os
 import re
@@ -110,11 +111,99 @@ Kind.SEQUENCE = Kind('sequence')
 # Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
 _NO_MAPPING_KEY_DEFAULT = object()
 
-_SCALAR_NULL  = 0b0001
-_SCALAR_BOOL  = 0b0010
-_SCALAR_INT   = 0b0100
-_SCALAR_FLOAT = 0b1000
-_SCALAR_ALL   = 0b1111
+_SCALAR_ALL       = 0b11111
+_SCALAR_BOOL      = 0b00001
+_SCALAR_FLOAT     = 0b00010
+_SCALAR_INT       = 0b00100
+_SCALAR_NULL      = 0b01000
+_SCALAR_TIMESTAMP = 0b10000
+
+def _make_values_int(dictArgs):
+   """Converts the values of its argument into int instances.
+
+   dict(str: str) dictArgs
+      Dictionary containing string values to convert. Will be modified in place.
+   dict(str: int) return
+      dictArgs, after it’s been modified.
+   """
+
+   for sKey, sValue in dictArgs.items():
+      dictArgs[sKey] = int(sValue, 10)
+   return dictArgs
+
+class _timestamp_tzinfo(datetime.tzinfo):
+   """Provides a tzinfo for datatime.datetime instances constructed from YAML timestamps that
+   included a time zone.
+   """
+
+   _m_td = None
+   _m_sTZ = None
+
+   def __init__(self, sTZ, iHour, iMinute):
+      """Constructor.
+
+      str sTZ
+         The timezone, as a string; can be “Z” to indicate UTC.
+      int iHour
+         Timezone hour part.
+      int iMinute
+         Timezone minute part.
+      """
+
+      self._m_td = datetime.timedelta(hours = iHour, minutes = iMinute)
+      self._m_sTZ = sTZ
+
+   def dst(self, dt):
+      """See datetime.tzinfo.dst()."""
+
+      return None
+
+   def tzname(self, dt):
+      """See datetime.tzinfo.tzname()."""
+
+      return self._m_sTZ
+
+   def utcoffset(self, dt):
+      """See datetime.tzinfo.utcoffset()."""
+
+      return self._m_td
+
+def _timestamp_to_datetime(**dictArgs):
+   """Constructs a datetime.datetime object by tweaking the arguments provided.
+
+   dict(str: str) **dictArgs
+      Values parsed from the regular expression matching a YAML timestamp.
+   datetime.datetime return
+      Object containing the timestamp.
+   """
+
+   # Convert the generic “fraction” part into “microsecond”. This needs to be done while it’s still
+   # a string, otherwise we won’t be able to tell the difference between “001” (1 ms) and “000001”
+   # (1 µs).
+   sFraction = dictArgs.pop('fraction', None)
+   if sFraction:
+      if len(sFraction) == 6:
+         # Already microseconds.
+         sUs = sFraction
+      elif len(sFraction) < 6:
+         # Too few digits; add some padding to multiply by the appropriate power of 10.
+         sUs = sFraction.ljust(6, '0')
+      else:
+         # Too many digits; drop the excess.
+         sUs = sFraction[0:6]
+      dictArgs['microsecond'] = sUs
+   sTZ = dictArgs.pop('tz', None)
+
+   _make_values_int(dictArgs)
+
+   iTZHour = dictArgs.pop('tzhour', 0)
+   iTZMinute = dictArgs.pop('tzminute', 0)
+   if sTZ == 'Z':
+      dictArgs['tzinfo'] = _timestamp_tzinfo('UTC', 0, 0)
+   elif sTZ:
+      dictArgs['tzinfo'] = _timestamp_tzinfo(sTZ, iTZHour, iTZMinute)
+
+   return datetime.datetime(**dictArgs)
 
 class Parser(object):
    """YAML parser. Only accepts a small subset of YAML 1.2 (sequences, maps, scalars, comments).
@@ -127,13 +216,38 @@ class Parser(object):
 
    # Built-in tags.
    _smc_dictBuiltinTags = {
-      'bool' : (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_BOOL , 'bool' , sYaml)),
-      'float': (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_FLOAT, 'float', sYaml)),
-      'int'  : (Kind.SCALAR  , lambda yp, sYaml: yp._builtin_tag(_SCALAR_INT  , 'int'  , sYaml)),
-      'map'  : (Kind.MAPPING , lambda yp, dictYaml: dictYaml),
-      'null' : (Kind.SCALAR  , lambda yp, sYaml: None),
-      'seq'  : (Kind.SEQUENCE, lambda yp, listYaml: listYaml),
-      'str'  : (Kind.SCALAR  , lambda yp, sYaml: sYaml),
+      'bool': (
+         Kind.SCALAR,
+         lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_BOOL, 'bool', sYaml)
+      ),
+      'float': (
+         Kind.SCALAR,
+         lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_FLOAT, 'float', sYaml)
+      ),
+      'int': (
+         Kind.SCALAR,
+         lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_INT, 'int', sYaml)
+      ),
+      'map': (
+         Kind.MAPPING,
+         lambda yp, dictYaml: dictYaml
+      ),
+      'null': (
+         Kind.SCALAR,
+         lambda yp, sYaml: None
+      ),
+      'seq': (
+         Kind.SEQUENCE,
+         lambda yp, listYaml: listYaml
+      ),
+      'str': (
+         Kind.SCALAR,
+         lambda yp, sYaml: sYaml
+      ),
+      'timestamp': (
+         Kind.SCALAR,
+         lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_TIMESTAMP, 'timestamp', sYaml)
+      ),
    }
    # Matches a comment.
    _smc_reComment = re.compile(r'[\t ]*#.*$')
@@ -147,16 +261,39 @@ class Parser(object):
    _smc_reMappingKey = re.compile(r'^(?P<key>[^:]+?) *:(?: +|$)')
    # Matchers and convertors for stock scalar types (see YAML 1.2 § 10.3.2. “Tag Resolution”).
    _smc_tplScalarTagConversions = (
-      (_SCALAR_NULL , re.compile(r'^(?:|~|NULL|[Nn]ull)$'  ), None),
-      (_SCALAR_BOOL , re.compile(r'^(?:TRUE|[Tt]rue)$'     ), True),
-      (_SCALAR_BOOL , re.compile(r'^(?:FALSE|[Ff]alse)$'   ), False),
-      (_SCALAR_INT  , re.compile(r'^(?P<s>[-+]?\d+)$'      ), lambda s: int(s, 10)),
-      (_SCALAR_INT  , re.compile(r'^0o(?P<s>[0-7]+)$'      ), lambda s: int(s,  8)),
-      (_SCALAR_INT  , re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'), lambda s: int(s, 16)),
-      (_SCALAR_FLOAT, re.compile(r'^\+?\.(?:INF|[Ii]nf)$'  ), float('inf')),
-      (_SCALAR_FLOAT, re.compile(r'^-\.(?:INF|[Ii]nf)$'    ), float('-inf')),
-      (_SCALAR_FLOAT, re.compile(r'^\.(?:N[Aa]N|nan)$'     ), float('nan')),
+      (_SCALAR_NULL, re.compile(r'^(?:|~|NULL|[Nn]ull)$'), None),
+
+      (_SCALAR_BOOL, re.compile(r'^(?:TRUE|[Tt]rue)$'  ), True),
+      (_SCALAR_BOOL, re.compile(r'^(?:FALSE|[Ff]alse)$'), False),
+
+      (_SCALAR_INT, re.compile(r'^(?P<s>[-+]?\d+)$'      ), lambda s: int(s, 10)),
+      (_SCALAR_INT, re.compile(r'^0o(?P<s>[0-7]+)$'      ), lambda s: int(s,  8)),
+      (_SCALAR_INT, re.compile(r'^0x(?P<s>[0-9A-Fa-f]+)$'), lambda s: int(s, 16)),
+
+      (_SCALAR_FLOAT, re.compile(r'^\+?\.(?:INF|[Ii]nf)$'), float('inf')),
+      (_SCALAR_FLOAT, re.compile(r'^-\.(?:INF|[Ii]nf)$'  ), float('-inf')),
+      (_SCALAR_FLOAT, re.compile(r'^\.(?:N[Aa]N|nan)$'   ), float('nan')),
       (_SCALAR_FLOAT, re.compile(r'^(?P<x>[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[Ee][-+]?\d+)?)$'), float),
+
+      # See <http://yaml.org/type/timestamp.html>.
+      (
+         _SCALAR_TIMESTAMP,
+         re.compile(r'(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})'),
+         lambda **dictArgs: datetime.date(**_make_values_int(dictArgs))
+      ),
+      (
+         _SCALAR_TIMESTAMP,
+         re.compile(r'''
+            (?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})
+            ([Tt]|[ \t]+)
+            (?P<hour>\d{1,2}):(?P<minute>\d{2}):(?P<second>\d{2})
+            (\.(?P<fraction>\d+))?
+            (?:(?:[ \t]*)
+               (?P<tz>Z|(?P<tzhour>[-+]\d{1,2})(?::(?P<tzminute>\d{2}))?)
+            )?
+         ''', re.VERBOSE),
+         _timestamp_to_datetime
+      ),
    )
    # Matches a sequence element start.
    _smc_reSequenceDash = re.compile(r'-(?: +|$)')
@@ -329,7 +466,7 @@ class Parser(object):
          # Restore the line number.
          self._m_iLine = iLineFinal
       elif kind is Kind.SCALAR and bResolveScalar:
-         oParsed = self._builtin_tag(_SCALAR_ALL, None, oParsed)
+         oParsed = self._construct_builtin_tag(_SCALAR_ALL, None, oParsed)
       return oParsed
 
    def consume_quoted_scalar(self):
@@ -419,7 +556,7 @@ class Parser(object):
       self._m_iSequenceMinIndent   = iOldSequenceMinIndent
       return listRet
 
-   def _builtin_tag(self, iApplicableScalarTypes, sExpectedTag, sParsed):
+   def _construct_builtin_tag(self, iApplicableScalarTypes, sExpectedTag, sParsed):
       """Constructs a built-in tag by finding a matching pattern in _smc_tplScalarTagConversions and
       applying the corresponding conversion.
 
