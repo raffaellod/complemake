@@ -108,32 +108,7 @@ Kind.SEQUENCE = Kind('sequence')
 
 ####################################################################################################
 
-# Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
-_NO_MAPPING_KEY_DEFAULT = object()
-
-_SCALAR_ALL       = 0b11111
-_SCALAR_BOOL      = 0b00001
-_SCALAR_FLOAT     = 0b00010
-_SCALAR_INT       = 0b00100
-_SCALAR_NULL      = 0b01000
-_SCALAR_TIMESTAMP = 0b10000
-
-def _make_values_int(dictArgs):
-   """Converts the values of its argument into int instances.
-
-   dict(str: str) dictArgs
-      Dictionary containing string values to convert. Will be modified in place.
-   dict(str: int) return
-      dictArgs, after it’s been modified.
-   """
-
-   dictRet = {}
-   for sKey, sValue in dictArgs.items():
-      if sValue:
-         dictRet[sKey] = int(sValue, 10)
-   return dictRet
-
-class _timestamp_tzinfo(datetime.tzinfo):
+class TimestampTZInfo(datetime.tzinfo):
    """Provides a tzinfo for datatime.datetime instances constructed from YAML timestamps that
    included a time zone.
    """
@@ -170,6 +145,33 @@ class _timestamp_tzinfo(datetime.tzinfo):
 
       return self._m_td
 
+####################################################################################################
+
+# Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
+_NO_MAPPING_KEY_DEFAULT = object()
+
+_SCALAR_ALL       = 0b11111
+_SCALAR_BOOL      = 0b00001
+_SCALAR_FLOAT     = 0b00010
+_SCALAR_INT       = 0b00100
+_SCALAR_NULL      = 0b01000
+_SCALAR_TIMESTAMP = 0b10000
+
+def _make_values_int(dictArgs):
+   """Converts the values of its argument into int instances.
+
+   dict(str: str) dictArgs
+      Dictionary containing string values to convert. Will be modified in place.
+   dict(str: int) return
+      dictArgs, after it’s been modified.
+   """
+
+   dictRet = {}
+   for sKey, sValue in dictArgs.items():
+      if sValue:
+         dictRet[sKey] = int(sValue, 10)
+   return dictRet
+
 def _timestamp_to_datetime(**dictArgs):
    """Constructs a datetime.datetime object by tweaking the arguments provided.
 
@@ -201,9 +203,9 @@ def _timestamp_to_datetime(**dictArgs):
    iTZHour = dictArgs.pop('tzhour', 0)
    iTZMinute = dictArgs.pop('tzminute', 0)
    if sTZ == 'Z':
-      dictArgs['tzinfo'] = _timestamp_tzinfo('UTC', 0, 0)
+      dictArgs['tzinfo'] = TimestampTZInfo('UTC', 0, 0)
    elif sTZ:
-      dictArgs['tzinfo'] = _timestamp_tzinfo(sTZ, iTZHour, iTZMinute)
+      dictArgs['tzinfo'] = TimestampTZInfo(sTZ, iTZHour, iTZMinute)
 
    return datetime.datetime(**dictArgs)
 
