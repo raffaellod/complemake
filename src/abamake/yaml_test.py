@@ -19,6 +19,7 @@
 
 """Test cases for the YAML parser."""
 
+import datetime
 import math
 import sys
 import textwrap
@@ -345,6 +346,118 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          1., 1.0, 1.1, .0, .1, 1.1e0, 1.1e1, 1.1e+1, 1.1e-1, +1., -1.0, +1.1, -.0, +.1,
          '1.e', '1.0e', '1.1e', 'e.0', '.1e', '1.1e0e', '1.1ee1', '1.1e+1e', 'e1.1e-1', '+1.e',
          'e-1.0', '+1.1e', '-.e', '+e.1', '1.',
+      ])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 1992
+         - 1992-
+         - 1991-07-1
+         - 1991-07-19
+         - 1991:07-19
+         -  991-07-19
+      ''')), [
+         1992,
+         '1992-',
+         '1991-07-1',
+         datetime.date(year = 1991, month = 7, day = 19),
+         '1991:07-19',
+         '991-07-19',
+      ])
+
+      self.maxDiff = None
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 1991-07-19T
+         - 1991-07-19T1
+         - 1991-07-19T13:07:5
+         - 1991-07-19T13:07:51
+         - 1991-07-19 13:07:51
+         - 1991-07-19  13:07:51
+         -  991-07-19T13:07:51
+         - 1991-07:19T13:07:51
+         - 1991-07-19Y13:07:51
+         - 1991-07-19T13-07:51
+         #- 1991-07-19T13:07:51Z
+      ''')), [
+         '1991-07-19T',
+         '1991-07-19T1',
+         '1991-07-19T13:07:5',
+         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
+         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
+         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
+         '991-07-19T13:07:51',
+         '1991-07:19T13:07:51',
+         '1991-07-19Y13:07:51',
+         '1991-07-19T13-07:51',
+         #datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
+      ])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 1991-07-19T13:07:51.
+         - 1991-07-19T13:07:51.1
+         - 1991-07-19T13:07:51.12
+         - 1991-07-19T13:07:51.123
+         - 1991-07-19T13:07:51.1234
+         - 1991-07-19T13:07:51.12345
+         - 1991-07-19T13:07:51.123456
+         - 1991-07-19T13:07:51.1234567
+         - 1991-07-19T13:07:51.12345678
+         - 1991-07-19T13:07:51.01
+         - 1991-07-19T13:07:51.0000001
+         #- 1991-07-19T13:07:51.123456Z
+         - 1991-07-19T13:07:51.123456Y
+      ''')), [
+         '1991-07-19T13:07:51.',
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 100000
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 120000
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123000
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123400
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123450
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123456
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123456
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123456
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 10000
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 0
+         ),
+         #datetime.datetime(
+         #   year = 1991, month = 7, day = 19,
+         #   hour = 13, minute = 7, second = 51, microsecond = 123456
+         #),
+         '1991-07-19T13:07:51.123456Y'
       ])
 
 class LocalTagsTest(unittest.TestCase):
