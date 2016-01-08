@@ -127,9 +127,11 @@ def _make_values_int(dictArgs):
       dictArgs, after it’s been modified.
    """
 
+   dictRet = {}
    for sKey, sValue in dictArgs.items():
-      dictArgs[sKey] = int(sValue, 10)
-   return dictArgs
+      if sValue:
+         dictRet[sKey] = int(sValue, 10)
+   return dictRet
 
 class _timestamp_tzinfo(datetime.tzinfo):
    """Provides a tzinfo for datatime.datetime instances constructed from YAML timestamps that
@@ -194,7 +196,7 @@ def _timestamp_to_datetime(**dictArgs):
       dictArgs['microsecond'] = sUs
    sTZ = dictArgs.pop('tz', None)
 
-   _make_values_int(dictArgs)
+   dictArgs = _make_values_int(dictArgs)
 
    iTZHour = dictArgs.pop('tzhour', 0)
    iTZMinute = dictArgs.pop('tzminute', 0)
@@ -278,20 +280,20 @@ class Parser(object):
       # See <http://yaml.org/type/timestamp.html>.
       (
          _SCALAR_TIMESTAMP,
-         re.compile(r'(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})'),
+         re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})$'),
          lambda **dictArgs: datetime.date(**_make_values_int(dictArgs))
       ),
       (
          _SCALAR_TIMESTAMP,
-         re.compile(r'''
+         re.compile(r'''^
             (?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})
-            ([Tt]|[ \t]+)
+            (?:[Tt]|[\t ]+)
             (?P<hour>\d{1,2}):(?P<minute>\d{2}):(?P<second>\d{2})
             (\.(?P<fraction>\d+))?
             (?:(?:[ \t]*)
                (?P<tz>Z|(?P<tzhour>[-+]\d{1,2})(?::(?P<tzminute>\d{2}))?)
             )?
-         ''', re.VERBOSE),
+         $''', re.VERBOSE),
          _timestamp_to_datetime
       ),
    )
