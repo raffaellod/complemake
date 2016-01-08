@@ -25,7 +25,8 @@ import sys
 import textwrap
 import unittest
 
-import abamake.yaml as yaml
+import yaml as y
+import yaml.parser as yp
 
 if sys.hexversion >= 0x03000000:
    basestring = str
@@ -33,46 +34,46 @@ if sys.hexversion >= 0x03000000:
 
 ####################################################################################################
 
-# (cd src && python -m unittest abamake/yaml_test.py)
+# (cd src && python -m unittest yaml/test.py)
 # @unittest.skip
 
 class BuiltinTagsTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!unk
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !!str
       ''')), '')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !!str
          a
       ''')), 'a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          --- !!str a
       ''')), 'a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          !!str
       ''')), '')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          !!str a
       ''')), 'a')
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -80,7 +81,7 @@ class BuiltinTagsTest(unittest.TestCase):
          - c
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -88,7 +89,7 @@ class BuiltinTagsTest(unittest.TestCase):
          - c
       ''')), ['a', 'b', 'c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -97,7 +98,7 @@ class BuiltinTagsTest(unittest.TestCase):
          - c
       ''')), ['a', {'k': 'b'}, 'c'])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -105,7 +106,7 @@ class BuiltinTagsTest(unittest.TestCase):
          e: f
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -113,7 +114,7 @@ class BuiltinTagsTest(unittest.TestCase):
          e: f
       ''')), {'a': 'b', 'c': 'd', 'e': 'f'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -124,7 +125,7 @@ class BuiltinTagsTest(unittest.TestCase):
 
 class ComplexTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: true
@@ -143,79 +144,79 @@ class ComplexTest(unittest.TestCase):
 
 class ExplicitlyTypedScalarTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - !!null
          - !!null a
       ''')), [None, None])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - !!bool true
          - !!bool false
       ''')), [True, False])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!bool a
       '''))
 
-      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.TagKindMismatchError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!bool
          - a
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - !!int 1
          - !!int 0x10
       ''')), [1, 16])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!int
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!int a
       '''))
 
-      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.TagKindMismatchError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!int
          - a
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - !!float .1
          - !!float 1e1
       ''')), [0.1, 10])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!float
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!float a
       '''))
 
-      self.assertRaises(yaml.TagKindMismatchError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.TagKindMismatchError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !!float
@@ -226,7 +227,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
    def runTest(self):
       self.maxDiff = None
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - null
@@ -237,7 +238,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - "null"
       ''')), [None, None, None, 'nULL', 'NUll', 'null'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - true
@@ -248,7 +249,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - 'true'
       ''')), [True, True, True, 'tRUE', 'TRue', 'true'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - false
@@ -259,7 +260,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - "false"
       ''')), [False, False, False, 'fALSE', 'FAlse', 'false'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 15
@@ -273,7 +274,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
 
       fPosInf = float('+Inf')
       fNegInf = float('+Inf')
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - .inf
@@ -303,16 +304,16 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
            'inf',   'Inf',   'INF',   'iNF',   'INf',
       ])
 
-      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.nan')))
-      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NaN')))
-      self.assertTrue(math.isnan(yaml.parse_string('%YAML 1.2\n---\n.NAN')))
-      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\n.nAN'), float))
-      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\n.NAn'), float))
-      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nnan'), float))
-      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nNAN'), float))
-      self.assertFalse(isinstance(yaml.parse_string('%YAML 1.2\n---\nNAN'), float))
+      self.assertTrue(math.isnan(yp.parse_string('%YAML 1.2\n---\n.nan')))
+      self.assertTrue(math.isnan(yp.parse_string('%YAML 1.2\n---\n.NaN')))
+      self.assertTrue(math.isnan(yp.parse_string('%YAML 1.2\n---\n.NAN')))
+      self.assertFalse(isinstance(yp.parse_string('%YAML 1.2\n---\n.nAN'), float))
+      self.assertFalse(isinstance(yp.parse_string('%YAML 1.2\n---\n.NAn'), float))
+      self.assertFalse(isinstance(yp.parse_string('%YAML 1.2\n---\nnan'), float))
+      self.assertFalse(isinstance(yp.parse_string('%YAML 1.2\n---\nNAN'), float))
+      self.assertFalse(isinstance(yp.parse_string('%YAML 1.2\n---\nNAN'), float))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 1.
@@ -350,7 +351,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          'e-1.0', '+1.1e', '-.e', '+e.1', '1.',
       ])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 1992
@@ -368,7 +369,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '991-07-19',
       ])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 1991-07-19T
@@ -394,7 +395,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '1991-07-19T13-07:51',
       ])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 1991-07-19T13:07:51.
@@ -452,7 +453,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          ),
       ])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - 1991-07-19T13:07:51x
@@ -467,49 +468,49 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '1991-07-19T13:07:51x',
          datetime.datetime(
             year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = yaml.TimestampTZInfo('UTC', 0, 0)
+            tzinfo = y.TimestampTZInfo('UTC', 0, 0)
          ),
          datetime.datetime(
             year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = yaml.TimestampTZInfo('+3', 3, 0)
+            tzinfo = y.TimestampTZInfo('+3', 3, 0)
          ),
          '1991-07-19T13:07:51+03:1',
          datetime.datetime(
             year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = yaml.TimestampTZInfo('+03:15', 3, 15)
+            tzinfo = y.TimestampTZInfo('+03:15', 3, 15)
          ),
          '1991-07-19T13:07:51.123456Y',
          datetime.datetime(
             year = 1991, month = 7, day = 19,
             hour = 13, minute = 7, second = 51, microsecond = 123456,
-            tzinfo = yaml.TimestampTZInfo('UTC', 0, 0)
+            tzinfo = y.TimestampTZInfo('UTC', 0, 0)
          ),
          datetime.datetime(
             year = 1991, month = 7, day = 19,
             hour = 13, minute = 7, second = 51, microsecond = 123456,
-            tzinfo = yaml.TimestampTZInfo('-11:30', -11, 30)
+            tzinfo = y.TimestampTZInfo('-11:30', -11, 30)
          ),
       ])
 
 class LocalTagsTest(unittest.TestCase):
    def runTest(self):
-      class LocalTagsTestParser(yaml.Parser):
+      class LocalTagsTestParser(yp.Parser):
          pass
 
       LocalTagsTestParser.register_local_tag(
-         'test_str', yaml.Kind.SCALAR, lambda yp, sYaml: '<' + sYaml + '>'
+         'test_str', y.Kind.SCALAR, lambda yp, sYaml: '<' + sYaml + '>'
       )
       LocalTagsTestParser.register_local_tag(
-         'test_map', yaml.Kind.MAPPING, lambda yp, dictYaml: dictYaml.get('k')
+         'test_map', y.Kind.MAPPING, lambda yp, dictYaml: dictYaml.get('k')
       )
 
       self.assertRaises(
-         yaml.DuplicateTagError, LocalTagsTestParser.register_local_tag, 'test_map', None, None
+         y.DuplicateTagError, LocalTagsTestParser.register_local_tag, 'test_map', None, None
       )
 
       tp = LocalTagsTestParser()
 
-      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !test_unk
@@ -543,7 +544,7 @@ class LocalTagsTest(unittest.TestCase):
          !test_str a
       ''')), '<a>')
 
-      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -568,7 +569,7 @@ class LocalTagsTest(unittest.TestCase):
          - c
       ''')), ['a', 'b', 'c'])
 
-      self.assertRaises(yaml.SyntaxError, tp.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
@@ -595,18 +596,18 @@ class LocalTagsTest(unittest.TestCase):
 
 class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
    def runTest(self):
-      class LocalTagsInDifferentSubclassesTestParser1(yaml.Parser):
+      class LocalTagsInDifferentSubclassesTestParser1(yp.Parser):
          pass
 
-      @LocalTagsInDifferentSubclassesTestParser1.local_tag('same_tag', yaml.Kind.SCALAR)
+      @LocalTagsInDifferentSubclassesTestParser1.local_tag('same_tag', y.Kind.SCALAR)
       class LocalTag1(object):
          def __init__(self, yp, sYaml):
             pass
 
-      class LocalTagsInDifferentSubclassesTestParser2(yaml.Parser):
+      class LocalTagsInDifferentSubclassesTestParser2(yp.Parser):
          pass
 
-      @LocalTagsInDifferentSubclassesTestParser2.local_tag('same_tag', yaml.Kind.SCALAR)
+      @LocalTagsInDifferentSubclassesTestParser2.local_tag('same_tag', y.Kind.SCALAR)
       class LocalTag2(object):
          def __init__(self, yp, sYaml):
             pass
@@ -620,33 +621,33 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
 class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
    def runTest(self):
-      class LocalTagsWithMandatoryMappingKeyTestParser(yaml.Parser):
+      class LocalTagsWithMandatoryMappingKeyTestParser(yp.Parser):
          pass
 
-      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('just_a_map', yaml.Kind.MAPPING)
+      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('just_a_map', y.Kind.MAPPING)
       def just_a_map(yp, sYaml):
          yp.get_current_mapping_key(str)
          return sYaml
 
-      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('need_str_key', yaml.Kind.SCALAR)
+      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('need_str_key', y.Kind.SCALAR)
       def need_str_key(yp, sYaml):
          yp.get_current_mapping_key(str)
          return sYaml
 
-      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('okay_with_no_key', yaml.Kind.SCALAR)
+      @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('okay_with_no_key', y.Kind.SCALAR)
       def okay_with_no_key(yp, sYaml):
          yp.get_current_mapping_key(str, None)
          return sYaml
 
       tp = LocalTagsWithMandatoryMappingKeyTestParser()
 
-      self.assertRaises(yaml.MappingKeyError, tp.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.MappingKeyError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          !need_str_key a
       '''))
 
-      self.assertRaises(yaml.MappingKeyError, tp.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.MappingKeyError, tp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - !need_str_key a
@@ -685,55 +686,55 @@ class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
 
 class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
       ''')), [{'a': 'b'}])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
          c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
           c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
            c
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
             c
       ''')), [{'a': 'b c'}])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
          - c
       ''')), [{'a': 'b'}, 'c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
            c: d
       ''')), [{'a': 'b', 'c': 'd'}])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a: b
@@ -742,128 +743,128 @@ class MappingInSequenceTest(unittest.TestCase):
 
 class MappingTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:b
       ''')), 'a:b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
       ''')), {'a': 'b'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a :b
       ''')), 'a :b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a : b
       ''')), {'a': 'b'})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a:
          b
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
           b
       ''')), {'a': 'b'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
            b
       ''')), {'a': 'b'})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a:b
          c: d
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
          c :d
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
          c : d
       ''')), {'a': 'b', 'c': 'd'})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b: c
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
           c
       ''')), {'a': 'b c'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a: b
            c
       ''')), {'a': 'b c'})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b:
           c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: b:
            c
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
          b: c
       ''')), {'a': None, 'b': 'c'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
           b: c
       ''')), {'a': {'b': 'c'}})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
            b: c
       ''')), {'a': {'b': 'c'}})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -871,7 +872,7 @@ class MappingTest(unittest.TestCase):
          d: e
       ''')), {'a': {'b': 'c'}, 'd': 'e'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -879,7 +880,7 @@ class MappingTest(unittest.TestCase):
          d: e
       ''')), {'a': {'b': 'c'}, 'd': 'e'})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -887,7 +888,7 @@ class MappingTest(unittest.TestCase):
           d: e
       ''')), {'a': {'b': 'c', 'd': 'e'}})
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -895,7 +896,7 @@ class MappingTest(unittest.TestCase):
            d: e
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -905,35 +906,35 @@ class MappingTest(unittest.TestCase):
 
 class PrologTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, 'a')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '- a')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, 'a: b')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2')
-      self.assertEqual(yaml.parse_string('%YAML 1.2\n---'), None)
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2\n---a')
-      self.assertEqual(yaml.parse_string('%YAML 1.2\n--- a'), 'a')
-      self.assertEqual(yaml.parse_string('%YAML 1.2\n---  a'), 'a')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2\n--- - a')
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, '%YAML 1.2\n--- a: b')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, 'a')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '- a')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, 'a: b')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2')
+      self.assertEqual(yp.parse_string('%YAML 1.2\n---'), None)
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2\n---a')
+      self.assertEqual(yp.parse_string('%YAML 1.2\n--- a'), 'a')
+      self.assertEqual(yp.parse_string('%YAML 1.2\n---  a'), 'a')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2\n--- - a')
+      self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2\n--- a: b')
 
 class QuotedMultilineStringTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          "
          a"
       ''')), ' a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          "a
          "
       ''')), 'a ')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          "
@@ -943,87 +944,87 @@ class QuotedMultilineStringTest(unittest.TestCase):
 
 class QuotedStringTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          'a
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a'
       ''')), 'a\'')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a"
       ''')), 'a"')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a'b
       ''')), 'a\'b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a"b
       ''')), 'a"b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
          "
       ''')), 'a "')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
          "b"
       ''')), 'a "b"')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          'a'
       ''')), 'a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          "a"
       ''')), 'a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          " a"
       ''')), ' a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          "a "
       ''')), 'a ')
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a"b
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          "a"
@@ -1032,61 +1033,61 @@ class QuotedStringTest(unittest.TestCase):
 
 class SequenceInMappingTest(unittest.TestCase):
    def runTest(self):
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: -
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: - b
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: - b
          c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: - b
           c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: - b
            c
       '''))
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          a: - b
             c
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
          - b
       ''')), {'a': ['b']})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
           - b
       ''')), {'a': ['b']})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -1094,7 +1095,7 @@ class SequenceInMappingTest(unittest.TestCase):
          - c
       ''')), {'a': ['b', 'c']})
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a:
@@ -1105,61 +1106,61 @@ class SequenceInMappingTest(unittest.TestCase):
 
 class SequenceTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -a
       ''')), '-a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
       ''')), ['a'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -a
          - b
       ''')), '-a - b')
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - a
          -b
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
           - b
       ''')), ['a - b'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
            - b
       ''')), ['a - b'])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
           - a
          - b
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
          - b
       ''')), ['a', 'b'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -1167,7 +1168,7 @@ class SequenceTest(unittest.TestCase):
          - c
       ''')), ['a - b', 'c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -1175,7 +1176,7 @@ class SequenceTest(unittest.TestCase):
          - c
       ''')), ['a - b', 'c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -1183,7 +1184,7 @@ class SequenceTest(unittest.TestCase):
           - c
       ''')), ['a', 'b - c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - a
@@ -1191,34 +1192,34 @@ class SequenceTest(unittest.TestCase):
            - c
       ''')), ['a', 'b - c'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - - a
       ''')), [['a']])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - - a
          - b
       ''')), [['a'], 'b'])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          - - a
           - b
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          - - a
            - b
       ''')), [['a', 'b']])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -
@@ -1226,7 +1227,7 @@ class SequenceTest(unittest.TestCase):
          - b
       ''')), [['a'], 'b'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -
@@ -1234,7 +1235,7 @@ class SequenceTest(unittest.TestCase):
          - b
       ''')), [['a'], 'b'])
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -
@@ -1242,7 +1243,7 @@ class SequenceTest(unittest.TestCase):
           - b
       ''')), [['a', 'b']])
 
-      self.assertRaises(yaml.SyntaxError, yaml.parse_string, textwrap.dedent('''
+      self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''
          %YAML 1.2
          ---
          -
@@ -1250,7 +1251,7 @@ class SequenceTest(unittest.TestCase):
           - b
       '''))
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          -
@@ -1261,34 +1262,34 @@ class SequenceTest(unittest.TestCase):
 
 class StringTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
       ''')), 'a')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
           b
       ''')), 'a b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
          b
       ''')), 'a b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
           b
       ''')), 'a b')
 
-      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
          a
@@ -1297,20 +1298,20 @@ class StringTest(unittest.TestCase):
 
 class TagKindValidationTest(unittest.TestCase):
    def runTest(self):
-      class TagKindValidationTestParser(yaml.Parser):
+      class TagKindValidationTestParser(yp.Parser):
          pass
 
       TagKindValidationTestParser.register_local_tag(
-         'test_map', yaml.Kind.MAPPING, lambda yp, dictYaml: dictYaml
+         'test_map', y.Kind.MAPPING, lambda yp, dictYaml: dictYaml
       )
       TagKindValidationTestParser.register_local_tag(
-         'test_str', yaml.Kind.SCALAR, lambda yp, sYaml: sYaml
+         'test_str', y.Kind.SCALAR, lambda yp, sYaml: sYaml
       )
 
       tp = TagKindValidationTestParser()
 
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map')
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map a')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!map a')
 
       self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -1318,8 +1319,8 @@ class TagKindValidationTest(unittest.TestCase):
          a: b
       ''')), {'a': 'b'})
 
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq')
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq a')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!!seq a')
 
       self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -1336,8 +1337,8 @@ class TagKindValidationTest(unittest.TestCase):
          a
       ''')), 'a')
 
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map')
-      self.assertRaises(yaml.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map a')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map')
+      self.assertRaises(yp.TagKindMismatchError, tp.parse_string, '%YAML 1.2\n---\n!test_map a')
 
       self.assertEqual(tp.parse_string(textwrap.dedent('''
          %YAML 1.2

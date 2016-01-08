@@ -19,12 +19,12 @@
 
 """Makefile parser and top-level YAML class mapping."""
 
-import abamake.yaml as yaml
+import yaml.parser
 
 
 ####################################################################################################
 
-class MakefileParser(yaml.Parser):
+class MakefileParser(yaml.parser.Parser):
    """Parser of YAML Abamakefiles."""
 
    def __init__(self, mk):
@@ -34,7 +34,7 @@ class MakefileParser(yaml.Parser):
          Make instance to make accessible via self.mk .
       """
 
-      yaml.Parser.__init__(self)
+      yaml.parser.Parser.__init__(self)
 
       self._m_mk = mk
 

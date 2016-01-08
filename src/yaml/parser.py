@@ -24,6 +24,8 @@ import io
 import os
 import re
 
+import yaml
+
 
 ####################################################################################################
 
@@ -51,13 +53,6 @@ def parse_string(s):
 
 ####################################################################################################
 
-class DuplicateTagError(Exception):
-   """Raised when attempting to register a tag with a name that’s already taken."""
-
-   pass
-
-####################################################################################################
-
 class SyntaxError(Exception):
    """Indicates a syntactical or semantical error in a YAML source."""
 
@@ -78,75 +73,6 @@ class TagKindMismatchError(SyntaxError):
    """Raised when a tag is applied to a YAML object of a kind not suitable to construct the tag."""
 
    pass
-
-####################################################################################################
-
-class Kind(object):
-   """YAML raw object type."""
-
-   MAPPING  = None
-   SCALAR   = None
-   SEQUENCE = None
-
-   _m_sName = None
-
-   def __init__(self, sName):
-      """Constructor.
-
-      str sName
-         Name of the kind.
-      """
-
-      self._m_sName = sName
-
-   def __str__(self):
-      return self._m_sName
-
-Kind.MAPPING  = Kind('mapping')
-Kind.SCALAR   = Kind('scalar')
-Kind.SEQUENCE = Kind('sequence')
-
-####################################################################################################
-
-class TimestampTZInfo(datetime.tzinfo):
-   """Provides a tzinfo for datatime.datetime instances constructed from YAML timestamps that
-   included a time zone.
-   """
-
-   _m_td = None
-   _m_sTZ = None
-
-   def __init__(self, sTZ, iHour, iMinute):
-      """Constructor.
-
-      str sTZ
-         The timezone, as a string; can be “Z” to indicate UTC.
-      int iHour
-         Timezone hour part.
-      int iMinute
-         Timezone minute part.
-      """
-
-      self._m_td = datetime.timedelta(hours = iHour, minutes = iMinute)
-      self._m_sTZ = sTZ
-
-   def __eq__(self, ttziOther):
-      return self._m_td == ttziOther._m_td
-
-   def dst(self, dt):
-      """See datetime.tzinfo.dst()."""
-
-      return None
-
-   def tzname(self, dt):
-      """See datetime.tzinfo.tzname()."""
-
-      return self._m_sTZ
-
-   def utcoffset(self, dt):
-      """See datetime.tzinfo.utcoffset()."""
-
-      return self._m_td
 
 ####################################################################################################
 
@@ -206,9 +132,9 @@ def _timestamp_to_datetime(**dictArgs):
    iTZHour = dictArgs.pop('tzhour', 0)
    iTZMinute = dictArgs.pop('tzminute', 0)
    if sTZ == 'Z':
-      dictArgs['tzinfo'] = TimestampTZInfo('UTC', 0, 0)
+      dictArgs['tzinfo'] = yaml.TimestampTZInfo('UTC', 0, 0)
    elif sTZ:
-      dictArgs['tzinfo'] = TimestampTZInfo(sTZ, iTZHour, iTZMinute)
+      dictArgs['tzinfo'] = yaml.TimestampTZInfo(sTZ, iTZHour, iTZMinute)
 
    return datetime.datetime(**dictArgs)
 
@@ -224,35 +150,35 @@ class Parser(object):
    # Built-in tags.
    _smc_dictBuiltinTags = {
       'bool': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_BOOL, 'bool', sYaml)
       ),
       'float': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_FLOAT, 'float', sYaml)
       ),
       'int': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_INT, 'int', sYaml)
       ),
       'map': (
-         Kind.MAPPING,
+         yaml.Kind.MAPPING,
          lambda yp, dictYaml: dictYaml
       ),
       'null': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: None
       ),
       'seq': (
-         Kind.SEQUENCE,
+         yaml.Kind.SEQUENCE,
          lambda yp, listYaml: listYaml
       ),
       'str': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: sYaml
       ),
       'timestamp': (
-         Kind.SCALAR,
+         yaml.Kind.SCALAR,
          lambda yp, sYaml: yp._construct_builtin_tag(_SCALAR_TIMESTAMP, 'timestamp', sYaml)
       ),
    }
@@ -419,7 +345,7 @@ class Parser(object):
          bWrapped = False
 
       oParsed = ''
-      kind = Kind.SCALAR
+      kind = yaml.Kind.SCALAR
       bResolveScalar = True
       sTag = None
       kindExpected = None
@@ -474,7 +400,7 @@ class Parser(object):
             self.raise_parsing_error('sequence element not expected in this context')
          # Continue parsing this line as a sequence.
          oParsed = self.consume_sequence_implicit()
-         kind = Kind.SEQUENCE
+         kind = yaml.Kind.SEQUENCE
       elif (
          not bWrapped or self._m_iLineIndent >= self._m_iMappingMinIndent
       ) and self.match_and_store(self._smc_reMappingKey):
@@ -482,7 +408,7 @@ class Parser(object):
             self.raise_parsing_error('mapping key not expected in this context')
          # Continue parsing this line as a map.
          oParsed = self.consume_map_implicit()
-         kind = Kind.MAPPING
+         kind = yaml.Kind.MAPPING
       elif not bWrapped or self._m_iLineIndent >= self._m_iScalarWrapMinIndent:
          oParsed = self.consume_scalar()
       else:
@@ -496,13 +422,15 @@ class Parser(object):
          iLineFinal = self._m_iLine
          self._m_iLine = iLineInitial
          if kind is not kindExpected:
-            raise TagKindMismatchError('{}:{}: expected {} to construct tag “{}”; found {}'.format(
-               self._m_sSourceName, self._m_iLine, kindExpected, sTag, kind
-            ))
+            raise TagKindMismatchError(
+               '{}:{}: expected {} to construct tag “{}”; found {}'.format(
+                  self._m_sSourceName, self._m_iLine, kindExpected, sTag, kind
+               )
+            )
          oParsed = oConstructor(self, oParsed)
          # Restore the line number.
          self._m_iLine = iLineFinal
-      elif kind is Kind.SCALAR and bResolveScalar:
+      elif kind is yaml.Kind.SCALAR and bResolveScalar:
          oParsed = self._construct_builtin_tag(_SCALAR_ALL, None, oParsed)
       return oParsed
 
@@ -797,7 +725,7 @@ class Parser(object):
       dictLocalTags = Parser._sm_dictLocalTagsByParserType.setdefault(cls.__name__, {})
       tpl = kind, oConstructor
       if dictLocalTags.setdefault(sTag, tpl) is not tpl:
-         raise DuplicateTagError('local tag “{}” already registered'.format(sTag))
+         raise yaml.DuplicateTagError('local tag “{}” already registered'.format(sTag))
 
    def _reset(self):
       """Reinitializes the internal parser status."""

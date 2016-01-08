@@ -29,7 +29,7 @@ import abamake.makefileparser
 import abamake.metadata
 import abamake.platform
 import abamake.target
-import abamake.yaml as yaml
+import yaml
 
 
 ####################################################################################################

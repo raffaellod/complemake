@@ -30,7 +30,7 @@ import abamake.job
 import abamake.make
 import abamake.makefileparser
 import abamake.tool
-import abamake.yaml as yaml
+import yaml
 
 if sys.hexversion >= 0x03000000:
    basestring = str
