@@ -130,6 +130,13 @@ class TimestampTZInfo(datetime.tzinfo):
       self._m_td = datetime.timedelta(hours = iHour, minutes = iMinute)
       self._m_sTZ = sTZ
 
+   def __eq__(self, ttziOther):
+      if self._m_sTZ and ttziOther._m_sTZ:
+         return self._m_sTZ == ttziOther._m_sTZ
+      else:
+         # One of the two might have _m_sTZ, but the other doesn’t, so just compare the raw numbers.
+         return self._m_td == ttziOther._m_td
+
    def dst(self, dt):
       """See datetime.tzinfo.dst()."""
 
