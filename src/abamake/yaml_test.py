@@ -224,6 +224,8 @@ class ExplicitlyTypedScalarTest(unittest.TestCase):
 
 class ImplicitlyTypedScalarTest(unittest.TestCase):
    def runTest(self):
+      self.maxDiff = None
+
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -366,7 +368,6 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '991-07-19',
       ])
 
-      self.maxDiff = None
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -380,7 +381,6 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - 1991-07:19T13:07:51
          - 1991-07-19Y13:07:51
          - 1991-07-19T13-07:51
-         #- 1991-07-19T13:07:51Z
       ''')), [
          '1991-07-19T',
          '1991-07-19T1',
@@ -392,7 +392,6 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '1991-07:19T13:07:51',
          '1991-07-19Y13:07:51',
          '1991-07-19T13-07:51',
-         #datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
       ])
 
       self.assertEqual(yaml.parse_string(textwrap.dedent('''
@@ -409,8 +408,6 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - 1991-07-19T13:07:51.12345678
          - 1991-07-19T13:07:51.01
          - 1991-07-19T13:07:51.0000001
-         #- 1991-07-19T13:07:51.123456Z
-         - 1991-07-19T13:07:51.123456Y
       ''')), [
          '1991-07-19T13:07:51.',
          datetime.datetime(
@@ -453,11 +450,45 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
             year = 1991, month = 7, day = 19,
             hour = 13, minute = 7, second = 51, microsecond = 0
          ),
-         #datetime.datetime(
-         #   year = 1991, month = 7, day = 19,
-         #   hour = 13, minute = 7, second = 51, microsecond = 123456
-         #),
-         '1991-07-19T13:07:51.123456Y'
+      ])
+
+      self.assertEqual(yaml.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         - 1991-07-19T13:07:51x
+         - 1991-07-19T13:07:51Z
+         - 1991-07-19T13:07:51+3
+         - 1991-07-19T13:07:51+03:1
+         - 1991-07-19T13:07:51+03:15
+         - 1991-07-19T13:07:51.123456Y
+         - 1991-07-19T13:07:51.123456Z
+         - 1991-07-19T13:07:51.123456-11:30
+      ''')), [
+         '1991-07-19T13:07:51x',
+         datetime.datetime(
+            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
+            tzinfo = yaml.TimestampTZInfo('UTC', 0, 0)
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
+            tzinfo = yaml.TimestampTZInfo('+3', 3, 0)
+         ),
+         '1991-07-19T13:07:51+03:1',
+         datetime.datetime(
+            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
+            tzinfo = yaml.TimestampTZInfo('+03:15', 3, 15)
+         ),
+         '1991-07-19T13:07:51.123456Y',
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123456,
+            tzinfo = yaml.TimestampTZInfo('UTC', 0, 0)
+         ),
+         datetime.datetime(
+            year = 1991, month = 7, day = 19,
+            hour = 13, minute = 7, second = 51, microsecond = 123456,
+            tzinfo = yaml.TimestampTZInfo('-11:30', -11, 30)
+         ),
       ])
 
 class LocalTagsTest(unittest.TestCase):
