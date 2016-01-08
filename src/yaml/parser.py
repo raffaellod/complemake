@@ -21,7 +21,6 @@
 
 import datetime
 import io
-import os
 import re
 
 import yaml
