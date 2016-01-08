@@ -653,7 +653,7 @@ class Parser(object):
 
       str sTag
          Tag to associate to the constructor.
-      abamake.yaml.Kind kind
+      yaml.Kind kind
          Kind expected by the tag’s constructor. If the object being constructed is not of this
          kind, a syntax error will be raised.
       """
@@ -782,7 +782,7 @@ class Parser(object):
 
       str sTag
          Tag to associate to the constructor.
-      abamake.yaml.Kind kind
+      yaml.Kind kind
          Kind expected by the tag’s constructor. If the object being constructed is not of this
          kind, a syntax error will be raised.
       callable oConstructor

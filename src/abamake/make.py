@@ -29,7 +29,7 @@ import abamake.makefileparser
 import abamake.metadata
 import abamake.platform
 import abamake.target
-import abamake.yaml
+import abamake.yaml as yaml
 
 
 ####################################################################################################
@@ -80,7 +80,7 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/makefile', abamake.yaml.Kind.MAPPING)
+@abamake.makefileparser.MakefileParser.local_tag('abamake/makefile', yaml.Kind.MAPPING)
 class Makefile(object):
    """Stores the attributes of a YAML abamake/makefile object."""
 

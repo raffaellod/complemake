@@ -30,7 +30,7 @@ import abamake.job
 import abamake.make
 import abamake.makefileparser
 import abamake.tool
-import abamake.yaml
+import abamake.yaml as yaml
 
 if sys.hexversion >= 0x03000000:
    basestring = str
@@ -787,7 +787,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exe', abamake.yaml.Kind.MAPPING)
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exe', yaml.Kind.MAPPING)
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
@@ -812,7 +812,7 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/dynlib', abamake.yaml.Kind.MAPPING)
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/dynlib', yaml.Kind.MAPPING)
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
@@ -934,9 +934,7 @@ class TestTargetMixIn(object):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag(
-   'abamake/target/tooltest', abamake.yaml.Kind.MAPPING
-)
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/tooltest', yaml.Kind.MAPPING)
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
@@ -1032,9 +1030,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag(
-   'abamake/target/exetest', abamake.yaml.Kind.MAPPING
-)
+@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exetest', yaml.Kind.MAPPING)
 class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
@@ -1237,7 +1233,7 @@ class OutputTransform(object):
 ####################################################################################################
 
 @abamake.makefileparser.MakefileParser.local_tag(
-   'abamake/target/filter-output-transform', abamake.yaml.Kind.SCALAR
+   'abamake/target/filter-output-transform', yaml.Kind.SCALAR
 )
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a
