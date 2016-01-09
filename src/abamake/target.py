@@ -431,6 +431,9 @@ class NamedTargetMixIn(NamedDependencyMixIn):
          Dependency name.
       """
 
+      if not sName:
+         mp.raise_parsing_error('missing or empty “name” non-optional attribute')
+
       NamedDependencyMixIn.__init__(self, sName)
 
       mk.add_named_target(self, sName)
@@ -694,14 +697,14 @@ class BinaryTarget(FileTarget):
 
       oTests = dictYaml.get('tests')
       if oTests:
-         if not isinstance(oTests, dict):
-            mp.raise_parsing_error('attribute “tests” must be a mapping')
-         for sName, o in oTests.items():
+         if not isinstance(oTests, list):
+            mp.raise_parsing_error('attribute “tests” must be a sequence')
+         for i, o in enumerate(oTests):
             if not isinstance(o, (ExecutableTestTarget, ToolTestTarget)):
                mp.raise_parsing_error((
                   'elements of the “tests” attribute must be of type !abamake/target/exetest or ' +
-                  '!abamake/target/tooltest, but element “{}” is not'
-               ).format(sName))
+                  '!abamake/target/tooltest, but element [{}] is not'
+               ).format(i))
             # A test must be built after the target it’s supposed to test.
             o.add_dependency(self)
 
@@ -782,7 +785,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(basestring))
+      NamedTargetMixIn.__init__(self, mp.mk, dictYaml.get('name', ''))
       BinaryTarget.__init__(self, mp, dictYaml)
 
 ####################################################################################################
@@ -804,9 +807,9 @@ class ExecutableTarget(NamedBinaryTarget):
 
       # Default the “path” attribute before constructing the base class.
       mk = mp.mk
+      # dictYaml['name'] may be missing, but NamedTargetMixIn will catch that.
       dictYaml.setdefault('path', os.path.join(
-         mk.output_dir, 'bin',
-         mk.target_platform.exe_file_name(mp.get_current_mapping_key(basestring))
+         mk.output_dir, 'bin', mk.target_platform.exe_file_name(dictYaml.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)
@@ -830,9 +833,9 @@ class DynLibTarget(NamedBinaryTarget):
 
       # Default the “path” attribute before constructing the base class.
       mk = mp.mk
+      # dictYaml['name'] may be missing, but NamedTargetMixIn will catch that.
       dictYaml.setdefault('path', os.path.join(
-         mk.output_dir, 'lib',
-         mk.target_platform.dynlib_file_name(mp.get_current_mapping_key(basestring))
+         mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(dictYaml.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)
@@ -949,7 +952,8 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(basestring))
+      # dictYaml['name'] may be missing, but NamedTargetMixIn will catch that.
+      NamedTargetMixIn.__init__(self, mp.mk, dictYaml.get('name', ''))
       Target.__init__(self, mp, dictYaml)
       TestTargetMixIn.__init__(self, mp, dictYaml)
 
@@ -1059,9 +1063,9 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
 
       # Default the “path” attribute before constructing the base class.
       mk = mp.mk
+      # dictYaml['name'] may be missing, but NamedTargetMixIn will catch that.
       dictYaml.setdefault('path', os.path.join(
-         mk.output_dir, 'bin', 'test',
-         mk.target_platform.exe_file_name(mp.get_current_mapping_key(basestring))
+         mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(dictYaml.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)

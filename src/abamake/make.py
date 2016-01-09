@@ -97,14 +97,14 @@ class Makefile(object):
       """
 
       oTargets = dictYaml.get('targets')
-      if not isinstance(oTargets, dict):
-         mp.raise_parsing_error('invalid “targets” element; expected mapping')
-      for sKey, o in oTargets.items():
+      if not isinstance(oTargets, list):
+         mp.raise_parsing_error('attribute “targets” must be a sequence')
+      for i, o in enumerate(oTargets):
          if not isinstance(o, abamake.target.Target):
             mp.raise_parsing_error((
-               'elements of the “targets” attribute must be of type !abamake/target/*, but “{}” ' +
-                  'is not'
-            ).format(sKey))
+               'elements of the “targets” attribute must be of type !abamake/target/*, but ' +
+               'element [{}] is not'
+            ).format(i))
       self._m_listTargets = oTargets
 
    def _get_targets(self):
