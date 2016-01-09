@@ -56,9 +56,9 @@ Abamake (short for “Abaclade Make”) was created to satisfy these requirement
    users.
 
 
-Abamake loads an Abamakefile (short for “Abamake makefile”, a fairly simple XML file; see [DOC:5581
-Abamakefiles]), creating a list of named and unnamed (file path-only) targets; these are then
-scheduled for build, and the resulting build is started, proceeding in the necessary order.
+Abamake loads an Abamakefile (short for “Abamake makefile”, a YAML file), creating a list of named
+and unnamed (file path-only) targets; these are then scheduled for build, and the resulting build is
+started, proceeding in the necessary order.
 
 Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 Abamake ‒
 Execution of external commands] for more information. Multiple non-dependent external commands are
