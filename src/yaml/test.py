@@ -626,17 +626,17 @@ class LocalTagsWithMandatoryMappingKeyTest(unittest.TestCase):
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('just_a_map', y.Kind.MAPPING)
       def just_a_map(yp, sYaml):
-         yp.get_current_mapping_key(str)
+         yp.get_current_mapping_key(basestring)
          return sYaml
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('need_str_key', y.Kind.SCALAR)
       def need_str_key(yp, sYaml):
-         yp.get_current_mapping_key(str)
+         yp.get_current_mapping_key(basestring)
          return sYaml
 
       @LocalTagsWithMandatoryMappingKeyTestParser.local_tag('okay_with_no_key', y.Kind.SCALAR)
       def okay_with_no_key(yp, sYaml):
-         yp.get_current_mapping_key(str, None)
+         yp.get_current_mapping_key(basestring, None)
          return sYaml
 
       tp = LocalTagsWithMandatoryMappingKeyTestParser()

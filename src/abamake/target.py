@@ -782,7 +782,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(str))
+      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(basestring))
       BinaryTarget.__init__(self, mp, dictYaml)
 
 ####################################################################################################
@@ -805,7 +805,8 @@ class ExecutableTarget(NamedBinaryTarget):
       # Default the “path” attribute before constructing the base class.
       mk = mp.mk
       dictYaml.setdefault('path', os.path.join(
-         mk.output_dir, 'bin', mk.target_platform.exe_file_name(mp.get_current_mapping_key(str))
+         mk.output_dir, 'bin',
+         mk.target_platform.exe_file_name(mp.get_current_mapping_key(basestring))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)
@@ -830,7 +831,8 @@ class DynLibTarget(NamedBinaryTarget):
       # Default the “path” attribute before constructing the base class.
       mk = mp.mk
       dictYaml.setdefault('path', os.path.join(
-         mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(mp.get_current_mapping_key(str))
+         mk.output_dir, 'lib',
+         mk.target_platform.dynlib_file_name(mp.get_current_mapping_key(basestring))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)
@@ -947,7 +949,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(str))
+      NamedTargetMixIn.__init__(self, mp.mk, mp.get_current_mapping_key(basestring))
       Target.__init__(self, mp, dictYaml)
       TestTargetMixIn.__init__(self, mp, dictYaml)
 
@@ -1059,7 +1061,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       mk = mp.mk
       dictYaml.setdefault('path', os.path.join(
          mk.output_dir, 'bin', 'test',
-         mk.target_platform.exe_file_name(mp.get_current_mapping_key(str))
+         mk.target_platform.exe_file_name(mp.get_current_mapping_key(basestring))
       ))
 
       NamedBinaryTarget.__init__(self, mp, dictYaml)
