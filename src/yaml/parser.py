@@ -59,24 +59,12 @@ class SyntaxError(Exception):
 
 ####################################################################################################
 
-class MappingKeyError(SyntaxError):
-   """Raised when a tag is applied to a YAML object that’s expected to be used in a mapping and
-   associated to keys of a certain type.
-   """
-
-   pass
-
-####################################################################################################
-
 class TagKindMismatchError(SyntaxError):
    """Raised when a tag is applied to a YAML object of a kind not suitable to construct the tag."""
 
    pass
 
 ####################################################################################################
-
-# Object used as default value for the oDefault argument of Parser.get_current_mapping_key().
-_NO_MAPPING_KEY_DEFAULT = object()
 
 _SCALAR_ALL       = 0b11111
 _SCALAR_BOOL      = 0b00001
@@ -302,10 +290,7 @@ class Parser(object):
 
          # Parse whatever is left; this may span multiple lines.
          # TODO: reject non-explicit sequences or maps.
-         oPrevMappingKey = self._m_oCurrMappingKey
-         self._m_oCurrMappingKey = sKey
          dictRet[sKey] = self.consume_object(False)
-         self._m_oCurrMappingKey = oPrevMappingKey
 
          # consume_*() functions always quit after reading one last line, so check if we’re still in
          # the map.
@@ -544,33 +529,6 @@ class Parser(object):
          # The whole line was consumed.
          return True
 
-   def get_current_mapping_key(self, clsExpected, oDefault = _NO_MAPPING_KEY_DEFAULT):
-      """Returns the mapping key associated to the tagged object being constructed. If the type of
-      the key is not an instance of the expected class, an exception will be raised; if the object
-      being constructed is not in a mapping object, an exception will be raised unless a default
-      value is provided via oDefault, in which case the return value will be oDefault.
-
-      type clsExpected
-         Expected Python type for the mapping key.
-      object oDefault
-         Value to be returned if the current object was not a value in a mapping object. If omitted,
-         this condition will result in an exception.
-      object return
-         Mapping key associated to the current object, or oDefault if a value was provided for
-         oDefault.
-      """
-
-      if isinstance(self._m_oCurrMappingKey, clsExpected):
-         return self._m_oCurrMappingKey
-      elif oDefault is not _NO_MAPPING_KEY_DEFAULT:
-         return oDefault
-      else:
-         raise MappingKeyError(
-            '{}:{}: object expects to be associated with key of type {}'.format(
-               self._m_sSourceName, self._m_iLine, clsExpected.__name__
-            )
-         )
-
    @classmethod
    def local_tag(cls, sTag, kind):
       """Decorator to associate a tag with a constructor. If the constructor is a static function,
@@ -734,7 +692,6 @@ class Parser(object):
       self._m_sLine = None
       self._m_iLineIndent = 0
       self._m_iterLines = None
-      self._m_oCurrMappingKey = None
       self._m_iMappingMinIndent = 0
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
