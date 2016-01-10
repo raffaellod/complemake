@@ -82,6 +82,7 @@ class Generator(object):
    def __init__(self):
       """Constructor."""
 
+      self._m_bCanonical = False
       self._reset()
 
    def generate_file(self, sFilePath, oRoot):
@@ -234,8 +235,7 @@ class Generator(object):
          # o does not have a __yaml__() method; look for a built-in convertor for it.
          if isinstance(o, dict):
             # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
-            # TODO: support forcing explicit tags.
-            if False or len(o) == 0:
+            if self._m_bCanonical or len(o) == 0:
                self.write_mapping_begin(u'!!map')
             else:
                self.write_mapping_begin(None)
@@ -246,8 +246,7 @@ class Generator(object):
             iContext = NO_CONTEXT
          elif isinstance(o, list):
             # Force generating a tag if the sequence is empty, otherwise we’d generate just nothing.
-            # TODO: support forcing explicit tags.
-            if False or len(o) == 0:
+            if self._m_bCanonical or len(o) == 0:
                self.write_sequence_begin(u'!!seq')
             else:
                self.write_sequence_begin(None)
@@ -260,8 +259,7 @@ class Generator(object):
                sYaml = unicode(o)
             else:
                sYaml = o
-            # TODO: support forcing explicit tags.
-            if False or self._smc_reSafeString.match(sYaml):
+            if self._m_bCanonical or self._smc_reSafeString.match(sYaml):
                # The string doesn’t need quotes or an explicit tag.
                self._m_fileDst.write(sYaml)
             else:
@@ -271,8 +269,7 @@ class Generator(object):
          elif isinstance(o, float):
             self.write_scalar(u'!!float', unistr(o))
          elif isinstance(o, int):
-            # TODO: support forcing explicit tags.
-            if False:
+            if self._m_bCanonical:
                self.write_scalar(u'!!int', unistr(o))
             else:
                self._m_fileDst.write(unistr(o))
