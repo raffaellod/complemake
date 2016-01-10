@@ -227,12 +227,15 @@ class Generator(object):
          self._m_fileDst.write(u' ')
 
       try:
-         o.__yaml__(self)
+         fnYaml = o.__yaml__
+      except AttributeError:
+         fnYaml = None
+      if fnYaml:
+         fnYaml(self)
          if self._m_iContext != iContext:
             # TODO: error in o.__yaml__().
             pass
-      except AttributeError:
-         # o does not have a __yaml__() method; look for a built-in convertor for it.
+      else:
          if o is None:
             self.write_scalar(u'!!null', u'')
          elif isinstance(o, basestring):
