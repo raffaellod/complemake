@@ -31,6 +31,35 @@ import yaml.generator as yg
 
 g_sDoc = '%YAML 1.2\n---'
 
+class ScalarLocalTagsTest(unittest.TestCase):
+   def runTest(self):
+      class ScalarLocalTagTest1(object):
+         def __init__(self, i):
+            self._m_i = i
+
+         def __yaml__(self, yg):
+            yg.write_scalar('!test_tag', '<{}>'.format(self._m_i))
+
+      t1 = ScalarLocalTagTest1(1)
+      t2 = ScalarLocalTagTest1(2)
+
+      self.assertEqual(
+         yg.generate_string(t1),
+         g_sDoc + ' !test_tag <1>\n'
+      )
+      self.assertEqual(
+         yg.generate_string([t1]),
+         g_sDoc + ' \n- !test_tag <1>\n'
+      )
+      self.assertEqual(
+         yg.generate_string([t1, t2]),
+         g_sDoc + ' \n- !test_tag <1>\n- !test_tag <2>\n'
+      )
+      self.assertEqual(
+         yg.generate_string({t1: t2}),
+         g_sDoc + ' \n!test_tag <1>: !test_tag <2>\n'
+      )
+
 class MapsTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yg.generate_string({}), g_sDoc + ' !!map\n')
