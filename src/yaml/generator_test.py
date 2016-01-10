@@ -19,6 +19,7 @@
 
 """Test cases for the YAML generator."""
 
+import datetime
 import unittest
 
 import yaml.generator as yg
@@ -72,6 +73,9 @@ class ScalarsTest(unittest.TestCase):
       self.assertEqual(yg.generate_string(None), g_sDoc + ' !!null\n')
       self.assertEqual(yg.generate_string(0), g_sDoc + ' 0\n')
       self.assertEqual(yg.generate_string('a'), g_sDoc + ' a\n')
+
+      dt = datetime.datetime.now()
+      self.assertEqual(yg.generate_string(dt), g_sDoc + ' ' + dt.isoformat() + '\n')
 
 class SequencesTest(unittest.TestCase):
    def runTest(self):

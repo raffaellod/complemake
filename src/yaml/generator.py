@@ -254,6 +254,12 @@ class Generator(object):
                self._m_fileDst.write(unistr(o))
          elif isinstance(o, bool):
             self.write_scalar(u'!!bool', u'true' if o else u'false')
+         elif isinstance(o, datetime.datetime):
+            sYaml = o.isoformat()
+            if self._m_bCanonical:
+               self.write_scalar(u'!!timestamp', sYaml)
+            else:
+               self._m_fileDst.write(sYaml)
          elif isinstance(o, dict):
             # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical or len(o) == 0:
