@@ -233,7 +233,28 @@ class Generator(object):
             pass
       except AttributeError:
          # o does not have a __yaml__() method; look for a built-in convertor for it.
-         if isinstance(o, dict):
+         if o is None:
+            self.write_scalar(u'!!null', u'')
+         elif isinstance(o, basestring):
+            if sys.hexversion < 0x03000000 and not isinstance(o, unicode):
+               sYaml = unicode(o)
+            else:
+               sYaml = o
+            if self._m_bCanonical or self._smc_reSafeString.match(sYaml):
+               # The string doesn’t need quotes or an explicit tag.
+               self._m_fileDst.write(sYaml)
+            else:
+               # The string needs quotes.
+               # TODO: escape characters and quotes in sYaml.
+               self.write_scalar(u'!!str', u'"{}"'.format(sYaml))
+         elif isinstance(o, int):
+            if self._m_bCanonical:
+               self.write_scalar(u'!!int', unistr(o))
+            else:
+               self._m_fileDst.write(unistr(o))
+         elif isinstance(o, bool):
+            self.write_scalar(u'!!bool', u'true' if o else u'false')
+         elif isinstance(o, dict):
             # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical or len(o) == 0:
                self.write_mapping_begin(u'!!map')
@@ -254,29 +275,8 @@ class Generator(object):
                self.produce_from_object(oElement)
             self.write_sequence_end()
             iContext = NO_CONTEXT
-         elif isinstance(o, basestring):
-            if sys.hexversion < 0x03000000 and not isinstance(o, unicode):
-               sYaml = unicode(o)
-            else:
-               sYaml = o
-            if self._m_bCanonical or self._smc_reSafeString.match(sYaml):
-               # The string doesn’t need quotes or an explicit tag.
-               self._m_fileDst.write(sYaml)
-            else:
-               # The string needs quotes.
-               # TODO: escape characters and quotes in sYaml.
-               self.write_scalar(u'!!str', u'"{}"'.format(sYaml))
          elif isinstance(o, float):
             self.write_scalar(u'!!float', unistr(o))
-         elif isinstance(o, int):
-            if self._m_bCanonical:
-               self.write_scalar(u'!!int', unistr(o))
-            else:
-               self._m_fileDst.write(unistr(o))
-         elif isinstance(o, bool):
-            self.write_scalar(u'!!bool', u'true' if o else u'false')
-         elif o is None:
-            self.write_scalar(u'!!null', u'')
          else:
             raise TypeError('unsupported type: {}'.format(type(o).__name__))
 
