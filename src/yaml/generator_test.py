@@ -34,17 +34,18 @@ g_sDoc = '%YAML 1.2\n---'
 class MapsTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yg.generate_string({}), g_sDoc + ' !!map\n')
-      self.assertEqual(yg.generate_string({1: 2}), g_sDoc + ' !!map\n!!int 1: !!int 2\n')
-      self.assertEqual(yg.generate_string({'a': 'b'}), g_sDoc + ' !!map\na: b\n')
+      self.assertEqual(yg.generate_string({1: 2}), g_sDoc + ' \n1: 2\n')
+      self.assertEqual(yg.generate_string({'a': 'b'}), g_sDoc + ' \na: b\n')
+      self.assertEqual(yg.generate_string({1: 'a', 2: 'b'}), g_sDoc + ' \n1: a\n2: b\n')
 
 class ScalarsTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yg.generate_string(None), g_sDoc + ' !!null\n')
-      self.assertEqual(yg.generate_string(0), g_sDoc + ' !!int 0\n')
+      self.assertEqual(yg.generate_string(0), g_sDoc + ' 0\n')
       self.assertEqual(yg.generate_string('a'), g_sDoc + ' a\n')
 
 class SequencesTest(unittest.TestCase):
    def runTest(self):
       self.assertEqual(yg.generate_string([]), g_sDoc + ' !!seq\n')
-      self.assertEqual(yg.generate_string([0]), g_sDoc + ' !!seq\n- !!int 0\n')
-      self.assertEqual(yg.generate_string(['a']), g_sDoc + ' !!seq\n- a\n')
+      self.assertEqual(yg.generate_string([0]), g_sDoc + ' \n- 0\n')
+      self.assertEqual(yg.generate_string(['a']), g_sDoc + ' \n- a\n')

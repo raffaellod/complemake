@@ -140,9 +140,10 @@ class Generator(object):
          YAML tag.
       """
 
-      # TODO: validate the format of sTag.
+      if sTag:
+         # TODO: validate the format of sTag.
+         self._m_fileDst.write(sTag)
 
-      self._m_fileDst.write(sTag)
       self.new_line()
       self._m_iLevel += 1
       self._m_listContextStack.append(self._m_iContext)
@@ -187,9 +188,10 @@ class Generator(object):
          YAML tag.
       """
 
-      # TODO: validate the format of sTag.
+      if sTag:
+         # TODO: validate the format of sTag.
+         self._m_fileDst.write(sTag)
 
-      self._m_fileDst.write(sTag)
       self.new_line()
       self._m_iLevel += 1
       self._m_listContextStack.append(self._m_iContext)
@@ -231,14 +233,24 @@ class Generator(object):
       except AttributeError:
          # o does not have a __yaml__() method; look for a built-in convertor for it.
          if isinstance(o, dict):
-            self.write_mapping_begin(u'!!map')
+            # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
+            # TODO: support forcing explicit tags.
+            if False or len(o) == 0:
+               self.write_mapping_begin(u'!!map')
+            else:
+               self.write_mapping_begin(None)
             for oKey, oValue in o.items():
                self.produce_from_object(oKey)
                self.produce_from_object(oValue)
             self.write_mapping_end()
             iContext = NO_CONTEXT
          elif isinstance(o, list):
-            self.write_sequence_begin(u'!!seq')
+            # Force generating a tag if the sequence is empty, otherwise we’d generate just nothing.
+            # TODO: support forcing explicit tags.
+            if False or len(o) == 0:
+               self.write_sequence_begin(u'!!seq')
+            else:
+               self.write_sequence_begin(None)
             for oElement in o:
                self.produce_from_object(oElement)
             self.write_sequence_end()
@@ -248,7 +260,8 @@ class Generator(object):
                sYaml = unicode(o)
             else:
                sYaml = o
-            if self._smc_reSafeString.match(sYaml):
+            # TODO: support forcing explicit tags.
+            if False or self._smc_reSafeString.match(sYaml):
                # The string doesn’t need quotes or an explicit tag.
                self._m_fileDst.write(sYaml)
             else:
@@ -258,7 +271,11 @@ class Generator(object):
          elif isinstance(o, float):
             self.write_scalar(u'!!float', unistr(o))
          elif isinstance(o, int):
-            self.write_scalar(u'!!int', unistr(o))
+            # TODO: support forcing explicit tags.
+            if False:
+               self.write_scalar(u'!!int', unistr(o))
+            else:
+               self._m_fileDst.write(unistr(o))
          elif isinstance(o, bool):
             self.write_scalar(u'!!bool', u'true' if o else u'false')
          elif o is None:
