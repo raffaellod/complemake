@@ -19,13 +19,8 @@
 
 """Test cases for the YAML generator."""
 
-import datetime
-import math
-import sys
-import textwrap
 import unittest
 
-import yaml as y
 import yaml.generator as yg
 
 
@@ -35,6 +30,12 @@ import yaml.generator as yg
 # @unittest.skip
 
 g_sDoc = '%YAML 1.2\n---'
+
+class MapsTest(unittest.TestCase):
+   def runTest(self):
+      self.assertEqual(yg.generate_string({}), g_sDoc + ' !!map\n')
+      self.assertEqual(yg.generate_string({1: 2}), g_sDoc + ' !!map\n!!int 1: !!int 2\n')
+      self.assertEqual(yg.generate_string({'a': 'b'}), g_sDoc + ' !!map\na: b\n')
 
 class ScalarsTest(unittest.TestCase):
    def runTest(self):
