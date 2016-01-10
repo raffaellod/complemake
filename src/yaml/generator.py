@@ -248,12 +248,17 @@ class Generator(object):
                # TODO: escape characters and quotes in sYaml.
                self.write_scalar(u'!!str', u'"{}"'.format(sYaml))
          elif isinstance(o, int):
+            sYaml = unistr(o)
             if self._m_bCanonical:
-               self.write_scalar(u'!!int', unistr(o))
+               self.write_scalar(u'!!int', sYaml)
             else:
-               self._m_fileDst.write(unistr(o))
+               self._m_fileDst.write(sYaml)
          elif isinstance(o, bool):
-            self.write_scalar(u'!!bool', u'true' if o else u'false')
+            sYaml = u'true' if o else u'false'
+            if self._m_bCanonical:
+               self.write_scalar(u'!!bool', sYaml)
+            else:
+               self._m_fileDst.write(sYaml)
          elif isinstance(o, datetime.datetime):
             sYaml = o.isoformat()
             if self._m_bCanonical:
@@ -282,7 +287,11 @@ class Generator(object):
             self.write_sequence_end()
             iContext = NO_CONTEXT
          elif isinstance(o, float):
-            self.write_scalar(u'!!float', unistr(o))
+            sYaml = unistr(o)
+            if self._m_bCanonical:
+               self.write_scalar(u'!!float', sYaml)
+            else:
+               self._m_fileDst.write(sYaml)
          else:
             raise TypeError('unsupported type: {}'.format(type(o).__name__))
 
