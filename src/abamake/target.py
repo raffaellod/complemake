@@ -467,7 +467,7 @@ class FileTarget(FileDependencyMixIn, Target):
 
          mk = mp.mk
          sFilePath = dictYaml.get('path')
-         if not sFilePath or not isinstance(sFilePath, basestring):
+         if not isinstance(sFilePath, basestring):
             mp.raise_parsing_error('missing or invalid “path” attribute')
       else:
          mk, sFilePath = iterArgs
