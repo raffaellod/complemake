@@ -168,10 +168,11 @@ class Generator(object):
 
       # TODO: validate the format of sTag.
       # TODO: validate that sYaml is a string.
+
       if sys.hexversion < 0x03000000:
          # Ensure that everything is Unicode.
          if not isinstance(sTag, unicode):
-            sYaml = unicode(sTag)
+            sTag = unicode(sTag)
          if not isinstance(sYaml, unicode):
             sYaml = unicode(sYaml)
 
