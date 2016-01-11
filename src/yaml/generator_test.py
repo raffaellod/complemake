@@ -63,7 +63,7 @@ class ScalarLocalTagsTest(unittest.TestCase):
 
 class MapsTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yg.generate_string({}), g_sDoc + ' !!map\n\n')
+      self.assertEqual(yg.generate_string({}), g_sDoc + ' \n\n')
       self.assertEqual(yg.generate_string({1: 2}), g_sDoc + ' \n1: 2\n\n')
       self.assertEqual(yg.generate_string({'a': 'b'}), g_sDoc + ' \na: b\n\n')
       self.assertEqual(yg.generate_string({1: 'a', 2: 'b'}), g_sDoc + ' \n1: a\n2: b\n\n')
@@ -79,6 +79,6 @@ class ScalarsTest(unittest.TestCase):
 
 class SequencesTest(unittest.TestCase):
    def runTest(self):
-      self.assertEqual(yg.generate_string([]), g_sDoc + ' !!seq\n\n')
+      self.assertEqual(yg.generate_string([]), g_sDoc + ' \n\n')
       self.assertEqual(yg.generate_string([0]), g_sDoc + ' \n- 0\n\n')
       self.assertEqual(yg.generate_string(['a']), g_sDoc + ' \n- a\n\n')

@@ -270,7 +270,7 @@ class Generator(object):
                self._m_fileDst.write(sYaml)
          elif isinstance(o, collections.Mapping):
             # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
-            if self._m_bCanonical or len(o) == 0:
+            if self._m_bCanonical:
                self.write_mapping_begin(u'!!map')
             else:
                self.write_mapping_begin(None)
@@ -280,7 +280,7 @@ class Generator(object):
             self.write_mapping_end()
          elif isinstance(o, collections.Iterable):
             # Force generating a tag if the sequence is empty, otherwise we’d generate just nothing.
-            if self._m_bCanonical or len(o) == 0:
+            if self._m_bCanonical:
                self.write_sequence_begin(u'!!seq')
             else:
                self.write_sequence_begin(None)
