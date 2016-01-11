@@ -270,7 +270,7 @@ class Generator(object):
             else:
                self._m_fileDst.write(sYaml)
          elif isinstance(o, datetime.datetime):
-            sYaml = o.isoformat()
+            sYaml = unistr(o.isoformat())
             if self._m_bCanonical:
                self.write_scalar(u'!!timestamp', sYaml)
             else:
