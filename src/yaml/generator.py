@@ -143,6 +143,9 @@ class Generator(object):
 
       if sTag:
          # TODO: validate the format of sTag.
+
+         if sys.hexversion < 0x03000000 and not isinstance(sTag, unicode):
+            sTag = unicode(sTag)
          self._m_fileDst.write(sTag)
 
       self.new_line()
@@ -192,6 +195,9 @@ class Generator(object):
 
       if sTag:
          # TODO: validate the format of sTag.
+
+         if sys.hexversion < 0x03000000 and not isinstance(sTag, unicode):
+            sTag = unicode(sTag)
          self._m_fileDst.write(sTag)
 
       self.new_line()
