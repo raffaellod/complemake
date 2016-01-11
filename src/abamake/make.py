@@ -380,8 +380,12 @@ class Make(object):
       # Make sure the makefile doesn’t define circular dependencies.
       self.validate_dependency_graph()
 
-      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata.xml')
-      self._m_mds = abamake.metadata.MetadataStore(self, sMetadataFilePath)
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata')
+      # Try loading an existing metadata store, or default to creating a new one.
+      try:
+         self._m_mds = abamake.metadata.MetadataParser(self).parse_file(sMetadataFilePath)
+      except (abamake.FileNotFoundErrorCompat, OSError):
+         self._m_mds = abamake.metadata.MetadataStore(self, sMetadataFilePath)
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
