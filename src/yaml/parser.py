@@ -696,3 +696,10 @@ class Parser(object):
       self._m_iScalarWrapMinIndent = 0
       self._m_iSequenceMinIndent = 0
       self._m_sSourceName = '<no input>'
+
+   def _get_source_name(self):
+      return self._m_sSourceName
+
+   source_name = property(_get_source_name, doc = """
+      Returns the name of the source being parsed; e.g. the path to the file.
+   """)
