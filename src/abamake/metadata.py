@@ -70,8 +70,6 @@ class FileSignature(object):
       # Date/time of the file’s last modification.
       '_m_dtMTime',
    )
-   # Format string used to convert a datetime instance to/from a string.
-   _smc_sDateTimeFormat = '%Y-%m-%dT%H:%M:%S.%f'
 
    def __init__(self, *iterArgs):
       """Constructor.
