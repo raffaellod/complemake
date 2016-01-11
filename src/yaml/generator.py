@@ -19,6 +19,7 @@
 
 """YAML generator."""
 
+import collections
 import datetime
 import io
 import re
@@ -59,7 +60,6 @@ def generate_string(oRoot):
 
 ####################################################################################################
 
-NO_CONTEXT            = 0
 DOCUMENT_CONTEXT      = 1
 SEQUENCE_CONTEXT      = 2
 MAPPING_KEY_CONTEXT   = 3
@@ -268,7 +268,7 @@ class Generator(object):
                self.write_scalar(u'!!timestamp', sYaml)
             else:
                self._m_fileDst.write(sYaml)
-         elif isinstance(o, dict):
+         elif isinstance(o, collections.Mapping):
             # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical or len(o) == 0:
                self.write_mapping_begin(u'!!map')
@@ -278,8 +278,7 @@ class Generator(object):
                self.produce_from_object(oKey)
                self.produce_from_object(oValue)
             self.write_mapping_end()
-            iContext = NO_CONTEXT
-         elif isinstance(o, list):
+         elif isinstance(o, collections.Iterable):
             # Force generating a tag if the sequence is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical or len(o) == 0:
                self.write_sequence_begin(u'!!seq')
@@ -288,7 +287,6 @@ class Generator(object):
             for oElement in o:
                self.produce_from_object(oElement)
             self.write_sequence_end()
-            iContext = NO_CONTEXT
          elif isinstance(o, float):
             sYaml = unistr(o)
             if self._m_bCanonical:
