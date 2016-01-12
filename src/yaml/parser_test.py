@@ -624,6 +624,12 @@ class MappingInSequenceTest(unittest.TestCase):
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
+         - a:
+      ''')), [{'a': None}])
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
          - a: b
       ''')), [{'a': 'b'}])
 
@@ -683,6 +689,12 @@ class MappingTest(unittest.TestCase):
          ---
          a:b
       ''')), 'a:b')
+
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         a:
+      ''')), {'a': None})
 
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
@@ -847,6 +859,7 @@ class PrologTest(unittest.TestCase):
       self.assertRaises(yp.SyntaxError, yp.parse_string, 'a: b')
       self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2')
       self.assertEqual(yp.parse_string('%YAML 1.2\n---'), None)
+      self.assertEqual(yp.parse_string('%YAML 1.2\n---\n'), None)
       self.assertRaises(yp.SyntaxError, yp.parse_string, '%YAML 1.2\n---a')
       self.assertEqual(yp.parse_string('%YAML 1.2\n--- a'), 'a')
       self.assertEqual(yp.parse_string('%YAML 1.2\n---  a'), 'a')
@@ -1041,6 +1054,12 @@ class SequenceInMappingTest(unittest.TestCase):
 
 class SequenceTest(unittest.TestCase):
    def runTest(self):
+      self.assertEqual(yp.parse_string(textwrap.dedent('''
+         %YAML 1.2
+         ---
+         -
+      ''')), [None])
+
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---

@@ -321,13 +321,15 @@ class Parser(object):
 
       if len(self._m_sLine) == 0:
          # The current container left no characters on the current line, so read another one.
-         bEOF = not self.next_line()
+         if not self.next_line():
+            # Nothing at all left in the source.
+            return None
          bWrapped = True
          bAllowImplicitMappingOrSequence = True
       else:
-         bEOF = False
          bWrapped = False
 
+      bEOF = False
       oParsed = ''
       kind = yaml.Kind.SCALAR
       bResolveScalar = True
