@@ -276,7 +276,6 @@ class Generator(object):
             else:
                self._m_fileDst.write(sYaml)
          elif isinstance(o, collections.Mapping):
-            # Force generating a tag if the mapping is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical:
                self.write_mapping_begin(u'!!map')
             else:
@@ -286,7 +285,6 @@ class Generator(object):
                self.produce_from_object(oValue)
             self.write_mapping_end()
          elif isinstance(o, collections.Iterable):
-            # Force generating a tag if the sequence is empty, otherwise we’d generate just nothing.
             if self._m_bCanonical:
                self.write_sequence_begin(u'!!seq')
             else:
