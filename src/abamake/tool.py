@@ -605,6 +605,7 @@ class GxxCompiler(CxxCompiler):
       """See CxxCompiler._create_job_add_flags()."""
 
       listArgs.extend([
+         '-pipe',                  # Use pipes instead of temporary files.
          '-c',                     # Compile without linking.
          '-std=c++11',             # Select C++11 language standard.
          '-fnon-call-exceptions',  # Allow trapping instructions to throw exceptions.
