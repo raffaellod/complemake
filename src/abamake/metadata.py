@@ -140,7 +140,7 @@ class FileSignature(object):
       """
 
       self = cls(sFilePath)
-      self._m_dtMTime = datetime.datetime.fromtimestamp(os.path.getmtime(sFilePath))
+      self._m_dtMTime = datetime.datetime.fromtimestamp(int(os.path.getmtime(sFilePath)))
       return self
 
 ####################################################################################################
