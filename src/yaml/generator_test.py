@@ -27,9 +27,6 @@ import yaml.generator as yg
 
 ####################################################################################################
 
-# (cd src && python -m unittest yaml/generator_test.py)
-# @unittest.skip
-
 g_sDoc = '%YAML 1.2\n---'
 
 class ScalarLocalTagsTest(unittest.TestCase):

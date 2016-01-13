@@ -34,9 +34,6 @@ if sys.hexversion >= 0x03000000:
 
 ####################################################################################################
 
-# (cd src && python -m unittest yaml/parser_test.py)
-# @unittest.skip
-
 class BuiltinTagsTest(unittest.TestCase):
    def runTest(self):
       self.assertRaises(yp.SyntaxError, yp.parse_string, textwrap.dedent('''

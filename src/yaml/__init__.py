@@ -17,7 +17,14 @@
 # <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""YAML support."""
+"""YAML parser and generator.
+
+To run the test suite:
+(cd src && python -m unittest discover yaml '*_test.py')
+
+To temporarily disable unit tests:
+@unittest.skip
+"""
 
 import datetime
 
