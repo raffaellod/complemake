@@ -23,6 +23,7 @@ interface to the very different implementations.
 
 import os
 import re
+import shlex
 import subprocess
 
 import abamake
@@ -198,6 +199,21 @@ class Tool(object):
          for flag in self._m_setAbstractFlags:
             listArgs.append(self._translate_abstract_flag(flag))
 
+   @staticmethod
+   def _create_job_add_flags_from_env_overrides(sEnvVarName, listArgs):
+      """Adds to the tool’s command line the contents of an environment variable containing override
+      values.
+
+      str sEnvVarName
+         Name of the environment variable to append to listArgs.
+      list(str*) listArgs
+         Arguments list.
+      """
+
+      sEnvVarValue = os.environ.get(sEnvVarName)
+      if sEnvVarValue:
+         listArgs.extend(shlex.split(sEnvVarValue))
+
    def _create_job_add_inputs(self, listArgs):
       """Builds the input files portion of the tool’s command line.
 
@@ -253,6 +269,7 @@ class Tool(object):
       listArgs = [self._m_sFilePath]
 
       self._create_job_add_flags(listArgs)
+      type(self)._create_job_add_flags_from_env_overrides(listArgs)
 
       if self._m_sOutputFilePath:
          if not mk.dry_run:
@@ -476,6 +493,16 @@ class CxxCompiler(Tool):
          sFormat = self._translate_abstract_flag(self.CFLAG_ADD_INCLUDE_DIR_FORMAT)
          for sDir in self._m_listIncludeDirs:
             listArgs.append(sFormat.format(dir = sDir))
+
+   @staticmethod
+   def _create_job_add_flags_from_env_overrides(listArgs):
+      """Adds to the tool’s command line the contents of the CXXFLAGS environment variable.
+
+      list(str*) listArgs
+         Arguments list.
+      """
+
+      Tool._create_job_add_flags_from_env_overrides('CXXFLAGS', listArgs)
 
    def _get_quiet_cmd(self):
       """See Tool._get_quiet_cmd(). This override substitutes the output file path with the inputs,
@@ -844,6 +871,16 @@ class Linker(Tool):
          sFormat = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_FORMAT)
          for sLib in self._m_listInputLibs:
             listArgs.append(sFormat.format(lib = sLib))
+
+   @staticmethod
+   def _create_job_add_flags_from_env_overrides(listArgs):
+      """Adds to the tool’s command line the contents of the LDFLAGS environment variable.
+
+      list(str*) listArgs
+         Arguments list.
+      """
+
+      Tool._create_job_add_flags_from_env_overrides('LDFLAGS', listArgs)
 
    @staticmethod
    def _get_supported():
