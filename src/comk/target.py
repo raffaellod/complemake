@@ -3,18 +3,18 @@
 #
 # Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Classes implementing different types of build target, each aware of how to build itself."""
@@ -25,11 +25,11 @@ import re
 import sys
 import weakref
 
-import abamake
-import abamake.job
-import abamake.make
-import abamake.makefileparser
-import abamake.tool
+import comk
+import comk.job
+import comk.make
+import comk.makefileparser
+import comk.tool
 import yaml
 
 if sys.hexversion >= 0x03000000:
@@ -60,7 +60,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not sName:
-         raise abamake.make.MakefileError('missing target name')
+         raise comk.make.MakefileError('missing target name')
       self._m_sName = sName
 
    def __str__(self):
@@ -87,7 +87,7 @@ class FileDependencyMixIn(object):
       """
 
       if not sFilePath:
-         raise abamake.make.MakefileError('missing target file path')
+         raise comk.make.MakefileError('missing target file path')
       self._m_sFilePath = os.path.normpath(sFilePath)
 
    def __str__(self):
@@ -112,7 +112,7 @@ class FileDependencyMixIn(object):
 
 class ForeignDependency(Dependency):
    """Abstract foreign dependency. Used by Target and its subclasses to represent files not built by
-   Abamake.
+   Complemake.
    """
 
    pass
@@ -144,7 +144,7 @@ class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
 
 class TestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
    """Executable that runs a test according to a “script”. Used to mimic interaction with a shell
-   that Abamake does not implement.
+   that Complemake does not implement.
    """
 
    pass
@@ -169,7 +169,7 @@ class Target(Dependency):
    _m_setBlockedDependents = None
    # If True, the target is being built.
    _m_bBuilding = False
-   # Dependencies (abamake.target.Dependency instances) for this target. Cannot be a set, because in
+   # Dependencies (comk.target.Dependency instances) for this target. Cannot be a set, because in
    # some cases (e.g. linker inputs) we need to keep it in order.
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _m_listDependencies = None
@@ -181,20 +181,20 @@ class Target(Dependency):
    def __init__(self, *iterArgs):
       """Constructor. Automatically registers the target with the specified Make instance.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       dict(object: object) dictYaml
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       """
 
       Dependency.__init__(self)
 
-      if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
+      if isinstance(iterArgs[0], comk.makefileparser.MakefileParser):
          mp, dictYaml = iterArgs
          mk = mp.mk
       else:
@@ -251,7 +251,7 @@ class Target(Dependency):
    def add_dependency(self, dep):
       """Adds a target dependency.
 
-      abamake.target.Dependency dep
+      comk.target.Dependency dep
          Dependency.
       """
 
@@ -362,12 +362,12 @@ class Target(Dependency):
             dep.dump_dependencies(sIndent + '  ')
 
    def get_dependencies(self, bTargetsOnly = False):
-      """Iterates over the dependencies (abamake.target.Dependency instances) for this target.
+      """Iterates over the dependencies (comk.target.Dependency instances) for this target.
 
       bool bTargetsOnly
-         If True, only abamake.target.Target instances will be returned; if False, no filtering will
+         If True, only comk.target.Target instances will be returned; if False, no filtering will
          occur.
-      abamake.target.Dependency yield
+      comk.target.Dependency yield
          Dependency of this target.
       """
 
@@ -379,17 +379,17 @@ class Target(Dependency):
       """Instantiates and configures the tool to build the target. Not used by Target, but offers a
       model for derived classes to follow.
 
-      abamake.tool.Tool return
+      comk.tool.Tool return
          Ready-to-use tool.
       """
 
       raise NotImplementedError('Target._get_tool() must be overridden in ' + type(self).__name__)
 
    def start_build(self, tgtDependent = None):
-      """Begins building the target. Builds are asynchronous; use abamake.job.Runner.run() to allow
+      """Begins building the target. Builds are asynchronous; use comk.job.Runner.run() to allow
       them to complete.
 
-      abamake.target.Target tgtDependent
+      comk.target.Target tgtDependent
          Target that will need to be unblocked when the build of this target completes. If self is
          already up-to-date, tgtDependent will be unblocked immediately.
       """
@@ -425,7 +425,7 @@ class NamedTargetMixIn(NamedDependencyMixIn):
       """Constructor. Automatically registers the name => target association with the specified Make
       instance.
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       str sName
          Dependency name.
@@ -447,20 +447,20 @@ class FileTarget(FileDependencyMixIn, Target):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       str sFilePath
          Target file path.
       """
 
-      if isinstance(iterArgs[0], abamake.makefileparser.MakefileParser):
+      if isinstance(iterArgs[0], comk.makefileparser.MakefileParser):
          mp, dictYaml = iterArgs
 
          Target.__init__(self, mp, dictYaml)
@@ -501,13 +501,13 @@ class ProcessedSourceTarget(FileTarget):
    def __init__(self, mk, sSourceFilePath, sSuffix, tgtFinalOutput):
       """Constructor.
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
       str sSuffix
          Suffix that is added to sSourceFilePath to generate the target’s file path.
-      abamake.target.Target tgtFinalOutput
+      comk.target.Target tgtFinalOutput
          Target that this target’s output will be linked into.
       """
 
@@ -526,11 +526,11 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """Constructor.
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
-      abamake.target.Target tgtFinalOutput
+      comk.target.Target tgtFinalOutput
          Target that this target’s output will be linked into.
       """
 
@@ -543,7 +543,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
       mk = self._m_mk()
 
-      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)
+      cxx = mk.target_platform.get_tool(comk.tool.CxxCompiler)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
@@ -557,7 +557,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       mk.target_platform.configure_tool(cxx)
 
       # TODO: add file-specific flags.
-      cxx.add_flags(abamake.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
+      cxx.add_flags(comk.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
       return cxx
 
    def _on_build_started(self):
@@ -598,17 +598,17 @@ class CxxObjectTarget(ObjectTarget):
    def __init__(self, mk, sSourceFilePath, tgtFinalOutput):
       """Constructor.
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance.
       str sSourceFilePath
          Source from which the target is built.
-      abamake.target.Target tgtFinalOutput
+      comk.target.Target tgtFinalOutput
          Target that this target’s output will be linked into.
       """
 
       ObjectTarget.__init__(
          self, mk, sSourceFilePath,
-         mk.target_platform.get_tool(abamake.tool.CxxCompiler).object_suffix, tgtFinalOutput
+         mk.target_platform.get_tool(comk.tool.CxxCompiler).object_suffix, tgtFinalOutput
       )
 
    def _get_tool(self):
@@ -618,12 +618,12 @@ class CxxObjectTarget(ObjectTarget):
 
       mk = self._m_mk()
 
-      cxx = mk.target_platform.get_tool(abamake.tool.CxxCompiler)
+      cxx = mk.target_platform.get_tool(comk.tool.CxxCompiler)
       cxx.output_file_path = self._m_sFilePath
       cxx.add_input(self._m_sSourceFilePath)
 
       if False:
-         cxx.add_macro('ABAMAKE_USING_VALGRIND')
+         cxx.add_macro('COMPLEMAKE_USING_VALGRIND')
 
       if self._m_tgtFinalOutput:
          tgtFinalOutput = self._m_tgtFinalOutput()
@@ -669,7 +669,7 @@ class BinaryTarget(FileTarget):
       """Constructor. Automatically registers the path => target association with the specified Make
       instance.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -702,8 +702,8 @@ class BinaryTarget(FileTarget):
          for i, o in enumerate(oTests):
             if not isinstance(o, (ExecutableTestTarget, ToolTestTarget)):
                mp.raise_parsing_error((
-                  'elements of the “tests” attribute must be of type !abamake/target/exetest or ' +
-                  '!abamake/target/tooltest, but element [{}] is not'
+                  'elements of the “tests” attribute must be of type !complemake/target/exetest ' +
+                  'or !complemake/target/tooltest, but element [{}] is not'
                ).format(i))
             # A test must be built after the target it’s supposed to test.
             o.add_dependency(self)
@@ -712,7 +712,7 @@ class BinaryTarget(FileTarget):
       """Configures the specified Tool instance to generate code suitable for linking in this
       target.
 
-      abamake.tool.Tool tool
+      comk.tool.Tool tool
          Tool (compiler) to configure.
       """
 
@@ -724,7 +724,7 @@ class BinaryTarget(FileTarget):
 
       mk = self._m_mk()
 
-      lnk = mk.target_platform.get_tool(abamake.tool.Linker)
+      lnk = mk.target_platform.get_tool(comk.tool.Linker)
       lnk.output_file_path = self._m_sFilePath
       # TODO: add file-specific flags.
 
@@ -779,7 +779,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -790,7 +790,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exe', yaml.Kind.MAPPING)
+@comk.makefileparser.MakefileParser.local_tag('complemake/target/exe', yaml.Kind.MAPPING)
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to
    the output base directory.
@@ -799,7 +799,7 @@ class ExecutableTarget(NamedBinaryTarget):
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -816,7 +816,7 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/dynlib', yaml.Kind.MAPPING)
+@comk.makefileparser.MakefileParser.local_tag('complemake/target/dynlib', yaml.Kind.MAPPING)
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the
    output base directory.
@@ -825,7 +825,7 @@ class DynLibTarget(NamedBinaryTarget):
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -845,13 +845,13 @@ class DynLibTarget(NamedBinaryTarget):
 
       NamedBinaryTarget.configure_compiler(self, tool)
 
-      if isinstance(tool, abamake.tool.CxxCompiler):
+      if isinstance(tool, comk.tool.CxxCompiler):
          # Make sure we’re generating code suitable for a dynamic library.
-         tool.add_flags(abamake.tool.CxxCompiler.CFLAG_DYNLIB)
+         tool.add_flags(comk.tool.CxxCompiler.CFLAG_DYNLIB)
          # Allow building both a dynamic library and its clients using the same header file, by
          # changing “import” to “export” when this macro is defined.
          tool.add_macro(
-            'ABAMAKE_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper()))
+            'COMPLEMAKE_BUILD_{}'.format(re.sub(r'[^_0-9A-Z]+', '_', self._m_sName.upper()))
          )
 
    def _get_tool(self):
@@ -861,7 +861,7 @@ class DynLibTarget(NamedBinaryTarget):
 
       lnk = NamedBinaryTarget._get_tool(self)
 
-      lnk.add_flags(abamake.tool.Linker.LDFLAG_DYNLIB)
+      lnk.add_flags(comk.tool.Linker.LDFLAG_DYNLIB)
       return lnk
 
 ####################################################################################################
@@ -878,7 +878,7 @@ class TestTargetMixIn(object):
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -901,12 +901,12 @@ class TestTargetMixIn(object):
             if not isinstance(o, OutputTransform):
                mp.raise_parsing_error((
                   'elements of “output transform” attribute must be of type ' +
-                  '!abamake/target/*-output-transform, but element [{}] is not'
+                  '!complemake/target/*-output-transform, but element [{}] is not'
                ).format(i))
          self._m_listOutputTransforms = oOutputTransforms
       else:
          mp.raise_parsing_error(
-            'attribute “output transform” must be a sequence of, or a single !abamake/target/' +
+            'attribute “output transform” must be a sequence of, or a single !complemake/target/' +
             'output-filter object'.format(self)
          )
 
@@ -939,14 +939,14 @@ class TestTargetMixIn(object):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/tooltest', yaml.Kind.MAPPING)
+@comk.makefileparser.MakefileParser.local_tag('complemake/target/tooltest', yaml.Kind.MAPPING)
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -1030,13 +1030,11 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, OutputRerefenceDependency)):
             cStaticCmpOperands += 1
       if cStaticCmpOperands != 2:
-         raise abamake.make.MakefileError(
-            '{}: need exactly two files/outputs to compare'.format(self)
-         )
+         raise comk.make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/target/exetest', yaml.Kind.MAPPING)
+@comk.makefileparser.MakefileParser.local_tag('complemake/target/exetest', yaml.Kind.MAPPING)
 class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative
    to the output base directory.
@@ -1055,7 +1053,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -1134,9 +1132,9 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       # If the build target uses abc::testing, run it with the special abc::testing job,
       # AbacladeTestJob.
       if self._m_bUsesAbacladeTesting:
-         clsJob = abamake.job.AbacladeTestJob
+         clsJob = comk.job.AbacladeTestJob
       else:
-         clsJob = abamake.job.ExternalCmdCapturingJob
+         clsJob = comk.job.ExternalCmdCapturingJob
       # This will store stdout and stderr of the program to file, and will buffer stdout in
       # memory so we can use it in _on_build_tool_run_complete() if we need to, without disk access.
       job = clsJob(
@@ -1225,7 +1223,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
             cStaticCmpOperands += 1
       if cStaticCmpOperands != 0 and cStaticCmpOperands != 1:
          # Expected a file against which to compare the test’s output.
-         raise abamake.make.MakefileError(
+         raise comk.make.MakefileError(
             '{}: can’t compare the test output against more than one file'.format(self)
          )
 
@@ -1238,8 +1236,8 @@ class OutputTransform(object):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag(
-   'abamake/target/filter-output-transform', yaml.Kind.SCALAR
+@comk.makefileparser.MakefileParser.local_tag(
+   'complemake/target/filter-output-transform', yaml.Kind.SCALAR
 )
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a
@@ -1252,7 +1250,7 @@ class FilterOutputTransform(OutputTransform):
    def __init__(self, mp, sYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object sYaml
          Parsed YAML object to be used to construct the new instance.

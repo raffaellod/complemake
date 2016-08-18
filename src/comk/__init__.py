@@ -3,30 +3,30 @@
 #
 # Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""This module contains the implementation of Abamake (short for “Abaclade Make”).
+"""This module contains the implementation of Complemake.
 
-This file contains Abamake and other core classes.
+This file contains Complemake and other core classes.
 
-See [DOC:6931 Abamake] for more information.
+See [DOC:6931 Complemake] for more information.
 """
 
-"""DOC:6931 Abamake
+"""DOC:6931 Complemake
 
-Abamake (short for “Abaclade Make”) was created to satisfy these requirements:
+Complemake was created to satisfy these requirements:
 
 •  Cross-platform enough to no longer need to separately maintain a GNU makefile and a Visual Studio
    solution and projects to build Abaclade; this is especially important when thinking of Abaclade
@@ -56,16 +56,16 @@ Abamake (short for “Abaclade Make”) was created to satisfy these requirement
    users.
 
 
-Abamake loads an Abamakefile (short for “Abamake makefile”, a YAML file), creating a list of named
-and unnamed (file path-only) targets; these are then scheduled for build, and the resulting build is
-started, proceeding in the necessary order.
+Complemake loads a Complemake file (a YAML file), creating a list of named and unnamed (file
+path-only) targets; these are then scheduled for build, and the resulting build is started,
+proceeding in the necessary order.
 
-Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 Abamake ‒
+Most targets are built using external commands (e.g. a C++ compiler); see [DOC:6821 Complemake ‒
 Execution of external commands] for more information. Multiple non-dependent external commands are
 executed in parallel, depending on the multiprocessing capability of the host system and command-
 line options used.
 
-TODO: link to documentation for abc::testing support in Abamake.
+TODO: link to documentation for abc::testing support in Complemake.
 """
 
 import os

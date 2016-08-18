@@ -1,44 +1,45 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013-2015 Raffaello D. Di Napoli
+# Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Job scheduling and execution classes."""
 
-"""DOC:6821 Abamake ‒ Execution of external commands
+"""DOC:6821 Complemake ‒ Execution of external commands
 
-External commands run by Abamake are managed by specializations of abamake.Job. The default
-subclass, abamake.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing
-them to any subclasses; stderr is always logged to a file, with a name (chosen by the code that
+External commands run by Complemake are managed by specializations of comk.Job. The default
+subclass, comk.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing them
+to any subclasses; stderr is always logged to a file, with a name (chosen by the code that
 instantiates the job) that’s typically output_dir/log/<path-to-the-target-built-by-the-job>.
 
-A subclass of abamake.ExternalCmdJob, abamake.ExternalCmdCapturingJob, also captures to file the
-standard output of the program; this is typically used to execute tests, since stdout is considered
-the non-log output of the test; for example, a test for an image manipulation library could output a
-generated bitmap to stdout, to have Abamake compare it against a pre-rendered bitmap and determine
-whether the test is passed or not, in addition to checking the test executable’s exit code.
+A subclass of comk.ExternalCmdJob, comk.ExternalCmdCapturingJob, also captures to file the standard
+output of the program; this is typically used to execute tests, since stdout is considered the
+non-log output of the test; for example, a test for an image manipulation library could output a
+generated bitmap to stdout, to have Complemake compare it against a pre-rendered bitmap and
+determine whether the test is passed or not, in addition to checking the test executable’s exit
+code.
 
-Special support is provided for tests using the abc::testing framework. Such tests are executed 
-using abamake.AbacladeTestJob, a subclass of abamake.ExternalCmdCapturingJob; the stderr and stdout
-are still captured and stored in files, but additionally stderr is parsed to capture progress of the
+Special support is provided for tests using the abc::testing framework. Such tests are executed
+using comk.AbacladeTestJob, a subclass of comk.ExternalCmdCapturingJob; the stderr and stdout are
+still captured and stored in files, but additionally stderr is parsed to capture progress of the
 assertions and test cases executed, and the resulting counts are used to display a test summary at
-the end of Abamake’s execution.
+the end of Complemake’s execution.
 
-TODO: link to documentation for abc::testing support in Abamake.
+TODO: link to documentation for abc::testing support in Complemake.
 """
 
 import io
@@ -51,14 +52,14 @@ import threading
 import time
 import weakref
 
-import abamake
+import comk
 
 
 ####################################################################################################
 
 class Job(object):
-   """Job to be executed by a abamake.job.Runner instance. See [DOC:6821 Abamake ‒ Execution of
-   external commands] for an overview on external command execution in Abamake.
+   """Job to be executed by a comk.job.Runner instance. See [DOC:6821 Complemake ‒ Execution of
+   external commands] for an overview on external command execution in Complemake.
    """
 
    # Function to call when the job completes.
@@ -123,7 +124,7 @@ class SynchronousJob(Job):
 class AsynchronousJob(Job):
    """Job that is executed asynchronously, typically in a separate process."""
 
-   # Weak reference to the abamake.job.Runner that called start().
+   # Weak reference to the comk.job.Runner that called start().
    _m_runner = None
 
    def __init__(self, fnOnComplete):
@@ -192,7 +193,7 @@ class ExternalCmdJob(AsynchronousJob):
          (ExternalCmdJob._stdout_chunk_read() will never be called), but logging will work as
          expected. 'universal_newlines' should always be omitted, since this class handles stderr as
          text and stdout as binary.
-      abamake.logging.Logger log
+      comk.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -287,7 +288,7 @@ class ExternalCmdJob(AsynchronousJob):
          fileStdErrTextPipe = io.open(fileErrOut.fileno(), 'r', closefd = False)
       del fileErrOut
       # Make sure that the directory in which we’ll write stdout exists.
-      abamake.makedirs(os.path.dirname(self._m_sStdErrFilePath))
+      comk.makedirs(os.path.dirname(self._m_sStdErrFilePath))
       # Use io.open() instead of just open() for Python 2.x.
       with io.open(self._m_sStdErrFilePath, 'w') as fileStdErr:
          for sLine in fileStdErrTextPipe:
@@ -355,7 +356,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
          “Quiet mode” command; see return value of tool.Tool._get_quiet_cmd().
       dict(str: object) dictPopenArgs
          Arguments to be passed to Popen’s constructor to execute this job.
-      abamake.logging.Logger log
+      comk.logging.Logger log
          Object to which the stderr of the process will be logged.
       str sStdErrFilePath
          Path to the file where the stderr of the process will be saved.
@@ -384,7 +385,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       """See ExternalCmdCapturingJob.start()."""
 
       # Make sure that the directory in which we’ll write stdout exists.
-      abamake.makedirs(os.path.dirname(self._m_sStdOutFilePath))
+      comk.makedirs(os.path.dirname(self._m_sStdOutFilePath))
       # Initialize buffering stdout in memory and on disk.
       self._m_byStdOut = b''
       self._m_fileStdOut = open(self._m_sStdOutFilePath, 'wb')
@@ -437,11 +438,11 @@ class AbacladeTestJob(ExternalCmdCapturingJob):
       contain the entire stderr output anyway).
       """
 
-      # TODO: document possible abc::testing output info and link to it from [DOC:6931 Abamake],
+      # TODO: document possible abc::testing output info and link to it from [DOC:6931 Complemake],
       # here, and in every involved abc::testing::runner method.
 
-      if sLine.startswith('ABCMK-TEST-'):
-         sInfo = sLine[len('ABCMK-TEST-'):]
+      if sLine.startswith('COMK-TEST-'):
+         sInfo = sLine[len('COMK-TEST-'):]
          if sInfo.startswith('ASSERT-PASS'):
             self._m_cTotalTestAssertions += 1
             sLine = None
@@ -473,8 +474,8 @@ class AbacladeTestJob(ExternalCmdCapturingJob):
 ####################################################################################################
 
 class Runner(object):
-   """Manages the execution of jobs for Abamake. It contains a queue to which jobs are pushed, and
-   offers a method to process the queue, run().
+   """Manages the execution of jobs for Complemake. It contains a queue to which jobs are pushed,
+   and offers a method to process the queue, run().
    """
 
    # Count of failed jobs.
@@ -487,7 +488,7 @@ class Runner(object):
    _m_fdJobsStatusQueueWrite = None
    # Lock that must be acquired prior to writing to _m_fdJobsStatusQueueWrite.
    _m_lockJobsStatusQueueWrite = None
-   # Weak reference to the owning abamake.Make instance.
+   # Weak reference to the owning comk.Make instance.
    _m_mk = None
    # Changed from True to False when a job fails and keep_going mode is not enabled.
    _m_bProcessQueue = True
@@ -501,7 +502,7 @@ class Runner(object):
    def __init__(self, mk):
       """Constructor.
 
-      abamake.Make mk
+      comk.Make mk
          Make instance.
       """
 
@@ -524,7 +525,7 @@ class Runner(object):
       """Invoked after a job completes, it executes its on_complete handler or reports a build
       error, depending on the job’s exit code.
 
-      abamake.job.Job job
+      comk.job.Job job
          Job that just completed.
       int iRet
          Exit code of the job.
@@ -548,7 +549,7 @@ class Runner(object):
    def _before_job_start(self, job):
       """Invoked before a job is started, it logs information about it.
 
-      abamake.job.Job job
+      comk.job.Job job
          Job that’s about to start.
       """
 
@@ -563,7 +564,7 @@ class Runner(object):
       """Adds a job to the job execution queue, or executes it immediately if it’s a synchronous
       one.
 
-      abamake.job.Job
+      comk.job.Job
          Job to execute.
       """
 
@@ -594,7 +595,7 @@ class Runner(object):
       """Report that an asynchronous job has completed. This is typically called from a different
       thread owned by the job itself.
 
-      abamake.job.Job job
+      comk.job.Job job
          Job that has completed.
       """
 
@@ -648,7 +649,7 @@ class Runner(object):
       """Starts an asynchrnous job, calling _before_job_start() and adding the job to
       _m_dictRunningJobs.
 
-      abamake.job.AsynchronousJob job
+      comk.job.AsynchronousJob job
          Job to start.
       """
 
@@ -660,7 +661,7 @@ class Runner(object):
       """Blocks to read from the jobs status queue, returning the first job that reported having
       completed.
 
-      abamake.job.Job return
+      comk.job.Job return
          Job instance that has completed.
       """
 

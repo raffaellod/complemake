@@ -1,32 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2014-2015 Raffaello D. Di Napoli
+# Copyright 2014-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Classes that abstract different software platforms, concealing their differences for the rest of
-Abamake.
+Complemake.
 """
 
 import os
 import re
 import sys
 
-import abamake
-import abamake.tool
+import comk
+import comk.tool
 
 import imp
 tpl = imp.find_module('platform', sys.path[1:])
@@ -123,9 +123,9 @@ class SystemType(object):
 
    @staticmethod
    def detect_host():
-      """Returns a SystemType instance describing the host on which Abamake is being run.
+      """Returns a SystemType instance describing the host on which Complemake is being run.
 
-      abamake.platform.SystemType return
+      comk.platform.SystemType return
          Host system type.
       """
 
@@ -208,7 +208,7 @@ class SystemType(object):
 
       str sTuple
          String that will be parsed to extract the necessary information.
-      abamake.platform.SystemType return
+      comk.platform.SystemType return
          Parsed system type.
       """
 
@@ -263,8 +263,8 @@ class Platform(object):
    """Generic software platform (OS/runtime environment)."""
 
    # Factories that create Tools for this platform. Associates a Tool non-leaf subclass to a factory
-   # able to instantiate a leaf class configured for this platform’s system type (abamake.tool.Tool
-   # => abamake.tool.ToolFactory).
+   # able to instantiate a leaf class configured for this platform’s system type (comk.tool.Tool =>
+   # comk.tool.ToolFactory).
    _m_dictToolFactories = None
    # System type (more specific than the platform type).
    _m_st = None
@@ -272,7 +272,7 @@ class Platform(object):
    def __init__(self, st):
       """Constructor.
 
-      abamake.platform.SystemType st
+      comk.platform.SystemType st
          System type of this platform.
       """
 
@@ -312,7 +312,7 @@ class Platform(object):
    def configure_tool(self, tool):
       """Configures the specified tool for this platform.
 
-      abamake.tool.Tool tool
+      comk.tool.Tool tool
          Tool to configure.
       """
 
@@ -323,7 +323,7 @@ class Platform(object):
       """Attempts to detect the underlying (host) platform, returning an instance of the Platform
       subclass that models it best.
 
-      abamake.platform.Platform return
+      comk.platform.Platform return
          Model for the underlying (host) platform.
       """
 
@@ -364,16 +364,16 @@ class Platform(object):
    def from_system_type(cls, st):
       """Returns an instance of the Platform subclass that most closely matches the specified system
       type. For example, Platform.from_system_type(SystemType.parse_tuple('i686-pc-linux-gnu')) will
-      return an abamake.platform.GnuPlatform instance.
+      return a comk.platform.GnuPlatform instance.
 
-      abamake.platform.SystemType st
+      comk.platform.SystemType st
          System type.
-      abamake.platform.Platform return
+      comk.platform.Platform return
          Corresponding platform.
       """
 
       iBestMatch, clsBestMatch = 0, None
-      for clsDeriv in abamake.derived_classes(cls):
+      for clsDeriv in comk.derived_classes(cls):
          iMatch = clsDeriv._match_system_type(st)
          if iMatch > iBestMatch:
             iBestMatch, clsBestMatch = iMatch, clsDeriv
@@ -385,11 +385,11 @@ class Platform(object):
       """Returns a leaf subclass of the specified Tool non-leaf subclass modeling the implementation
       of the specified tool for the platform.
 
-      For example, my_platform.get_tool(abamake.tool.CxxCompiler) will return an instance of
-      abamake.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
+      For example, my_platform.get_tool(comk.tool.CxxCompiler) will return an instance of
+      comk.tool.GxxCompiler if G++ is the C++ compiler for my_platorm.
 
       type clsTool
-         Subclass of abamake.tool.Tool.
+         Subclass of comk.tool.Tool.
       type return
          Instance of a clsTool subclass.
       """
@@ -407,7 +407,7 @@ class Platform(object):
 
       The default implementation always returns 0.
 
-      abamake.platform.SystemType st
+      comk.platform.SystemType st
          System type.
       int return
          A value in range 0-4, representing how many elements of st match the platform.
@@ -420,7 +420,7 @@ class Platform(object):
       CxxCompiler), detecting the tool subtype (e.g. ClangxxCompiler).
 
       type clsTool
-         Subclass of abamake.tool.Tool.
+         Subclass of comk.tool.Tool.
       str sFilePath
          Path to the tool’s executable.
       """
@@ -436,7 +436,7 @@ class Platform(object):
    def system_type(self):
       """Returns the system type from which the Platform instance was created.
 
-      abamake.platform.SystemType return
+      comk.platform.SystemType return
          System type.
       """
 
@@ -499,7 +499,7 @@ class FreeBsdPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      if isinstance(tool, abamake.tool.Linker):
+      if isinstance(tool, comk.tool.Linker):
          tool.add_input_lib('pthread')
 
    def dynlib_file_name(self, sName):
@@ -539,7 +539,7 @@ class GnuPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      if isinstance(tool, abamake.tool.Linker):
+      if isinstance(tool, comk.tool.Linker):
          tool.add_input_lib('dl')
          tool.add_input_lib('pthread')
 
@@ -589,7 +589,7 @@ class WinPlatform(Platform):
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
-      if isinstance(tool, abamake.tool.Linker):
+      if isinstance(tool, comk.tool.Linker):
          tool.add_input_lib('advapi32')
          tool.add_input_lib('kernel32')
          tool.add_input_lib('mswsock')

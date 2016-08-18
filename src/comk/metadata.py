@@ -3,18 +3,18 @@
 #
 # Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Metadata management classes."""
@@ -26,7 +26,7 @@ import yaml
 import yaml.generator
 import yaml.parser
 
-import abamake.target
+import comk.target
 
 if sys.hexversion >= 0x03000000:
    basestring = str
@@ -35,12 +35,12 @@ if sys.hexversion >= 0x03000000:
 ####################################################################################################
 
 class MetadataParser(yaml.parser.Parser):
-   """Parser of Abamake’s metadata YAML files."""
+   """Parser of Complemake’s metadata YAML files."""
 
    def __init__(self, mk):
       """Constructor.
 
-      abamake.make.Make mk
+      comk.make.Make mk
          Make instance to make accessible via self.mk .
       """
 
@@ -60,7 +60,7 @@ ASSUME_NEW   = 1
 UPDATE_CACHE = 2
 USE_CACHE    = 3
 
-@MetadataParser.local_tag('abamake/metadata/file-signature', yaml.Kind.MAPPING)
+@MetadataParser.local_tag('complemake/metadata/file-signature', yaml.Kind.MAPPING)
 class FileSignature(object):
    """Signature metadata for a single file."""
 
@@ -74,7 +74,7 @@ class FileSignature(object):
    def __init__(self, *iterArgs):
       """Constructor.
 
-      abamake.metadata.MetadataParser mp
+      comk.metadata.MetadataParser mp
          Parser instantiating the object.
       dict(object: object) dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -108,7 +108,7 @@ class FileSignature(object):
    def __yaml__(self, yg):
       """TODO: comment."""
 
-      yg.write_mapping_begin('!abamake/metadata/file-signature')
+      yg.write_mapping_begin('!complemake/metadata/file-signature')
       yg.produce_from_object('path')
       yg.produce_from_object(self._m_sFilePath)
       yg.produce_from_object('mtime')
@@ -121,7 +121,7 @@ class FileSignature(object):
 
       str sFilePath
          Path to the file associated to the signature.
-      abamake.metadata.FileSignature return
+      comk.metadata.FileSignature return
          Generated signature.
       """
 
@@ -135,7 +135,7 @@ class FileSignature(object):
 
       str sFilePath
          Path to the file for which a signature should be generated.
-      abamake.metadata.FileSignature return
+      comk.metadata.FileSignature return
          Generated signature.
       """
 
@@ -145,7 +145,7 @@ class FileSignature(object):
 
 ####################################################################################################
 
-@MetadataParser.local_tag('abamake/metadata/target-snapshot', yaml.Kind.MAPPING)
+@MetadataParser.local_tag('complemake/metadata/target-snapshot', yaml.Kind.MAPPING)
 class TargetSnapshot(object):
    """Captures information about a target at a specific time. Used to detect changes that should
    trigger a rebuild.
@@ -163,16 +163,16 @@ class TargetSnapshot(object):
    def __init__(self, *iterArgs):
       """Constructor.
 
-      abamake.metadata.MetadataParser mp
+      comk.metadata.MetadataParser mp
          Parser instantiating the object.
       dict(object: object) dictYaml
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      abamake.metadata.MetadataStore mds
+      comk.metadata.MetadataStore mds
          MetadataStore instance.
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target to collect signatures for from the file system.
       """
 
@@ -210,7 +210,7 @@ class TargetSnapshot(object):
                if not isinstance(o, FileSignature):
                   mp.raise_parsing_error((
                      'elements of the “inputs” attribute must be of type ' +
-                     '!abamake/metadata/file-signature, but element [{}] is not'
+                     '!complemake/metadata/file-signature, but element [{}] is not'
                   ).format(i))
                self._m_dictInputSigs[o._m_sFilePath] = o
 
@@ -222,7 +222,7 @@ class TargetSnapshot(object):
                if not isinstance(o, FileSignature):
                   mp.raise_parsing_error((
                      'elements of the “outputs” attribute must be of type ' +
-                     '!abamake/metadata/file-signature, but element [{}] is not'
+                     '!complemake/metadata/file-signature, but element [{}] is not'
                   ).format(i))
                self._m_dictOutputSigs[o._m_sFilePath] = o
       else:
@@ -231,17 +231,17 @@ class TargetSnapshot(object):
          for dep in tgt.get_dependencies():
             mds.get_signatures(dep.get_generated_files(), self._m_dictInputSigs, USE_CACHE)
          # Collect signatures for all the target’s generated files (outputs).
-         if isinstance(tgt, abamake.target.FileTarget):
+         if isinstance(tgt, comk.target.FileTarget):
             mds.get_signatures(tgt.get_generated_files(), self._m_dictOutputSigs, USE_CACHE)
 
    def __yaml__(self, yg):
       """TODO: comment."""
 
       tgt = self._m_tgt
-      yg.write_mapping_begin('!abamake/metadata/target-snapshot')
+      yg.write_mapping_begin('!complemake/metadata/target-snapshot')
 
       # Store the name of the target if named, or its file path otherwise.
-      if isinstance(tgt, abamake.target.NamedTargetMixIn):
+      if isinstance(tgt, comk.target.NamedTargetMixIn):
          yg.produce_from_object('name')
          yg.produce_from_object(tgt.name)
       else:
@@ -262,9 +262,9 @@ class TargetSnapshot(object):
       """Compares self (current snapshot) with the stored snapshot for the same target, logging any
       detected differences.
 
-      abamake.metadata.TargetSnapshot tssStored
+      comk.metadata.TargetSnapshot tssStored
          Stored snapshot.
-      abamake.Logger log
+      comk.Logger log
          Log instance.
       bool return
          True if the two snapshots are equal, of False in case of any differences.
@@ -322,13 +322,13 @@ class TargetSnapshot(object):
    def update(self, mds, bDryRun):
       """Updates the snapshot.
 
-      abamake.metadata.MetadataStore mds
+      comk.metadata.MetadataStore mds
          MetadataStore instance.
       bool bDryRun
          True if “dry run” mode is active, or False otherwise.
       """
 
-      if isinstance(self._m_tgt, abamake.target.FileTarget):
+      if isinstance(self._m_tgt, comk.target.FileTarget):
          # Recreate signatures for all the target’s generated files (outputs).
          mds.get_signatures(
             self._m_tgt.get_generated_files(), self._m_dictOutputSigs,
@@ -337,11 +337,11 @@ class TargetSnapshot(object):
 
 ####################################################################################################
 
-@MetadataParser.local_tag('abamake/metadata/store', yaml.Kind.MAPPING)
+@MetadataParser.local_tag('complemake/metadata/store', yaml.Kind.MAPPING)
 class MetadataStore(object):
    """Handles storage and retrieval of file metadata."""
 
-   # Freshly-read target snapshots (abamake.target.Target -> TargetSnapshot).
+   # Freshly-read target snapshots (comk.target.Target -> TargetSnapshot).
    _m_dictCurrTargetSnapshots = None
    # True if any changes occurred, which means that the metadata file should be updated.
    _m_bDirty = None
@@ -351,20 +351,20 @@ class MetadataStore(object):
    _m_log = None
    # Signature for each file (str -> FileSignature).
    _m_dictSignatures = None
-   # Target snapshots as stored in the metadata file (abamake.target.Target -> TargetSnapshot).
+   # Target snapshots as stored in the metadata file (comk.target.Target -> TargetSnapshot).
    _m_dictStoredTargetSnapshots = None
 
    def __init__(self, *iterArgs):
       """Constructor. Reads metadata from the specified file.
 
-      abamake.metadata.MetadataParser mp
+      comk.metadata.MetadataParser mp
          Parser instantiating the object.
       dict(object: object) dictYaml
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      abamake.Make mk
+      comk.Make mk
          Make instance.
       str sFilePath
          Metadata storage file.
@@ -395,7 +395,7 @@ class MetadataStore(object):
             if not isinstance(o, TargetSnapshot):
                mp.raise_parsing_error((
                   'elements of the “target-snapshots” attribute must be of type ' +
-                  '!abamake/metadata/target-snapshot, but element [{}] is not'
+                  '!complemake/metadata/target-snapshot, but element [{}] is not'
                ).format(i))
             # If None, this TargetSnapshot should not be used because its target is gone.
             if o._m_tgt:
@@ -407,7 +407,7 @@ class MetadataStore(object):
    def __yaml__(self, yg):
       """TODO: comment."""
 
-      yg.write_mapping_begin('!abamake/metadata/store')
+      yg.write_mapping_begin('!complemake/metadata/store')
       yg.produce_from_object('target-snapshots')
       yg.produce_from_object(self._m_dictStoredTargetSnapshots.values())
       yg.write_mapping_end()
@@ -428,7 +428,7 @@ class MetadataStore(object):
 
       iterable(str*) iterFilePaths
          Enumerates file paths.
-      dict(str: abamake.metadata.FileSignature) dictOut
+      dict(str: comk.metadata.FileSignature) dictOut
          Dictionary in which every signature will be stored, even if None.
       int iMode
          If ASSUME_NEW, the signature will be unconditionally updated to a fictional value that
@@ -451,7 +451,7 @@ class MetadataStore(object):
                # Need to read this file’s signature.
                try:
                   fs = FileSignature.generate(sFilePath)
-               except (abamake.FileNotFoundErrorCompat, OSError):
+               except (comk.FileNotFoundErrorCompat, OSError):
                   fs = None
             # Cache this signature.
             self._m_dictSignatures[sFilePath] = fs
@@ -462,9 +462,9 @@ class MetadataStore(object):
       """Returns a current snapshot for the specified target, creating one first it none such
       exists.
 
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target for which to return a current snapshot.
-      abamake.metadata.TargetSnapshot return
+      comk.metadata.TargetSnapshot return
          Current target snapshot.
       """
 
@@ -484,7 +484,7 @@ class MetadataStore(object):
       The new signatures are stored internally, and will be used to update the target’s snapshot
       once MetadataStore.update_target_snapshot() is called.
 
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target for which to get a new snapshot to compare with the stored one.
       bool return
          True if any files have changed since the last build, or False otherwise.
@@ -506,7 +506,7 @@ class MetadataStore(object):
    def update_target_snapshot(self, tgt, bDryRun):
       """Updates the snapshot for the specified target.
 
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target for which to update the snapshot.
       bool bDryRun
          True if “dry run” mode is active, or False otherwise.

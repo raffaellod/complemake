@@ -3,21 +3,21 @@
 #
 # Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Builds outputs and runs tests as specified in a .abamk file."""
+"""Builds outputs and runs tests as specified in a .comk file."""
 
 # TODO: maybe support launching gdb/devenv to run one of the programs via debugger?
 #
@@ -32,8 +32,8 @@
 import os
 import sys
 
-import abamake.make
-import abamake.tool
+import comk.make
+import comk.tool
 
 
 ####################################################################################################
@@ -50,7 +50,7 @@ def main(iterArgs):
    import argparse
 
    argparser = argparse.ArgumentParser(add_help = False)
-   #   Usage: abamake.py [options] [makefile] [targets...]
+   #   Usage: complemake.py [options] [makefile] [targets...]
    argparser.add_argument(
       '-n', '--dry-run', action = 'store_true', default = False,
       help = 'Don’t actually run any external commands. Useful to test if anything needs to be ' +
@@ -78,10 +78,10 @@ def main(iterArgs):
       help = 'Continue building targets even if other independent targets fail.'
    )
    argparser.add_argument(
-      '-m', '--makefile', metavar = 'PROJECT.abamk', nargs = 1,
-      help = 'Abamakefile (.abamk) containing instructions on how to build targets. If omitted ' +
-             'and the current directory contains a single file matching *.abamk, that file will ' +
-             'be used as makefile.'
+      '-m', '--makefile', metavar = 'PROJECT.comk', nargs = 1,
+      help = 'Complemake file (.comk) containing instructions on how to build targets. If ' +
+             'omitted and the current directory contains a single file matching *.comk, that ' +
+             'file will be used as makefile.'
    )
    argparser.add_argument(
       '-g', '--target-system-type', metavar = 'SYSTEM-TYPE',
@@ -103,12 +103,12 @@ def main(iterArgs):
    argparser.add_argument(
       'target', nargs = '*',
       help = 'List of target files to be conditionally built. If none are specified, all targets ' +
-             'declared in the Abamakefile (.abamk) will be conditionally built.'
+             'declared in the Complemake file (.comk) will be conditionally built.'
    )
 
    args = argparser.parse_args()
 
-   mk = abamake.make.Make()
+   mk = comk.make.Make()
    mk.dry_run = args.dry_run
    mk.force_build = args.force_build
    mk.force_test = args.force_test
@@ -118,24 +118,24 @@ def main(iterArgs):
    if args.target_system_type:
       mk.target_platform = args.target_system_type
    if args.tool_cxx:
-      mk.target_platform.set_tool(abamake.tool.CxxCompiler, args.tool_cxx)
+      mk.target_platform.set_tool(comk.tool.CxxCompiler, args.tool_cxx)
       if not args.tool_ld:
          # Also use the C++ compiler as the linker driver.
-         mk.target_platform.set_tool(abamake.tool.Linker, args.tool_cxx)
+         mk.target_platform.set_tool(comk.tool.Linker, args.tool_cxx)
    if args.tool_ld:
-      mk.target_platform.set_tool(abamake.tool.Linker, args.tool_ld)
+      mk.target_platform.set_tool(comk.tool.Linker, args.tool_ld)
    mk.log.verbosity += args.verbose
 
    # Check for a makefile.
    sMakefilePath = args.makefile
    if not sMakefilePath:
-      # Check if the current directory contains a single Abamakefile.
+      # Check if the current directory contains a single Complemake file.
       for sFilePath in os.listdir(os.getcwd()):
-         if sFilePath.endswith('.abamk'):
+         if sFilePath.endswith('.comk'):
             if sMakefilePath:
                sys.stderr.write(
                   'error: multiple makefiles found in the current directory, please specify one ' +
-                  'explicitly with --makefile PROJECT.abamk\n'
+                  'explicitly with --makefile PROJECT.comk\n'
                )
                return 1
             sMakefilePath = sFilePath
@@ -144,7 +144,7 @@ def main(iterArgs):
       if not sMakefilePath:
          sys.stderr.write(
             'error: no makefiles in current directory, please specify one explicitly with ' +
-            '--makefile PROJECT.abamk\n'
+            '--makefile PROJECT.comk\n'
          )
          return 1
    # Load the makefile.

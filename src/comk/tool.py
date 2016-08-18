@@ -1,20 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2013-2015 Raffaello D. Di Napoli
+# Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Classes implementing different build tools, such as C++ compilers, providing an abstract
@@ -26,10 +26,10 @@ import re
 import shlex
 import subprocess
 
-import abamake
-import abamake.job
-import abamake.logging
-import abamake.version
+import comk
+import comk.job
+import comk.logging
+import comk.version
 
 
 ####################################################################################################
@@ -40,7 +40,7 @@ class AbstractFlag(object):
    def __str__(self):
       """Returns the member name, in the containing class, of the abstract flag.
 
-      Implemented by searching for self in every abamake.tool.Tool-derived class, and returning the
+      Implemented by searching for self in every comk.tool.Tool-derived class, and returning the
       corresponding member name when found.
 
       str return
@@ -50,7 +50,7 @@ class AbstractFlag(object):
       sAttr = self._get_self_in_class(Tool)
       if sAttr:
          return sAttr
-      for cls in abamake.derived_classes(Tool):
+      for cls in comk.derived_classes(Tool):
          sAttr = self._get_self_in_class(cls)
          if sAttr:
             return sAttr
@@ -94,9 +94,9 @@ class ToolFactory(object):
          Class to instantiate.
       str sFilePath
          Path to the tool’s executable.
-      abamake.platform.SystemType stTarget
+      comk.platform.SystemType stTarget
          Target system type.
-      abamake.version.Version ver
+      comk.version.Version ver
          Version of the tool.
       iterable(str*) iterArgs
          Optional list of additional arguments to be provided to the tool.
@@ -111,7 +111,7 @@ class ToolFactory(object):
    def __call__(self):
       """Instantiates the target Tool subclass.
 
-      abamake.tool.Tool return
+      comk.tool.Tool return
          New tool instance.
       """
 
@@ -165,7 +165,7 @@ class Tool(object):
       will take care of translating each flag into a command-line argument understood by a specific
       tool implementation (e.g. GCC).
 
-      iterable(abamake.tool.AbstractFlag*) *iterArgs
+      iterable(comk.tool.AbstractFlag*) *iterArgs
          Flags to turn on.
       """
 
@@ -228,24 +228,24 @@ class Tool(object):
          listArgs.extend(self._m_listInputFilePaths)
 
    def _create_job_instance(self, fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath):
-      """Returns an new abamake.job.ExternalCmdJob instance constructed with the provided arguments.
-      It allows subclasses to customize the job creation.
+      """Returns an new comk.job.ExternalCmdJob instance constructed with the provided arguments. It
+      allows subclasses to customize the job creation.
 
       callable fnOnComplete
          Function to call after the job completes; it will be provided the exit code of the job.
       iterable(str, str*) iterQuietCmd
-         See iterQuietCmd argument in abamake.job.ExternalCmdJob.__init__().
+         See iterQuietCmd argument in comk.job.ExternalCmdJob.__init__().
       dict(str: object) dictPopenArgs
-         See dictPopenArgs argument in abamake.job.ExternalCmdJob.__init__().
-      abamake.logging.Logger log
-         See log argument in abamake.job.ExternalCmdJob.__init__().
+         See dictPopenArgs argument in comk.job.ExternalCmdJob.__init__().
+      comk.logging.Logger log
+         See log argument in comk.job.ExternalCmdJob.__init__().
       str sStdErrFilePath
-         See sStdErrFilePath argument in abamake.job.ExternalCmdJob.__init__().
-      abamake.job.ExternalCmdJob return
+         See sStdErrFilePath argument in comk.job.ExternalCmdJob.__init__().
+      comk.job.ExternalCmdJob return
          Newly instantiated job.
       """
 
-      return abamake.job.ExternalCmdJob(
+      return comk.job.ExternalCmdJob(
          fnOnComplete, iterQuietCmd, dictPopenArgs, log, sStdErrFilePath
       )
 
@@ -255,13 +255,13 @@ class Tool(object):
       The default implementation schedules a job whose command line is composed by calling
       Tool._create_job_add_flags() and Tool._create_job_add_inputs().
 
-      abamake.Make mk
+      comk.Make mk
          Make instance.
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target that this job will build.
       callable fnOnComplete
          Function to call after the job completes; it will be provided the exit code of the job.
-      abamake.job.Job return
+      comk.job.Job return
          Job scheduled.
       """
 
@@ -274,7 +274,7 @@ class Tool(object):
       if self._m_sOutputFilePath:
          if not mk.dry_run:
             # Make sure that the output directory exists.
-            abamake.makedirs(os.path.dirname(self._m_sOutputFilePath))
+            comk.makedirs(os.path.dirname(self._m_sOutputFilePath))
          # Get the compiler-specific command-line argument to specify an output file path.
          sFormat = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
          # Add the output file path.
@@ -299,9 +299,9 @@ class Tool(object):
 
       str sFilePath
          Path to the executable to invoke.
-      abamake.platform.SystemType stTarget
+      comk.platform.SystemType stTarget
          Target system type.
-      abamake.tool.ToolFactory return
+      comk.tool.ToolFactory return
          Factory able to instantiate cls, or None if the executable does not exist or is not modeled
          by cls or does not target st.
       """
@@ -333,7 +333,7 @@ class Tool(object):
          );
          sOut = proc.communicate()[0].rstrip('\r\n')
          return sOut, proc.returncode
-      except (abamake.FileNotFoundErrorCompat, OSError):
+      except (comk.FileNotFoundErrorCompat, OSError):
          # Could not execute the program.
          return None, None
 
@@ -350,22 +350,22 @@ class Tool(object):
    @classmethod
    def get_factory(cls, sFilePathOverride = None, stTarget = None):
       """Detects if a tool of the type of this non-leaf subclass (e.g. a C++ compiler for
-      abamake.tool.CxxCompiler) exists for the specified system type, returning the corresponding
-      leaf class (e.g. abamake.tool.GxxCompiler if G++ for that system type is installed).
+      comk.tool.CxxCompiler) exists for the specified system type, returning the corresponding leaf
+      class (e.g. comk.tool.GxxCompiler if G++ for that system type is installed).
 
       str sFilePathOverride
          Path to a tool’s executable that will be used instead of the default for each leaf class.
-      abamake.platform.SystemType stTarget
+      comk.platform.SystemType stTarget
          System type for which the tool is needed. If omitted, the returned factory will create Tool
          instances for the host platform or for whatever system type is targeted by the user-
          specified tool (TODO).
-      abamake.tool.ToolFactory return
-         Factory able to instantiate a abamake.tool.Tool subclass matching the tool.
+      comk.tool.ToolFactory return
+         Factory able to instantiate a comk.tool.Tool subclass matching the tool.
       """
 
       if sFilePathOverride:
          # Check if any leaf class can model the specified executable.
-         for clsDeriv in abamake.derived_classes(cls):
+         for clsDeriv in comk.derived_classes(cls):
             tf = clsDeriv._get_factory_if_exe_matches_tool_and_target(sFilePathOverride, stTarget)
             if tf:
                return tf
@@ -408,7 +408,7 @@ class Tool(object):
       """Translates an abstract flag (*FLAG_*) into a command-line argument specific to the tool
       implementation using a class-specific _smc_dictAbstactToImplFlags dictionary.
 
-      abamake.tool.AbstractFlag flag
+      comk.tool.AbstractFlag flag
          Abstract flag.
       str return
          Corresponding command-line argument.
@@ -597,15 +597,15 @@ class ClangxxCompiler(CxxCompiler):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       # Verify that this compiler supports the specified system type.
       match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
       if not match:
          return None
       try:
-         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
-      except abamake.platform.SystemTypeTupleError:
+         stSupported = comk.platform.SystemType.parse_tuple(match.group('target'))
+      except comk.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
@@ -638,7 +638,7 @@ class GxxCompiler(CxxCompiler):
          '-fnon-call-exceptions',  # Allow trapping instructions to throw exceptions.
          '-fvisibility=hidden',    # Set default ELF symbol visibility to “hidden”.
       ])
-      if self._m_ver and self._m_ver >= abamake.version.Version(4, 9):
+      if self._m_ver and self._m_ver >= comk.version.Version(4, 9):
          listArgs.extend([
             '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
          ])
@@ -686,15 +686,15 @@ class GxxCompiler(CxxCompiler):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       # Verify that this compiler supports the specified system type.
       sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut or iRet != 0:
          return None
       try:
-         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-      except abamake.platform.SystemTypeTupleError:
+         stSupported = comk.platform.SystemType.parse_tuple(sOut)
+      except comk.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
@@ -760,7 +760,7 @@ class MscCompiler(CxxCompiler):
 
       # cl.exe has the annoying habit of printing the file name we asked it to compile; create a
       # filtered logger to hide it.
-      log = abamake.logging.FilteredLogger(log)
+      log = comk.logging.FilteredLogger(log)
       log.add_exclusion(os.path.basename(self._m_listInputFilePaths[0]))
 
       return CxxCompiler._create_job_instance(
@@ -788,16 +788,16 @@ class MscCompiler(CxxCompiler):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       sTarget = match.group('target')
       if sTarget.endswith('x86'):
-         stSupported = abamake.platform.SystemType('i386', None, None, 'win32')
+         stSupported = comk.platform.SystemType('i386', None, None, 'win32')
       elif sTarget == 'x64':
-         stSupported = abamake.platform.SystemType('x86_64', None, None, 'win64')
+         stSupported = comk.platform.SystemType('x86_64', None, None, 'win64')
       elif sTarget == 'ARM':
          # TODO: is arm-win32 the correct system type “triplet” for Windows RT?
-         stSupported = abamake.platform.SystemType('arm', None, None, 'win32')
+         stSupported = comk.platform.SystemType('arm', None, None, 'win32')
       else:
          # Target not recognized, so report it as not supported.
          return None
@@ -937,7 +937,7 @@ class ClangGnuLdLinker(Linker):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       return ToolFactory(cls, sFilePath, stTarget, ver, ('-target', str(stTarget)))
 
@@ -991,15 +991,15 @@ class ClangMachOLdLinker(Linker):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       # Verify that this compiler supports the specified system type.
       match = re.search(r'^Target: (?P<target>.*)$', sOut, re.MULTILINE)
       if not match:
          return None
       try:
-         stSupported = abamake.platform.SystemType.parse_tuple(match.group('target'))
-      except abamake.platform.SystemTypeTupleError:
+         stSupported = comk.platform.SystemType.parse_tuple(match.group('target'))
+      except comk.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
       # TODO: end copy & paste from ClangxxCompiler
@@ -1076,15 +1076,15 @@ class GxxGnuLdLinker(Linker):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       # Verify that this linker driver supports the specified system type.
       sOut, iRet = Tool._get_cmd_output((sFilePath, '-dumpmachine'))
       if not sOut or iRet != 0:
          return None
       try:
-         stSupported = abamake.platform.SystemType.parse_tuple(sOut)
-      except abamake.platform.SystemTypeTupleError:
+         stSupported = comk.platform.SystemType.parse_tuple(sOut)
+      except comk.platform.SystemTypeTupleError:
          # If the tuple can’t be parsed, assume it’s not supported.
          return None
 
@@ -1130,7 +1130,7 @@ class MsLinker(Linker):
 
       # link.exe has the annoying habit of telling us it’s doing what we told it to; create a
       # filtered logger to hide it.
-      log = abamake.logging.FilteredLogger(log)
+      log = comk.logging.FilteredLogger(log)
       log.add_exclusion('   Creating library {0}.lib and object {0}.exp'.format(
          os.path.splitext(self._m_sOutputFilePath)[0]
       ))
@@ -1171,7 +1171,7 @@ class MsLinker(Linker):
       if not match:
          return None
 
-      ver = abamake.version.Version.parse(match.group('ver'))
+      ver = comk.version.Version.parse(match.group('ver'))
 
       if stTarget:
          # Check for a LNK4012 warning, as explained above.

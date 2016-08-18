@@ -1,13 +1,15 @@
 ﻿1. Introduction
 ---------------
 
-Abamake is a build utility for C++ projects, featuring:
+Complemake – the tool your project was missing.
+Complemake is a build utility for software (currently C++-only) projects,
+featuring:
 
 •  Multiple platform compatibility (currently FreeBSD, Linux, OS X, Windows)
 •  Parallel execution of all sub-processes;
 •  Simple, YAML-based syntax
-•  Minimal-to-no build instructions required in each makefile, and no toolchain-
-   specific commands/flags;
+•  Minimal instructions required in each makefile, and no toolchain-specific
+   commands/flags;
 •  Integration with Abaclade’s abc::testing framework, providing a fluid
    automated testing experience (see <https://github.com/raffaellod/abaclade>);
 •  Command-line options generally compatible with GNU make, to be immediately
@@ -15,59 +17,59 @@ Abamake is a build utility for C++ projects, featuring:
 •  No GNU Autotools
 
 
-2. Getting Abamake
--------------------
+2. Getting Complemake
+---------------------
 
-Abaclade is available at https://github.com/raffaellod/abaclade via git; to
+Complemake is available at https://github.com/raffaellod/complemake via git; to
 download it, just clone the repository:
 
-   git clone https://github.com/raffaellod/abamake.git
-   cd abamake
+   git clone https://github.com/raffaellod/complemake.git
+   cd complemake
 
 The default branch, master, is where all development occurs. See § 6. Versioning
 and branching for more information on available branches.
 
 
-3. Building Abamake
--------------------
+3. Building Complemake
+----------------------
 
-Since Abamake is entirely written in Python, it doesn’t need to be built.
+Since Complemake is entirely written in Python, it doesn’t need to be built.
 
 
-4. Installing Abamake
----------------------
+4. Installing Complemake
+------------------------
 
-At the moment, Abamake lacks any means for installation. The recommended way to
-“install” it for the time being is to create a symlink to abamake.py in a
+At the moment, Complemake lacks any means for installation. The recommended way
+to “install” it for the time being is to create a symlink to complemake.py in a
 directory in the system PATH (such as /usr/local/bin on non-Windows system).
 
-TODO: make Abaclade installable.
+TODO: make Complemake installable.
 
 
-5. Using Abamake
-----------------
+5. Using Complemake
+-------------------
 
-In order to use Abamake, an Abamakefile (short for “Abamake makefile”, a fairly
-simple YAML file; see [DOC:5581 Abamakefiles]) must be created for your project,
-defining a list of named and unnamed (file path-only) targets.
+In order to use Complemake, a Complemake file (a fairly simple YAML file; see
+[DOC:5581 Complemake files]) must be created for your project, defining a list
+of named and unnamed (file path-only) targets.
 
-Abamake should be run preferably from the directory containing the target
-project’s Abamakefile (.abamk), relying on the PATH environment variable to
-locate the abamake.py program:
+Complemake should be run preferably from the directory containing the target
+project’s Complemake file (.comk), relying on the PATH environment variable to
+locate the complemake.py program:
 
-   abamake.py
+   complemake.py
 
 
-When running, Abamake will build the targets in the makefile and create outputs
-in the bin/ and lib/ directories.
+When running, Complemake will build the targets in the makefile and create
+outputs in the bin/ and lib/ directories.
 
-Run abamake.py --help to see a guide to Abamake’s command-line arguments.
+Run complemake.py --help to see a guide to Complemake’s command-line arguments.
 
 
 6. Versioning and branching
 -----------------------------
 
-Abamake uses semantical versioning, with releases named vX.Y.Z where X is the
+Complemake uses semantical versioning, with releases named vX.Y.Z where X is the
 major version, Y is the minor version, and Z is the revision.
 
 While the major number is 0, changes to the minor indicate breaking changes,
@@ -88,7 +90,7 @@ branch, to support maintenance releases independent of the master branch.
 7. Compatibility
 ----------------
 
-Abamake is in full development, so the compatibility can and will change over
+Complemake is in full development, so the compatibility can and will change over
 time (hopefully expanding).
 
 Supported build systems:
@@ -112,7 +114,7 @@ Supported operating systems:
 •  FreeBSD 10 or later
 •  OS X 10.9 Mavericks or later
 
-Abamake requires Python 2.7 or 3.2 or later to be installed on the build host
+Complemake requires Python 2.7 or 3.2 or later to be installed on the build host
 system.
 
 Future plans include removal of the dependency on Python.
@@ -125,15 +127,15 @@ Future plans include removal of the dependency on Python.
 8.1. Some history
 -----------------
 
-Abamake is a spin-off of Abaclade (<https://github.com/raffaellod/abaclade>);
+Complemake is a spin-off of Abaclade (<https://github.com/raffaellod/abaclade>);
 its creation became a necessity as the number of fixes to the different build
 systems in use (the traditional make utility and MSBuild) started becoming
 excessive:
 
 •  The syntax of traditional makefiles is one of a kind, and often that’s the
-   case for its replacements as well; while this is also true for Abamake, the
-   syntax for the latter is rather simplified and often only offers one way to
-   reach the desired result;
+   case for its replacements as well; while this is also true for Complemake,
+   the syntax for the latter is rather simplified and often only offers one way
+   to reach the desired result;
 
 •  Traditional makefiles require toolchain-specific commands/flags to be hard-
    coded in the target build rules;
@@ -147,17 +149,17 @@ excessive:
    sequential anyway.
 
 
-8.2. Current status of Abamake
--------------------------------
+8.2. Current status of Complemake
+---------------------------------
 
-Though not yet as complete as it should be, Abamake is the recommended utility
-to build projects using Abaclade.
+Though not yet as complete as it should be, Complemake is the recommended
+utility to build projects using Abaclade.
 
 
 8.3. Project goals
 ------------------
 
-Abamake has met or is targeting these goals:
+Complemake has met or is targeting these goals:
 
 1. Offer a fast way of setting up C++ projects using Abaclade;
 
@@ -174,16 +176,16 @@ these objectives.
 --------------------------------------------------------------------------------
 Copyright 2010-2016 Raffaello D. Di Napoli
 
-This file is part of Abamake.
+This file is part of Complemake.
 
-Abamake is free software: you can redistribute it and/or modify it under the
+Complemake is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version.
 
-Abamake is distributed in the hope that it will be useful, but WITHOUT ANY 
+Complemake is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-Abamake. If not, see <http://www.gnu.org/licenses/>.
+Complemake. If not, see <http://www.gnu.org/licenses/>.

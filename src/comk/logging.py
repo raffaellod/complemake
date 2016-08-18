@@ -1,20 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2014 Raffaello D. Di Napoli
+# Copyright 2014, 2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
 """Logging-related classes."""
@@ -29,7 +29,7 @@ if sys.hexversion < 0x03000000:
 ####################################################################################################
 
 class LogGenerator(object):
-   """Generator of logs. Only one instance of this class exists for each abamake.Make instance."""
+   """Generator of logs. Only one instance of this class exists for each comk.Make instance."""
 
    # Total count of failed test assertions.
    _m_cFailedTestAssertions = None
@@ -89,7 +89,7 @@ class LogGenerator(object):
          cFailed,  cFailed * 100      // cTotal,
       )
 
-   # Selects a verbosity level (abamake.logging.Logger.*), affecting what is displayed about the
+   # Selects a verbosity level (comk.logging.Logger.*), affecting what is displayed about the
    # operations executed.
    verbosity = None
 
@@ -139,8 +139,8 @@ class Logger(object):
       """Constructor.
 
       object lg
-         abamake.logging.LogGenerator instance, or abamake.logging.Logger whose LogGenerator is to
-         be shared.
+         comk.logging.LogGenerator instance, or comk.logging.Logger whose LogGenerator is to be
+         shared.
       """
 
       if isinstance(lg, LogGenerator):
@@ -206,7 +206,7 @@ class Logger(object):
       self._m_lg.verbosity = iLevel
 
    verbosity = property(_get_verbosity, _set_verbosity, doc = """
-      Selects a verbosity level (abamake.logging.Logger.*), affecting what is displayed about the
+      Selects a verbosity level (comk.logging.Logger.*), affecting what is displayed about the
       operations executed.
    """)
 

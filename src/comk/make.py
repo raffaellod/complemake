@@ -3,32 +3,32 @@
 #
 # Copyright 2013-2016 Raffaello D. Di Napoli
 #
-# This file is part of Abamake.
+# This file is part of Complemake.
 #
-# Abamake is free software: you can redistribute it and/or modify it under the terms of the GNU
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
 # General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
-# Abamake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along with Abamake. If not, see
-# <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with Complemake. If not,
+# see <http://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------------
 
-"""Implementation of the main Abamake class, Make."""
+"""Implementation of the main Complemake class, Make."""
 
 import os
 import re
 import sys
 
-import abamake.job
-import abamake.logging
-import abamake.makefileparser
-import abamake.metadata
-import abamake.platform
-import abamake.target
+import comk.job
+import comk.logging
+import comk.makefileparser
+import comk.metadata
+import comk.platform
+import comk.target
 import yaml
 
 
@@ -53,7 +53,7 @@ class DependencyCycleError(MakefileError):
 
       str sMessage
          Exception message.
-      iterable(abamake.target.Target) iterTargets
+      iterable(comk.target.Target) iterTargets
          Targets that create a cycle in the dependency graph.
       iterable(object*) iterArgs
          Other arguments.
@@ -80,17 +80,17 @@ class TargetReferenceError(MakefileError):
 
 ####################################################################################################
 
-@abamake.makefileparser.MakefileParser.local_tag('abamake/makefile', yaml.Kind.MAPPING)
+@comk.makefileparser.MakefileParser.local_tag('complemake/makefile', yaml.Kind.MAPPING)
 class Makefile(object):
-   """Stores the attributes of a YAML abamake/makefile object."""
+   """Stores the attributes of a YAML complemake/makefile object."""
 
-   # List of abamake.target.Target instances parsed from the top-level “targets” attribute.
+   # List of comk.target.Target instances parsed from the top-level “targets” attribute.
    _m_listTargets = None
 
    def __init__(self, mp, dictYaml):
       """Constructor.
 
-      abamake.makefileparser.MakefileParser mp
+      comk.makefileparser.MakefileParser mp
          Parser instantiating the object.
       object dictYaml
          Parsed YAML object to be used to construct the new instance.
@@ -100,9 +100,9 @@ class Makefile(object):
       if not isinstance(oTargets, list):
          mp.raise_parsing_error('attribute “targets” must be a sequence')
       for i, o in enumerate(oTargets):
-         if not isinstance(o, abamake.target.Target):
+         if not isinstance(o, comk.target.Target):
             mp.raise_parsing_error((
-               'elements of the “targets” attribute must be of type !abamake/target/*, but ' +
+               'elements of the “targets” attribute must be of type !complemake/target/*, but ' +
                'element [{}] is not'
             ).format(i))
       self._m_listTargets = oTargets
@@ -117,13 +117,13 @@ class Makefile(object):
 ####################################################################################################
 
 class Make(object):
-   """Parses an Abamakefile (.abamk) and exposes an abamake.job.Runner instance that can be used to
+   """Parses a Complemake file (.comk) and exposes a comk.job.Runner instance that can be used to
    schedule target builds and run them.
 
    Example usage:
 
-      mk = abamake.Make()
-      mk.parse('project.abamk.yml')
+      mk = comk.Make()
+      mk.parse('project.comk.yml')
       tgt = mk.get_named_target('projectbin')
       mk.build((tgt, ))
    """
@@ -170,10 +170,10 @@ class Make(object):
       self._m_dictFileTargets = {}
       self._m_bForceBuild = False
       self._m_bForceTest = False
-      self._m_platformHost = abamake.platform.Platform.detect_host()
-      self._m_jr = abamake.job.Runner(self)
+      self._m_platformHost = comk.platform.Platform.detect_host()
+      self._m_jr = comk.job.Runner(self)
       self._m_bKeepGoing = False
-      self._m_log = abamake.logging.Logger(abamake.logging.LogGenerator())
+      self._m_log = comk.logging.Logger(comk.logging.LogGenerator())
       self._m_mds = None
       self._m_dictNamedTargets = {}
       self._m_sOutputDir = ''
@@ -183,7 +183,7 @@ class Make(object):
    def add_file_target(self, tgt, sFilePath):
       """Records a file target, making sure no duplicates are added.
 
-      abamake.target.FileTarget tgt
+      comk.target.FileTarget tgt
          Target to add.
       str sFilePath
          Target file path.
@@ -196,7 +196,7 @@ class Make(object):
    def add_named_target(self, tgt, sName):
       """Records a named target, making sure no duplicates are added.
 
-      abamake.target.NamedTargetMixIn tgt
+      comk.target.NamedTargetMixIn tgt
          Target to add.
       str sName
          Target name.
@@ -209,7 +209,7 @@ class Make(object):
    def add_target(self, tgt):
       """Records a target.
 
-      abamake.target.Target tgt
+      comk.target.Target tgt
          Target to add.
       """
 
@@ -219,14 +219,14 @@ class Make(object):
       return self._m_bCrossBuild
 
    cross_build = property(_get_cross_build, doc = """
-      If True, the host platform is not the same as the target platform, and Abamake may be unable
-      to execute the binaries it builds.
+      If True, the host platform is not the same as the target platform, and Complemake may be
+      unable to execute the binaries it builds.
    """)
 
    def build_targets(self, iterTargets):
       """Builds the specified targets, as well as their dependencies, as needed.
 
-      iterable(abamake.target.Target*) iterTargets
+      iterable(comk.target.Target*) iterTargets
          Targets to be built.
       bool return
          True if all the targets were built successfully, or False otherwise.
@@ -285,7 +285,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      abamake.target.Target return
+      comk.target.Target return
          Target that builds sFilePath, or oFallback if no such target was defined in the makefile.
       """
 
@@ -303,7 +303,7 @@ class Make(object):
       object oFallback
          Object to return in case the specified target does not exist. If omitted, an exception will
          be raised if the target does not exist.
-      abamake.target.Target return
+      comk.target.Target return
          Target named sName, or oFallback if no such target was defined in the makefile.
       """
 
@@ -357,13 +357,13 @@ class Make(object):
    """)
 
    def parse(self, sFilePath):
-      """Parses an Abamakefile.
+      """Parses a Complemake file.
 
       str sFilePath
          Path to the makefile to parse.
       """
 
-      mp = abamake.makefileparser.MakefileParser(self)
+      mp = comk.makefileparser.MakefileParser(self)
       # mp.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._m_setTargets on construction.
       # By collecting all targets upfront we allow for Target.validate() to always find a referenced
@@ -372,7 +372,7 @@ class Make(object):
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
       if not isinstance(mkf, Makefile):
          mp.raise_parsing_error(
-            'the top level object of an Abamake makefile must be of type abamake/makefile'
+            'the top level object of a Complemake file must be of type complemake/makefile'
          )
       # Validate each target.
       for tgt in self._m_setTargets:
@@ -380,16 +380,16 @@ class Make(object):
       # Make sure the makefile doesn’t define circular dependencies.
       self.validate_dependency_graph()
 
-      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.abamk-metadata')
+      sMetadataFilePath = os.path.join(os.path.dirname(sFilePath), '.comk-metadata')
       # Try loading an existing metadata store, or default to creating a new one.
       try:
-         self._m_mds = abamake.metadata.MetadataParser(self).parse_file(sMetadataFilePath)
-      except (abamake.FileNotFoundErrorCompat, OSError):
-         self._m_mds = abamake.metadata.MetadataStore(self, sMetadataFilePath)
+         self._m_mds = comk.metadata.MetadataParser(self).parse_file(sMetadataFilePath)
+      except (comk.FileNotFoundErrorCompat, OSError):
+         self._m_mds = comk.metadata.MetadataStore(self, sMetadataFilePath)
 
    def _get_target_platform(self):
       if not self._m_platformTarget:
-         self._m_platformTarget = abamake.platform.Platform.detect_host()
+         self._m_platformTarget = comk.platform.Platform.detect_host()
          self._m_bCrossBuild = False
       return self._m_platformTarget
 
@@ -397,13 +397,13 @@ class Make(object):
       if self._m_platformTarget:
          raise Exception('cannot set target platform after it’s already been assigned or detected')
       if isinstance(o, basestring):
-         o = abamake.platform.SystemType.parse_tuple(o)
-      if isinstance(o, abamake.platform.SystemType):
-         o = abamake.platform.Platform.from_system_type(o)
-      if not isinstance(o, abamake.platform.Platform):
+         o = comk.platform.SystemType.parse_tuple(o)
+      if isinstance(o, comk.platform.SystemType):
+         o = comk.platform.Platform.from_system_type(o)
+      if not isinstance(o, comk.platform.Platform):
          raise TypeError((
             'cannot set target platform from object of type {}; expected one of ' +
-            'str, abamake.platform.SystemType, abamake.platform.Platform'
+            'str, comk.platform.SystemType, comk.platform.Platform'
          ).format(type(o)))
       self._m_platformTarget = o
       self._m_bCrossBuild = (o.system_type() != self._m_platformHost.system_type())
@@ -446,7 +446,7 @@ class Make(object):
       rooted in tgtSubRoot, adding tgtSubRoot to setValidatedSubtrees in case of success, or raising
       an exception in case of problems with the subtree.
 
-      abamake.target.Target tgtSubRoot
+      comk.target.Target tgtSubRoot
          Target at the root of the subtree to validate.
       list listDependents
          Ancestors of tgtSubRoot. An ordered set with fast push/pop would be faster, since we
