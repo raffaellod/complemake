@@ -1,2 +1,6 @@
 *.pyc
 __pycache__
+/test/*/.comk-metadata
+/test/*/bin
+/test/*/int
+/test/*/log
