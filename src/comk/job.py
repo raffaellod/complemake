@@ -209,7 +209,7 @@ class ExternalCmdJob(AsynchronousJob):
       stdout = popen_args.setdefault('stdout', subprocess.PIPE)
       if stderr not in (subprocess.PIPE, subprocess.STDOUT):
          raise ValueError('invalid value for popen_args[\'stderr\']')
-      if stdout != subprocess.PIPE:
+      if stdout is not subprocess.PIPE:
          raise ValueError('invalid value for popen_args[\'stdout\']')
 
    def get_quiet_command(self):
@@ -236,7 +236,7 @@ class ExternalCmdJob(AsynchronousJob):
       """Reads from the job process’ stderr."""
 
       # Pick stdout if stderr is merged with it.
-      if self._popen_args['stderr'] == subprocess.STDOUT:
+      if self._popen_args['stderr'] is subprocess.STDOUT:
          err_out = self._popen.stdout
       else:
          err_out = self._popen.stderr
@@ -286,7 +286,7 @@ class ExternalCmdJob(AsynchronousJob):
       # Start the I/O threads.
       self._stderr_reader_thread = threading.Thread(target=self._read_stderr)
       self._stderr_reader_thread.start()
-      if self._popen_args['stderr'] != subprocess.STDOUT:
+      if self._popen_args['stderr'] is not subprocess.STDOUT:
          self._stdout_reader_thread = threading.Thread(target=self._read_stdout)
          self._stdout_reader_thread.start()
 
