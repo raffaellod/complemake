@@ -77,7 +77,7 @@ def main(args):
       help='Continue building targets even if other independent targets fail.'
    )
    argparser.add_argument(
-      '-m', '--makefile', metavar='PROJECT.comk', nargs=1,
+      '-m', '--makefile', metavar='PROJECT.comk',
       help='Complemake file (.comk) containing instructions on how to build targets. If omitted and the ' +
            'current directory contains a single file matching *.comk, that file will be used as makefile.'
    )
