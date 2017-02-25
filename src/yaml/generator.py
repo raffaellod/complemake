@@ -149,7 +149,6 @@ class Generator(object):
          self._dst_file.write(tag)
 
       self.new_line()
-      self._level += 1
       self._context_stack.append(self._context)
       self._context = _MAPPING_KEY_CONTEXT
 
@@ -158,7 +157,6 @@ class Generator(object):
 
       # TODO: validate self._context.
       self._context = self._context_stack.pop()
-      self._level -= 1
 
    def write_scalar(self, tag, s):
       """Writes a scalar object. To be called by a YAML-friendly class’s __yaml__() method.
@@ -201,7 +199,6 @@ class Generator(object):
          self._dst_file.write(tag)
 
       self.new_line()
-      self._level += 1
       self._context_stack.append(self._context)
       self._context = _SEQUENCE_CONTEXT
 
@@ -210,7 +207,6 @@ class Generator(object):
 
       # TODO: validate self._context.
       self._context = self._context_stack.pop()
-      self._level -= 1
 
    def produce_from_object(self, o):
       """Generates YAML for the specified object.
@@ -221,8 +217,9 @@ class Generator(object):
 
       context = self._context
       if self._at_bol:
-         if self._level > 1:
-            self._dst_file.write(u'  ' * (self._level - 1))
+         level = len(self._context_stack)
+         if level > 1:
+            self._dst_file.write(u'  ' * (level - 1))
          self._at_bol = False
       if context == _SEQUENCE_CONTEXT:
          self._dst_file.write(u'- ')
@@ -318,4 +315,3 @@ class Generator(object):
       self._context = _DOCUMENT_CONTEXT
       self._context_stack = []
       self._dst_file = None
-      self._level = 0
