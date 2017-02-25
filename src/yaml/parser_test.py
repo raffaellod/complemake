@@ -1,21 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2015-2016 Raffaello D. Di Napoli
+# Copyright 2015-2017 Raffaello D. Di Napoli
 #
 # This file is part of Complemake.
 #
-# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
-# General Public License as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
 #
-# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-# General Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
-# You should have received a copy of the GNU General Public License along with Complemake. If not,
-# see <http://www.gnu.org/licenses/>.
-#---------------------------------------------------------------------------------------------------
+# You should have received a copy of the GNU General Public License along with Complemake. If not, see
+# <http://www.gnu.org/licenses/>.
+#-------------------------------------------------------------------------------------------------------------
 
 """Test cases for the YAML parser."""
 
@@ -32,7 +32,7 @@ if sys.hexversion >= 0x03000000:
    basestring = str
 
 
-####################################################################################################
+##############################################################################################################
 
 class BuiltinTagsTest(unittest.TestCase):
    def runTest(self):
@@ -269,8 +269,8 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - '15'
       ''')), [15, 0o15, 0x15, 'a15', 'Oo15', '0a15', '15'])
 
-      fPosInf = float('+Inf')
-      fNegInf = float('+Inf')
+      pos_inf = float('+Inf')
+      neg_inf = float('+Inf')
       self.assertEqual(yp.parse_string(textwrap.dedent('''
          %YAML 1.2
          ---
@@ -295,9 +295,9 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - iNF
          - INf
       ''')), [
-         fPosInf, fPosInf, fPosInf,  '.iNF',  '.INf',
-         fPosInf, fPosInf, fPosInf, '+.iNF', '+.INf',
-         #fNegInf, fNegInf, fNegInf, '-.iNF', '-.INf',
+         pos_inf, pos_inf, pos_inf,  '.iNF',  '.INf',
+         pos_inf, pos_inf, pos_inf, '+.iNF', '+.INf',
+         #neg_inf, neg_inf, neg_inf, '-.iNF', '-.INf',
            'inf',   'Inf',   'INF',   'iNF',   'INf',
       ])
 
@@ -361,7 +361,7 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          1992,
          '1992-',
          '1991-07-1',
-         datetime.date(year = 1991, month = 7, day = 19),
+         datetime.date(year=1991, month=7, day=19),
          '1991:07-19',
          '991-07-19',
       ])
@@ -383,9 +383,9 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          '1991-07-19T',
          '1991-07-19T1',
          '1991-07-19T13:07:5',
-         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
-         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
-         datetime.datetime(year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51),
          '991-07-19T13:07:51',
          '1991-07:19T13:07:51',
          '1991-07-19Y13:07:51',
@@ -408,46 +408,16 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - 1991-07-19T13:07:51.0000001
       ''')), [
          '1991-07-19T13:07:51.',
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 100000
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 120000
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123000
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123400
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123450
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123456
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123456
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123456
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 10000
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 0
-         ),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=100000),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=120000),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123000),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123400),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123450),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123456),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123456),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123456),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond= 10000),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=     0),
       ])
 
       self.assertEqual(yp.parse_string(textwrap.dedent('''
@@ -463,30 +433,13 @@ class ImplicitlyTypedScalarTest(unittest.TestCase):
          - 1991-07-19T13:07:51.123456-11:30
       ''')), [
          '1991-07-19T13:07:51x',
-         datetime.datetime(
-            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = y.TimestampTZInfo('UTC', 0, 0)
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = y.TimestampTZInfo('+3', 3, 0)
-         ),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51,                     tzinfo=y.TimestampTZInfo('UTC',      0,  0)),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51,                     tzinfo=y.TimestampTZInfo('+3',       3,  0)),
          '1991-07-19T13:07:51+03:1',
-         datetime.datetime(
-            year = 1991, month = 7, day = 19, hour = 13, minute = 7, second = 51,
-            tzinfo = y.TimestampTZInfo('+03:15', 3, 15)
-         ),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51,                     tzinfo=y.TimestampTZInfo('+03:15',   3, 15)),
          '1991-07-19T13:07:51.123456Y',
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123456,
-            tzinfo = y.TimestampTZInfo('UTC', 0, 0)
-         ),
-         datetime.datetime(
-            year = 1991, month = 7, day = 19,
-            hour = 13, minute = 7, second = 51, microsecond = 123456,
-            tzinfo = y.TimestampTZInfo('-11:30', -11, 30)
-         ),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123456, tzinfo=y.TimestampTZInfo('UTC',      0,  0)),
+         datetime.datetime(year=1991, month=7, day=19, hour=13, minute=7, second=51, microsecond=123456, tzinfo=y.TimestampTZInfo('-11:30', -11, 30)),
       ])
 
 class LocalTagsTest(unittest.TestCase):
@@ -494,16 +447,10 @@ class LocalTagsTest(unittest.TestCase):
       class LocalTagsTestParser(yp.Parser):
          pass
 
-      LocalTagsTestParser.register_local_tag(
-         'test_str', y.Kind.SCALAR, lambda yp, sYaml: '<' + sYaml + '>'
-      )
-      LocalTagsTestParser.register_local_tag(
-         'test_map', y.Kind.MAPPING, lambda yp, dictYaml: dictYaml.get('k')
-      )
+      LocalTagsTestParser.register_local_tag('test_str', y.Kind.SCALAR,  lambda yp, s: '<' + s + '>')
+      LocalTagsTestParser.register_local_tag('test_map', y.Kind.MAPPING, lambda yp, dict: dict.get('k'))
 
-      self.assertRaises(
-         y.DuplicateTagError, LocalTagsTestParser.register_local_tag, 'test_map', None, None
-      )
+      self.assertRaises(y.DuplicateTagError, LocalTagsTestParser.register_local_tag, 'test_map', None, None)
 
       tp = LocalTagsTestParser()
 
@@ -598,7 +545,7 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @LocalTagsInDifferentSubclassesTestParser1.local_tag('same_tag', y.Kind.SCALAR)
       class LocalTag1(object):
-         def __init__(self, yp, sYaml):
+         def __init__(self, yp, s):
             pass
 
       class LocalTagsInDifferentSubclassesTestParser2(yp.Parser):
@@ -606,15 +553,15 @@ class LocalTagsInDifferentSubclassesTest(unittest.TestCase):
 
       @LocalTagsInDifferentSubclassesTestParser2.local_tag('same_tag', y.Kind.SCALAR)
       class LocalTag2(object):
-         def __init__(self, yp, sYaml):
+         def __init__(self, yp, s):
             pass
 
       tp1 = LocalTagsInDifferentSubclassesTestParser1()
       tp2 = LocalTagsInDifferentSubclassesTestParser2()
 
-      sYaml = '%YAML 1.2\n--- !same_tag'
-      self.assertIsInstance(tp1.parse_string(sYaml), LocalTag1)
-      self.assertIsInstance(tp2.parse_string(sYaml), LocalTag2)
+      s = '%YAML 1.2\n--- !same_tag'
+      self.assertIsInstance(tp1.parse_string(s), LocalTag1)
+      self.assertIsInstance(tp2.parse_string(s), LocalTag2)
 
 class MappingInSequenceTest(unittest.TestCase):
    def runTest(self):
@@ -1252,12 +1199,8 @@ class TagKindValidationTest(unittest.TestCase):
       class TagKindValidationTestParser(yp.Parser):
          pass
 
-      TagKindValidationTestParser.register_local_tag(
-         'test_map', y.Kind.MAPPING, lambda yp, dictYaml: dictYaml
-      )
-      TagKindValidationTestParser.register_local_tag(
-         'test_str', y.Kind.SCALAR, lambda yp, sYaml: sYaml
-      )
+      TagKindValidationTestParser.register_local_tag('test_map', y.Kind.MAPPING, lambda yp, dict: dict)
+      TagKindValidationTestParser.register_local_tag('test_str', y.Kind.SCALAR,  lambda yp, s: s)
 
       tp = TagKindValidationTestParser()
 

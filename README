@@ -1,7 +1,8 @@
 ﻿1. Introduction
 ---------------
 
-Complemake – the tool your project was missing.
+Complemake – the build tool your project was missing.
+
 Complemake is a build utility for software (currently C++-only) projects,
 featuring:
 

@@ -1,21 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8; mode: python; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2015-2016 Raffaello D. Di Napoli
+# Copyright 2015-2017 Raffaello D. Di Napoli
 #
 # This file is part of Complemake.
 #
-# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU
-# General Public License as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Complemake is free software: you can redistribute it and/or modify it under the terms of the GNU General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
 #
-# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
+# Complemake is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # You should have received a copy of the GNU General Public License along with Complemake. If not, see
 # <http://www.gnu.org/licenses/>.
-#---------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 
 """Utilities to parse and use software version numbers."""
 
@@ -27,73 +27,70 @@ if sys.hexversion >= 0x03000000:
    basestring = str
 
 
-####################################################################################################
+##############################################################################################################
 
 class InvalidVersionError(ValueError):
    """Raised upon failure to parse a software version string."""
 
    pass
 
-####################################################################################################
+##############################################################################################################
 
 @functools.total_ordering
 class Version(object):
    """Software version number."""
 
    # Major version number, or None if unset.
-   _m_oMajor = None,
-
+   _major = None,
    # Minor version number, or None if unset.
-   _m_oMinor = None,
-
+   _minor = None,
    # Revision number, or None if unset.
-   _m_oRevision = None,
-
+   _revision = None,
    # Build number, or None if unset.
-   _m_oBuild = None,
+   _build = None,
 
-   def __init__(self, oMajor = None, oMinor = None, oRevision = None, oBuild = None):
+   def __init__(self, major = None, minor = None, revision = None, build = None):
       """Constructor.
 
-      object oMajor
+      object major
          Optional major version number.
-      object oMinor
+      object minor
          Optional minor version number.
-      object oRevision
+      object revision
          Optional revision number.
-      object oBuild
+      object build
          Optional build number.
       """
 
-      self._m_oMajor    = oMajor
-      self._m_oMinor    = oMinor
-      self._m_oRevision = oRevision
-      self._m_oBuild    = oBuild
+      self._major    = major
+      self._minor    = minor
+      self._revision = revision
+      self._build    = build
 
-   def __eq__(self, verOther):
-      return self._compare_component(self._m_oMajor,    verOther._m_oMajor   ) == 0 \
-         and self._compare_component(self._m_oMinor,    verOther._m_oMinor   ) == 0 \
-         and self._compare_component(self._m_oRevision, verOther._m_oRevision) == 0 \
-         and self._compare_component(self._m_oBuild,    verOther._m_oBuild   ) == 0
+   def __eq__(self, other):
+      return self._compare_component(self._major,    other._major   ) == 0 \
+         and self._compare_component(self._minor,    other._minor   ) == 0 \
+         and self._compare_component(self._revision, other._revision) == 0 \
+         and self._compare_component(self._build,    other._build   ) == 0
 
-   def __lt__(self, verOther):
-      iRet = self._compare_component(self._m_oMajor, verOther._m_oMajor)
-      if iRet == 0:
-         iRet = self._compare_component(self._m_oMinor, verOther._m_oMinor)
-         if iRet == 0:
-            iRet = self._compare_component(self._m_oRevision, verOther._m_oRevision)
-            if iRet == 0:
-               iRet = self._compare_component(self._m_oBuild, verOther._m_oBuild)
-      return iRet < 0
+   def __lt__(self, other):
+      ret = self._compare_component(self._major, other._major)
+      if ret == 0:
+         ret = self._compare_component(self._minor, other._minor)
+         if ret == 0:
+            ret = self._compare_component(self._revision, other._revision)
+            if ret == 0:
+               ret = self._compare_component(self._build, other._build)
+      return ret < 0
 
    def __str__(self):
-      s = str(self._m_oMajor) if self._m_oMajor else ''
-      if self._m_oMinor:
-         s += '.{}'.format(self._m_oMinor)
-         if self._m_oRevision:
-            s += '.{}'.format(self._m_oRevision)
-            if self._m_oBuild:
-               s += '.{}'.format(self._m_oBuild)
+      s = str(self._major) if self._major else ''
+      if self._minor:
+         s += '.{}'.format(self._minor)
+         if self._revision:
+            s += '.{}'.format(self._revision)
+            if self._build:
+               s += '.{}'.format(self._build)
       return s
 
    @staticmethod
@@ -114,38 +111,38 @@ class Version(object):
       return o
 
    @classmethod
-   def _compare_component(cls, oL, oR):
+   def _compare_component(cls, l, r):
       """Compares a version component with another of the same level.
 
-      object oL
+      object l
          Left version component to compare.
-      object oR
+      object r
          Right version component to compare.
       int return
-         +1 if oL > oR, -1 if oL < oR, or 0 if oL == oR.
+         +1 if l > r, -1 if l < r, r 0 if l == r.
       """
 
-      oL = cls._canonicalize_component(oL)
-      oR = cls._canonicalize_component(oR)
-      if isinstance(oL, int) and isinstance(oR, int):
+      l = cls._canonicalize_component(l)
+      r = cls._canonicalize_component(r)
+      if isinstance(l, int) and isinstance(r, int):
          # Both are integers, compare them as such.
-         return oL - oR
+         return l - r
       else:
          # Compare them as strings.
-         oL = str(oL)
-         oR = str(oR)
-         if oL > oR:
+         l = str(l)
+         r = str(r)
+         if l > r:
             return +1
-         elif oL < oR:
+         elif l < r:
             return -1
          else:
             return 0
 
    @classmethod
-   def parse(cls, sVersion):
+   def parse(cls, s):
       """Parses a version number strings, returning a Version instance.
 
-      str sVersion
+      str s
          String to parse.
       comk.tool.Version return
          Parsed version number.
@@ -164,10 +161,8 @@ class Version(object):
                )?
             )?
          )?$
-      ''', sVersion, re.VERBOSE)
+      ''', s, re.VERBOSE)
       if not match:
-         raise InvalidVersionError('could not parse version: {}'.format(sVersion))
+         raise InvalidVersionError('could not parse version: {}'.format(s))
 
-      return cls(
-         match.group('major'), match.group('minor'), match.group('revision'), match.group('build')
-      )
+      return cls(match.group('major'), match.group('minor'), match.group('revision'), match.group('build'))
