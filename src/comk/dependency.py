@@ -61,6 +61,15 @@ class NamedDependencyMixIn(object):
 
 ##############################################################################################################
 
+class ExternalLibDependency(NamedDependencyMixIn, Dependency):
+   """External library dependency. Supports not built by the same makefile and referenced only by name, as in
+   their typical usage.
+   """
+
+   pass
+
+##############################################################################################################
+
 class FileDependencyMixIn(object):
    """Mixin that provides a file path for a Dependency subclass."""
 
@@ -98,37 +107,21 @@ class FileDependencyMixIn(object):
 
 ##############################################################################################################
 
-class ForeignDependency(Dependency):
-   """Abstract foreign dependency. Used by comk.target.Target and its subclasses to represent files not built
-   by Complemake.
-   """
-
-   pass
-
-##############################################################################################################
-
-class ForeignSourceDependency(FileDependencyMixIn, ForeignDependency):
-   """Foreign source file dependency."""
-
-   pass
-
-##############################################################################################################
-
-class ForeignLibDependency(NamedDependencyMixIn, ForeignDependency):
-   """Foreign library dependency. Supports libraries referenced only by name, as in their typical usage."""
-
-   pass
-
-##############################################################################################################
-
-class OutputRerefenceDependency(FileDependencyMixIn, ForeignDependency):
+class OutputRerefenceDependency(FileDependencyMixIn, Dependency):
    """File used as a reference to validate expected outputs."""
 
    pass
 
 ##############################################################################################################
 
-class TestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
+class SourceFileDependency(FileDependencyMixIn, Dependency):
+   """Source file dependency."""
+
+   pass
+
+##############################################################################################################
+
+class TestExecScriptDependency(FileDependencyMixIn, Dependency):
    """Executable that runs a test according to a “script”. Used to mimic interaction with a shell that
    Complemake does not implement.
    """
@@ -138,8 +131,8 @@ class TestExecScriptDependency(FileDependencyMixIn, ForeignDependency):
 ##############################################################################################################
 
 class UndeterminedLibDependency(NamedDependencyMixIn, Dependency):
-   """Foreign or local library dependency; gets replaced by a comk.target.Target subclass or
-   ForeignLibDependency during Target.validate().
+   """External or internal library dependency; gets replaced by a comk.target.Target subclass or
+   ExternalLibDependency during Target.validate().
    """
 
    pass

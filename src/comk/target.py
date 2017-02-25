@@ -380,8 +380,8 @@ class ProcessedSourceTarget(FileTarget):
 
       self._source_file_path = source_file_path
       self._final_output = weakref.ref(final_output)
-      self.add_dependency(comk.dependency.ForeignSourceDependency(self._source_file_path))
-      # TODO: add other external dependencies.
+      self.add_dependency(comk.dependency.SourceFileDependency(self._source_file_path))
+      # TODO: add external file dependencies.
 
 ##############################################################################################################
 
@@ -598,7 +598,7 @@ class BinaryTarget(FileTarget):
       output_lib_path_added = False
       # At this point all the dependencies are available, so add them as inputs.
       for dep in self._dependencies:
-         if isinstance(dep, comk.dependency.ForeignLibDependency):
+         if isinstance(dep, comk.dependency.ExternalLibDependency):
             # Strings go directly to the linker’s command line, assuming that they are external libraries to
             # link to.
             lnk.add_input_lib(dep.name)
@@ -621,14 +621,14 @@ class BinaryTarget(FileTarget):
 
       mk = self._mk()
       # Replace any UndeterminedLibDependency instances with either known Target instances or with
-      # ForeignLibDependency instances.
+      # ExternalLibDependency instances.
       for i, dependency in enumerate(self._dependencies):
          if isinstance(dependency, comk.dependency.UndeterminedLibDependency):
             target = mk.get_named_target(dependency.name, None)
             if target:
                dependency = target
             else:
-               dependency = comk.dependency.ForeignLibDependency(dependency.name)
+               dependency = comk.dependency.ExternalLibDependency(dependency.name)
             self._dependencies[i] = dependency
          # TODO: validate the type of all other dependencies.
 
@@ -930,7 +930,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
 
       # Check if this test uses the abaclade-testing framework.
       if isinstance(dep, (
-         comk.dependency.UndeterminedLibDependency, comk.dependency.ForeignLibDependency, DynLibTarget
+         comk.dependency.UndeterminedLibDependency, comk.dependency.ExternalLibDependency, DynLibTarget
       )):
          if dep.name == 'abaclade-testing':
             self._uses_abaclade_testing = True
