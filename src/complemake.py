@@ -151,10 +151,8 @@ def main(args):
    # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
    # will be built.
    if args.target:
-      targets = []
-      for target in args.target:
-         # mk.get_file_target() will raise an exception if no such file target is defined.
-         targets.append(mk.get_named_target(target, None) or mk.get_file_target(os.path.normpath(target)))
+      # mk.get_file_target() will raise an exception if no such file target is defined.
+      targets = (mk.get_named_target(t, None) or mk.get_file_target(os.path.normpath(t)) for t in args.target)
    else:
       targets = mk.named_targets
 
