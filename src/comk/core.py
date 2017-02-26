@@ -83,9 +83,6 @@ class TargetReferenceError(ProjectError):
 class Project(object):
    """Stores the attributes of a YAML complemake/project object."""
 
-   # List of comk.target.Target instances parsed from the top-level “targets” attribute.
-   _targets = None
-
    def __init__(self, parser, parsed):
       """Constructor.
 
@@ -104,12 +101,6 @@ class Project(object):
                'elements of the “targets” attribute must be of type !complemake/target/*, but element [{}] ' +
                'is not'
             ).format(i))
-      self._targets = targets
-
-   def _get_targets(self):
-      return self._targets
-
-   targets = property(_get_targets, doc="""Returns the top-level targets declared in the project.""")
 
 ##############################################################################################################
 
