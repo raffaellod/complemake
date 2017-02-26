@@ -18,10 +18,10 @@
 #-------------------------------------------------------------------------------------------------------------
 
 --- !complemake/makefile
-brief: Complemake file for Complemake Test Project 1.
+brief: Complemake Test Executable 1.
 targets:
    - !complemake/target/exe
-      name: project1
-      brief: Test Project 1
+      name: exe1
+      brief: Test Executable 1
       sources:
       -  src/main.cxx
