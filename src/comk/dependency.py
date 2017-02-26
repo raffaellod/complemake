@@ -21,7 +21,7 @@
 
 import os
 
-import comk.make
+import comk.core
 
 
 ##############################################################################################################
@@ -48,7 +48,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not name:
-         raise comk.make.MakefileError('missing target name')
+         raise comk.core.ProjectError('missing target name')
       self._name = name
 
    def __str__(self):
@@ -62,7 +62,7 @@ class NamedDependencyMixIn(object):
 ##############################################################################################################
 
 class ExternalLibDependency(NamedDependencyMixIn, Dependency):
-   """External library dependency. Supports not built by the same makefile and referenced only by name, as in
+   """External library dependency. Supports not built by the same project and referenced only by name, as in
    their typical usage.
    """
 
@@ -84,7 +84,7 @@ class FileDependencyMixIn(object):
       """
 
       if not file_path:
-         raise comk.make.MakefileError('missing target file path')
+         raise comk.core.ProjectError('missing target file path')
       self._file_path = os.path.normpath(file_path)
 
    def __str__(self):

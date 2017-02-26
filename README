@@ -9,7 +9,7 @@ featuring:
 •  Multiple platform compatibility (currently FreeBSD, Linux, OS X, Windows)
 •  Parallel execution of all sub-processes;
 •  Simple, YAML-based syntax
-•  Minimal instructions required in each makefile, and no toolchain-specific
+•  Minimal instructions required in each project, and no toolchain-specific
    commands/flags;
 •  Integration with Abaclade’s abc::testing framework, providing a fluid
    automated testing experience (see <https://github.com/raffaellod/abaclade>);
@@ -61,7 +61,7 @@ locate the complemake.py program:
    complemake.py
 
 
-When running, Complemake will build the targets in the makefile and create
+When running, Complemake will build the targets in the project and create
 outputs in the bin/ and lib/ directories.
 
 Run complemake.py --help to see a guide to Complemake’s command-line arguments.

@@ -32,15 +32,15 @@ Complemake was created to satisfy these requirements:
    and projects to build Abaclade; this is especially important when thinking of Abaclade as a framework that
    should simplify building projects with/on top of it;
 
-•  Allow a single makefile per project (this was just impossible with MSBuild);
+•  Allow a single file per project (this was just impossible with MSBuild);
 
 •  Simplified syntax for a very shallow learning curve, just like Abaclade itself aims to be easier to use
    than other C++ frameworks;
 
-•  Minimal-to-no build instructions required in each makefile, and no toolchain-specific commands/flags (this
+•  Minimal-to-no build instructions required in each project, and no toolchain-specific commands/flags (this
    was getting difficult with GNU make);
 
-•  Implicit definition of intermediate targets, so that each makefile needs only mention sources and outputs
+•  Implicit definition of intermediate targets, so that each project needs only mention sources and outputs
    (this had already been achieved via Makefile.inc for GNU make, and was not required for MSBuild);
 
 •  Trivial test declaration and execution (this had been implemented in both GNU make and MSBuild, but at the

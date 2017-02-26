@@ -246,14 +246,14 @@ class Tool(object):
 
       return comk.job.ExternalCmdJob(on_complete_fn, quiet_cmd, popen_args, log, stderr_file_path)
 
-   def create_jobs(self, mk, target, on_complete_fn):
+   def create_jobs(self, core, target, on_complete_fn):
       """Returns a job that, when run, results in the execution of the tool.
 
       The default implementation schedules a job whose command line is composed by calling
       Tool._create_job_add_flags() and Tool._create_job_add_inputs().
 
-      comk.Make mk
-         Make instance.
+      comk.Core core
+         Core instance.
       comk.target.Target target
          Target that this job will build.
       callable on_complete_fn
@@ -269,7 +269,7 @@ class Tool(object):
       type(self)._create_job_add_flags_from_env_overrides(args)
 
       if self._output_file_path:
-         if not mk.dry_run:
+         if not core.dry_run:
             # Make sure that the output directory exists.
             comk.makedirs(os.path.dirname(self._output_file_path))
          # Get the compiler-specific command-line argument to specify an output file path.
@@ -285,7 +285,7 @@ class Tool(object):
       # Forward on_complete_fn directly to Job. More complex Tool subclasses that require multiple jobs will
       # want to only do so with the last job.
       return self._create_job_instance(
-         on_complete_fn, self._get_quiet_cmd(), popen_args, mk.log, target.build_log_path
+         on_complete_fn, self._get_quiet_cmd(), popen_args, core.log, target.build_log_path
       )
 
    @classmethod

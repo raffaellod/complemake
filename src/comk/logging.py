@@ -29,7 +29,7 @@ if sys.hexversion < 0x03000000:
 ##############################################################################################################
 
 class LogGenerator(object):
-   """Generator of logs. Only one instance of this class exists for each comk.Make instance."""
+   """Generator of logs. Only one instance of this class exists for each comk.Core instance."""
 
    # Total count of failed test assertions.
    _failed_test_assertions = None

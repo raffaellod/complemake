@@ -37,21 +37,21 @@ if sys.hexversion >= 0x03000000:
 class MetadataParser(yaml.parser.Parser):
    """Parser of Complemake’s metadata YAML files."""
 
-   def __init__(self, mk):
+   def __init__(self, core):
       """Constructor.
 
-      comk.make.Make mk
-         Make instance to make accessible via self.mk .
+      comk.core.Core core
+         Core instance to make accessible via self.core .
       """
 
       yaml.parser.Parser.__init__(self)
 
-      self._mk = mk
+      self._core = core
 
-   def _get_mk(self):
-      return self._mk
+   def _get_core(self):
+      return self._core
 
-   mk = property(_get_mk, doc="""Returns the Make instance that’s running the parser.""")
+   core = property(_get_core, doc="""Returns the Core instance that’s running the parser.""")
 
 ##############################################################################################################
 
@@ -74,7 +74,7 @@ class FileSignature(object):
    def __init__(self, *args):
       """Constructor.
 
-      comk.metadata.MetadataParser mp
+      comk.metadata.MetadataParser parser
          Parser instantiating the object.
       dict(object: object) parsed
          Parsed YAML object to be used to construct the new instance.
@@ -86,7 +86,7 @@ class FileSignature(object):
       """
 
       if isinstance(args[0], MetadataParser):
-         mp, parsed = args
+         parser, parsed = args
       else:
          parsed = None
          file_path, = args
@@ -94,12 +94,12 @@ class FileSignature(object):
       if parsed:
          path = parsed.get('path')
          if not isinstance(path, basestring):
-            mp.raise_parsing_error('missing or invalid “path” attribute')
+            parser.raise_parsing_error('missing or invalid “path” attribute')
          self._file_path = path
 
          mtime = parsed.get('mtime')
          if not isinstance(mtime, datetime.datetime):
-            mp.raise_parsing_error('missing or invalid “mtime” attribute')
+            parser.raise_parsing_error('missing or invalid “mtime” attribute')
          self._mtime = mtime
       else:
          self._file_path = file_path
@@ -163,7 +163,7 @@ class TargetSnapshot(object):
    def __init__(self, *args):
       """Constructor.
 
-      comk.metadata.MetadataParser mp
+      comk.metadata.MetadataParser parser
          Parser instantiating the object.
       dict(object: object) parsed
          Parsed YAML object to be used to construct the new instance.
@@ -177,7 +177,7 @@ class TargetSnapshot(object):
       """
 
       if isinstance(args[0], MetadataParser):
-         mp, parsed = args
+         parser, parsed = args
       else:
          parsed = None
          mds, target = args
@@ -186,18 +186,18 @@ class TargetSnapshot(object):
       self._output_signatures = {}
 
       if parsed:
-         mk = mp.mk
+         core = parser.core
 
-         # Allow for None to be returned by mk.get_*_target() because it’s possible that no such target exists
-         # – maybe it used to, but not anymore.
+         # Allow for None to be returned by core.get_*_target() because it’s possible that no such target
+         # exists – maybe it used to, but not anymore.
          name = parsed.get('name')
          path = parsed.get('path')
          if name:
-            self._target = mk.get_named_target(name, None)
+            self._target = core.get_named_target(name, None)
          elif path:
-            self._target = mk.get_file_target(path, None)
+            self._target = core.get_file_target(path, None)
          else:
-            mp.raise_parsing_error('expected one attribute of “name” or “path”')
+            parser.raise_parsing_error('expected one attribute of “name” or “path”')
          if not self._target:
             # The condition above will make the MetadataStore ignore this signature.
             return
@@ -205,10 +205,10 @@ class TargetSnapshot(object):
          inputs = parsed.get('inputs')
          if inputs:
             if not isinstance(inputs, list):
-               mp.raise_parsing_error('attribute “inputs” must be a sequence')
+               parser.raise_parsing_error('attribute “inputs” must be a sequence')
             for i, o in enumerate(inputs):
                if not isinstance(o, FileSignature):
-                  mp.raise_parsing_error((
+                  parser.raise_parsing_error((
                      'elements of the “inputs” attribute must be of type !complemake/metadata/file-' +
                      'signature, but element [{}] is not'
                   ).format(i))
@@ -217,10 +217,10 @@ class TargetSnapshot(object):
          outputs = parsed.get('outputs')
          if outputs:
             if not isinstance(outputs, list):
-               mp.raise_parsing_error('attribute “outputs” must be a sequence')
+               parser.raise_parsing_error('attribute “outputs” must be a sequence')
             for i, o in enumerate(outputs):
                if not isinstance(o, FileSignature):
-                  mp.raise_parsing_error((
+                  parser.raise_parsing_error((
                      'elements of the “outputs” attribute must be of type !complemake/metadata/file-' +
                      'signature, but element [{}] is not'
                   ).format(i))
@@ -355,31 +355,31 @@ class MetadataStore(object):
    def __init__(self, *args):
       """Constructor. Reads metadata from the specified file.
 
-      comk.metadata.MetadataParser mp
+      comk.metadata.MetadataParser parser
          Parser instantiating the object.
       dict(object: object) parsed
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      comk.Make mk
-         Make instance.
+      comk.Core core
+         Core instance.
       str file_path
          Metadata storage file.
       """
 
       if isinstance(args[0], MetadataParser):
-         mp, parsed = args
-         mk = mp.mk
-         file_path = mp.source_name
+         parser, parsed = args
+         core = parser.core
+         file_path = parser.source_name
       else:
          parsed = None
-         mk, file_path = args
+         core, file_path = args
 
       self._curr_target_snapshots = {}
       self._dirty = False
       self._file_path = file_path
-      self._log = mk.log
+      self._log = core.log
       self._signatures = {}
       self._stored_target_snapshots = {}
 
@@ -388,10 +388,10 @@ class MetadataStore(object):
          log(log.HIGH, 'metadata: loading store: {}', self._file_path)
          target_snapshots = parsed.get('target-snapshots')
          if not isinstance(target_snapshots, list):
-            mp.raise_parsing_error('attribute “target-snapshots” must be a sequence')
+            parser.raise_parsing_error('attribute “target-snapshots” must be a sequence')
          for i, o in enumerate(target_snapshots):
             if not isinstance(o, TargetSnapshot):
-               mp.raise_parsing_error((
+               parser.raise_parsing_error((
                   'elements of the “target-snapshots” attribute must be of type ' +
                   '!complemake/metadata/target-snapshot, but element [{}] is not'
                ).format(i))

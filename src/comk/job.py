@@ -73,7 +73,7 @@ class Job(object):
       self._on_complete_fn = on_complete_fn
 
    def get_quiet_command(self):
-      """Returns a command summary for Make to print out in quiet mode.
+      """Returns a command summary for Core to print out in quiet mode.
 
       iterable(str, str*) return
          Job command summary: an iterable containing the short name and relevant (input or output) files for
@@ -83,7 +83,7 @@ class Job(object):
       raise NotImplementedError('Job.get_quiet_command() must be overridden in ' + type(self).__name__)
 
    def get_verbose_command(self):
-      """Returns a command-line for Make to print out in verbose mode.
+      """Returns a command-line for Core to print out in verbose mode.
 
       str return
          Job command line.
@@ -477,8 +477,8 @@ class Runner(object):
    _jobs_status_queue_write = None
    # Lock that must be acquired prior to writing to _jobs_status_queue_write.
    _jobs_status_queue_write_lock = None
-   # Weak reference to the owning comk.Make instance.
-   _mk = None
+   # Weak reference to the owning comk.Core instance.
+   _core = None
    # Changed from True to False when a job fails and keep_going mode is not enabled.
    _process_queue = True
    # Jobs queued to be run.
@@ -488,17 +488,17 @@ class Runner(object):
    # See Runner.running_jobs_max
    _running_jobs_max = None
 
-   def __init__(self, mk):
+   def __init__(self, core):
       """Constructor.
 
-      comk.Make mk
-         Make instance.
+      comk.Core core
+         Core instance.
       """
 
       self._failed_jobs = 0
       self._jobs_status_queue_read, self._jobs_status_queue_write = os.pipe()
       self._jobs_status_queue_write_lock = threading.Lock()
-      self._mk = weakref.ref(mk)
+      self._core = weakref.ref(core)
       self._process_queue = True
       self._queued_jobs = set()
       self._running_jobs = {}
@@ -523,13 +523,13 @@ class Runner(object):
       if ret == 0:
          job.on_complete()
       else:
-         mk = self._mk()
-         log = mk.log
+         core = self._core()
+         log = core.log
          log(log.QUIET, 'scheduler: job failed ({}); command was: {}', ret, job.get_verbose_command())
          # Track this failure.
          self._failed_jobs += 1
          # If not configured to keep going after a failure, stop processing the queue.
-         if not mk.keep_going:
+         if not core.keep_going:
             self._process_queue = False
 
    def _before_job_start(self, job):
@@ -539,7 +539,7 @@ class Runner(object):
          Job that’s about to start.
       """
 
-      log = self._mk().log
+      log = self._core().log
       if log.verbosity >= log.LOW:
          log(log.LOW, '{}', job.get_verbose_command())
       else:
@@ -553,8 +553,8 @@ class Runner(object):
          Job to execute.
       """
 
-      log = self._mk().log
-      if self._mk().dry_run:
+      log = self._core().log
+      if self._core().dry_run:
          log(log.HIGH, 'scheduler: dry-running job synchronously')
          # Report running the job with an exit code of 0.
          self._before_job_start(job)
@@ -589,7 +589,7 @@ class Runner(object):
          Job that has completed.
       """
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'scheduler: releasing main thread after completion of job id={}', id(job))
       bytes_to_write = self._jobs_status_queue_message_struct.pack(id(job))
       with self._jobs_status_queue_write_lock as lock:
@@ -601,7 +601,7 @@ class Runner(object):
       job queue has been processed, which includes jobs added by on_complete handlers of other jobs.
       """
 
-      log = self._mk().log
+      log = self._core().log
       self._process_queue = True
       while self._running_jobs:
          log(log.MEDIUM, 'scheduler: waiting for a job to complete')

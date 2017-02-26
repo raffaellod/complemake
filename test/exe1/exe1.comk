@@ -17,7 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------------------------------------
 
---- !complemake/makefile
+--- !complemake/project
 brief: Complemake Test Executable 1.
 targets:
    - !complemake/target/exe

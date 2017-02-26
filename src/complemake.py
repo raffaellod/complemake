@@ -32,7 +32,7 @@
 import os
 import sys
 
-import comk.make
+import comk.core
 import comk.tool
 
 
@@ -50,7 +50,7 @@ def main(args):
    import argparse
 
    argparser = argparse.ArgumentParser(add_help=False)
-   #   Usage: complemake.py [options] [makefile] [targets...]
+   #   Usage: complemake.py [options] [project] [targets...]
    argparser.add_argument(
       '-n', '--dry-run', action='store_true', default=False,
       help='Don’t actually run any external commands. Useful to test if anything needs to be built.'
@@ -77,9 +77,9 @@ def main(args):
       help='Continue building targets even if other independent targets fail.'
    )
    argparser.add_argument(
-      '-m', '--makefile', metavar='PROJECT.comk',
+      '-m', '--project', metavar='PROJECT.comk',
       help='Complemake file (.comk) containing instructions on how to build targets. If omitted and the ' +
-           'current directory contains a single file matching *.comk, that file will be used as makefile.'
+           'current directory contains a single file matching *.comk, that file will be used as the project.'
    )
    argparser.add_argument(
       '-g', '--target-system-type', metavar='SYSTEM-TYPE',
@@ -105,61 +105,64 @@ def main(args):
 
    args = argparser.parse_args()
 
-   mk = comk.make.Make()
-   mk.dry_run = args.dry_run
-   mk.force_build = args.force_build
-   mk.force_test = args.force_test
+   core = comk.core.Core()
+   core.dry_run = args.dry_run
+   core.force_build = args.force_build
+   core.force_test = args.force_test
    if args.jobs:
-      mk.job_runner.running_jobs_max = args.jobs
-   mk.keep_going = args.keep_going
+      core.job_runner.running_jobs_max = args.jobs
+   core.keep_going = args.keep_going
    if args.target_system_type:
-      mk.target_platform = args.target_system_type
+      core.target_platform = args.target_system_type
    if args.tool_cxx:
-      mk.target_platform.set_tool(comk.tool.CxxCompiler, args.tool_cxx)
+      core.target_platform.set_tool(comk.tool.CxxCompiler, args.tool_cxx)
       if not args.tool_ld:
          # Also use the C++ compiler as the linker driver.
-         mk.target_platform.set_tool(comk.tool.Linker, args.tool_cxx)
+         core.target_platform.set_tool(comk.tool.Linker, args.tool_cxx)
    if args.tool_ld:
-      mk.target_platform.set_tool(comk.tool.Linker, args.tool_ld)
-   mk.log.verbosity += args.verbose
+      core.target_platform.set_tool(comk.tool.Linker, args.tool_ld)
+   core.log.verbosity += args.verbose
 
-   # Check for a makefile.
-   makefile_path = args.makefile
-   if not makefile_path:
+   # Check for a project.
+   project_path = args.project
+   if not project_path:
       # Check if the current directory contains a single Complemake file.
       for file_path in os.listdir(os.getcwd()):
          if file_path.endswith('.comk'):
-            if makefile_path:
+            if project_path:
                sys.stderr.write(
-                  'error: multiple makefiles found in the current directory, please specify one explicitly ' +
-                  'with --makefile PROJECT.comk\n'
+                  'error: multiple projects found in the current directory, please specify one explicitly ' +
+                  'with --project PROJECT.comk\n'
                )
                return 1
-            makefile_path = file_path
+            project_path = file_path
       del file_path
-      # Still no makefile?
-      if not makefile_path:
+      # Still no project?
+      if not project_path:
          sys.stderr.write(
-            'error: no makefiles in current directory, please specify one explicitly with --makefile ' +
+            'error: no projects in current directory, please specify one explicitly with --project ' +
             'PROJECT.comk\n'
          )
          return 1
-   # Load the makefile.
-   mk.parse(makefile_path)
-#   mk.print_target_graphs()
+   # Load the project.
+   core.parse(project_path)
+#   core.print_target_graphs()
 
    # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
    # will be built.
    if args.target:
-      # mk.get_file_target() will raise an exception if no such file target is defined.
-      targets = (mk.get_named_target(t, None) or mk.get_file_target(os.path.normpath(t)) for t in args.target)
+      # core.get_file_target() will raise an exception if no such file target is defined.
+      targets = (
+         core.get_named_target(target, None) or core.get_file_target(os.path.normpath(target)) \
+            for target in args.target
+      )
    else:
-      targets = mk.named_targets
+      targets = core.named_targets
 
    # Build the selected targets.
-   all_succeeded = mk.build_targets(targets)
+   all_succeeded = core.build_targets(targets)
 
-   mk.log.test_summary()
+   core.log.test_summary()
    return 0 if all_succeeded else 1
 
 if __name__ == '__main__':

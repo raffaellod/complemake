@@ -17,7 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------------------------------------
 
-"""Implementation of the main Complemake class, Make."""
+"""Implementation of the main Complemake class, Core."""
 
 import os
 import re
@@ -25,31 +25,31 @@ import sys
 
 import comk.job
 import comk.logging
-import comk.makefileparser
 import comk.metadata
 import comk.platform
+import comk.projectparser
 import comk.target
 import yaml
 
 
 ##############################################################################################################
 
-class MakefileError(Exception):
-   """Indicates a semantical error in a makefile."""
+class ProjectError(Exception):
+   """Indicates a semantical error in a project."""
 
    pass
 
 ##############################################################################################################
 
-class DependencyCycleError(MakefileError):
-   """Raised when a makefile specifies dependencies among targets in a way that creates circular dependencies,
+class DependencyCycleError(ProjectError):
+   """Raised when a project specifies dependencies among targets in a way that creates circular dependencies,
    an unsolvable situation.
    """
 
    _targets = None
 
    def __init__(self, message, targets, *args):
-      """See MakefileError.__init__().
+      """See ProjectError.__init__().
 
       str message
          Exception message.
@@ -60,35 +60,36 @@ class DependencyCycleError(MakefileError):
       """
 
       # Don’t pass targets to the superclass’ constructor, so its __str__() won’t display it.
-      MakefileError.__init__(self, message, *args)
+      ProjectError.__init__(self, message, *args)
 
       self._targets = targets
 
    def __str__(self):
       # Show the regular exception description line followed by the targets in the cycle, one per line.
-      s = MakefileError.__str__(self) + '\n' + '\n'.join('  ' + str(target) for target in self._targets)
+      s = ProjectError.__str__(self) + '\n' + '\n'.join('  ' + str(target) for target in self._targets)
       return s
 
 ##############################################################################################################
 
-class TargetReferenceError(MakefileError):
+class TargetReferenceError(ProjectError):
    """Raised when a reference to a target can’t be resolved."""
 
    pass
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/makefile', yaml.Kind.MAPPING)
-class Makefile(object):
-   """Stores the attributes of a YAML complemake/makefile object."""
+@comk.projectparser.ProjectParser.local_tag('complemake/project', yaml.Kind.MAPPING)
+@comk.projectparser.ProjectParser.local_tag('complemake/makefile', yaml.Kind.MAPPING) # TODO: delete legacy alias.
+class Project(object):
+   """Stores the attributes of a YAML complemake/project object."""
 
    # List of comk.target.Target instances parsed from the top-level “targets” attribute.
    _targets = None
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -96,10 +97,10 @@ class Makefile(object):
 
       targets = parsed.get('targets')
       if not isinstance(targets, list):
-         mp.raise_parsing_error('attribute “targets” must be a sequence')
+         parser.raise_parsing_error('attribute “targets” must be a sequence')
       for i, o in enumerate(targets):
          if not isinstance(o, comk.target.Target):
-            mp.raise_parsing_error((
+            parser.raise_parsing_error((
                'elements of the “targets” attribute must be of type !complemake/target/*, but element [{}] ' +
                'is not'
             ).format(i))
@@ -108,50 +109,50 @@ class Makefile(object):
    def _get_targets(self):
       return self._targets
 
-   targets = property(_get_targets, doc="""Returns the top-level targets declared in the makefile.""")
+   targets = property(_get_targets, doc="""Returns the top-level targets declared in the project.""")
 
 ##############################################################################################################
 
-class Make(object):
+class Core(object):
    """Parses a Complemake file (.comk) and exposes a comk.job.Runner instance that can be used to schedule
    target builds and run them.
 
    Example usage:
 
-      mk = comk.Make()
-      mk.parse('project.comk.yml')
-      target = mk.get_named_target('projectbin')
-      mk.build((target, ))
+      core = comk.Core()
+      core.parse('project.comk.yml')
+      target = core.get_named_target('projectbin')
+      core.build((target, ))
    """
 
-   # See Make.cross_build.
+   # See Core.cross_build.
    _cross_build = None
-   # See Make.dry_run.
+   # See Core.dry_run.
    _dry_run = None
-   # Targets explicitly or implicitly defined (e.g. intermediate targets) in the makefile that have a file
-   # path assigned (file path -> Target).
+   # Targets explicitly or implicitly defined (e.g. intermediate targets) in the project that have a file path
+   # assigned (file path -> Target).
    _file_targets = None
-   # See Make.force_build.
+   # See Core.force_build.
    _force_build = None
-   # See Make.force_test.
+   # See Core.force_test.
    _force_test = None
    # Platform under which targets will be built.
    _host_platform = None
-   # See Make.job_runner.
+   # See Core.job_runner.
    _job_runner = None
-   # See Make.keep_going.
+   # See Core.keep_going.
    _keep_going = None
-   # See Make.log.
+   # See Core.log.
    _log = None
-   # See Make.metadata.
+   # See Core.metadata.
    _metadata = None
-   # Targets defined in the makefile that have a name assigned (name -> Target).
+   # Targets defined in the project that have a name assigned (name -> Target).
    _named_targets = None
-   # See Make.output_dir.
+   # See Core.output_dir.
    _output_dir = None
    # Platform under which targets will be executed.
    _target_platform = None
-   # All targets explicitly or implicitly defined in the makefile.
+   # All targets explicitly or implicitly defined in the project.
    _targets = None
 
    # Special value used with get_target_by_*() to indicate that a target not found should result in an
@@ -281,7 +282,7 @@ class Make(object):
          Object to return in case the specified target does not exist. If omitted, an exception will be raised
          if the target does not exist.
       comk.target.Target return
-         Target that builds file_path, or fallback if no such target was defined in the makefile.
+         Target that builds file_path, or fallback if no such target was defined in the project.
       """
 
       target = self._file_targets.get(file_path, fallback)
@@ -290,7 +291,7 @@ class Make(object):
       return target
 
    def get_named_target(self, name, fallback = _RAISE_IF_NOT_FOUND):
-      """Returns a target given its name as specified in the makefile, raising an exception if no such target
+      """Returns a target given its name as specified in the project, raising an exception if no such target
       exists and no fallback value was provided.
 
       str name
@@ -299,7 +300,7 @@ class Make(object):
          Object to return in case the specified target does not exist. If omitted, an exception will be raised
          if the target does not exist.
       comk.target.Target return
-         Target named name, or fallback if no such target was defined in the makefile.
+         Target named name, or fallback if no such target was defined in the project.
       """
 
       target = self._named_targets.get(name, fallback)
@@ -336,7 +337,7 @@ class Make(object):
    def _get_named_targets(self):
       return self._named_targets.values()
 
-   named_targets = property(_get_named_targets, doc="""Targets explicitly declared in the parsed makefile.""")
+   named_targets = property(_get_named_targets, doc="""Targets explicitly declared in the parsed project.""")
 
    def _get_output_dir(self):
       return self._output_dir
@@ -352,24 +353,24 @@ class Make(object):
       """Parses a Complemake file.
 
       str file_path
-         Path to the makefile to parse.
+         Path to the project to parse.
       """
 
-      mp = comk.makefileparser.MakefileParser(self)
-      # mp.parse_file() will construct instances of any YAML-constructible Target subclass; Target instances
-      # will add themselves to self._targets on construction. By collecting all targets upfront we allow for
-      # Target.validate() to always find a referenced target even it it was defined after the target on which
-      # validate() is called.
-      mkf = mp.parse_file(file_path)
+      parser = comk.projectparser.ProjectParser(self)
+      # parser.parse_file() will construct instances of any YAML-constructible Target subclass; Target
+      # instances will add themselves to self._targets on construction. By collecting all targets upfront we
+      # allow for Target.validate() to always find a referenced target even it it was defined after the target
+      # on which validate() is called.
+      project = parser.parse_file(file_path)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
-      if not isinstance(mkf, Makefile):
-         mp.raise_parsing_error(
-            'the top level object of a Complemake file must be of type complemake/makefile'
+      if not isinstance(project, Project):
+         parser.raise_parsing_error(
+            'the top level object of a Complemake file must be of type complemake/project'
          )
       # Validate each target.
       for target in self._targets:
          target.validate()
-      # Make sure the makefile doesn’t define circular dependencies.
+      # Make sure the project doesn’t define circular dependencies.
       self.validate_dependency_graph()
 
       metadata_file_path = os.path.join(os.path.dirname(file_path), '.comk-metadata')
@@ -421,7 +422,7 @@ class Make(object):
       Implemented by performing a depth-first search for back edges in the graph; this is very speed-efficient
       because it only visits each subtree once.
 
-      See also the recursion step Make._validate_dependency_subtree().
+      See also the recursion step Core._validate_dependency_subtree().
       """
 
       # No previous ancerstors considered for the targets enumerated by this function.
@@ -433,7 +434,7 @@ class Make(object):
             self._validate_dependency_subtree(target, dependents, validated_subtrees)
 
    def _validate_dependency_subtree(self, sub_root_target, dependents, validated_subtrees):
-      """Recursion step for Make.validate_dependency_graph(). Validates a dependency graph subtree rooted in
+      """Recursion step for Core.validate_dependency_graph(). Validates a dependency graph subtree rooted in
       sub_root_target, adding sub_root_target to validated_subtrees in case of success, or raising an
       exception in case of problems with the subtree.
 

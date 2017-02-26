@@ -17,28 +17,28 @@
 # <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------------------------------------
 
-"""Makefile parser and top-level YAML class mapping."""
+"""Project parser and top-level YAML class mapping."""
 
 import yaml.parser
 
 
 ##############################################################################################################
 
-class MakefileParser(yaml.parser.Parser):
+class ProjectParser(yaml.parser.Parser):
    """Parser of YAML Complemake files."""
 
-   def __init__(self, mk):
+   def __init__(self, core):
       """Constructor.
 
-      comk.make.Make mk
-         Make instance to make accessible via self.mk .
+      comk.core.Core core
+         Core instance to make accessible via self.core .
       """
 
       yaml.parser.Parser.__init__(self)
 
-      self._mk = mk
+      self._core = core
 
-   def _get_mk(self):
-      return self._mk
+   def _get_core(self):
+      return self._core
 
-   mk = property(_get_mk, doc="""Returns the Make instance that’s running the parser.""")
+   core = property(_get_core, doc="""Returns the Core instance that’s running the parser.""")

@@ -26,10 +26,10 @@ import sys
 import weakref
 
 import comk
+import comk.core
 import comk.dependency
 import comk.job
-import comk.make
-import comk.makefileparser
+import comk.projectparser
 import comk.tool
 import yaml
 
@@ -53,45 +53,45 @@ class Target(comk.dependency.Dependency):
    # TODO: use an ordered set when one becomes available in “stock” Python?
    _dependencies = None
    # Weak ref to the owning make instance.
-   _mk = None
+   _core = None
    # If True, the target has been built or at least verified to be up-to-date.
    _up_to_date = False
 
    def __init__(self, *args):
-      """Constructor. Automatically registers the target with the specified Make instance.
+      """Constructor. Automatically registers the target with the specified Core instance.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       dict(object: object) parsed
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       """
 
       comk.dependency.Dependency.__init__(self)
 
-      if isinstance(args[0], comk.makefileparser.MakefileParser):
-         mp, parsed = args
-         mk = mp.mk
+      if isinstance(args[0], comk.projectparser.ProjectParser):
+         parser, parsed = args
+         core = parser.core
       else:
          parsed = None
-         mk, = args
+         core, = args
       self._blocked_dependents = set()
       self._blocking_dependencies = 0
       self._building = False
       self._dependencies = []
-      self._mk = weakref.ref(mk)
+      self._core = weakref.ref(core)
       self._up_to_date = False
-      mk.add_target(self)
+      core.add_target(self)
 
       if parsed:
          sources = parsed.get('sources')
          if sources:
             if not isinstance(sources, list):
-               mp.raise_parsing_error('attribute “sources” must be a sequence')
+               parser.raise_parsing_error('attribute “sources” must be a sequence')
             for i, o in enumerate(sources):
                if isinstance(o, basestring):
                   file_path = o
@@ -99,12 +99,12 @@ class Target(comk.dependency.Dependency):
                elif isinstance(o, dict):
                   file_path = o.get('path')
                   if file_path is None:
-                     mp.raise_parsing_error((
+                     parser.raise_parsing_error((
                         'a mapping in “sources” must specify a “path” attribute, but element [{}] does not'
                      ).format(i))
                   tool = o.get('tool')
                else:
-                  mp.raise_parsing_error((
+                  parser.raise_parsing_error((
                      'elements of the “sources” attribute must be strings or mappings with a “path” ' +
                      'attribute, but element [{}] does not'
                   ).format(i))
@@ -115,12 +115,14 @@ class Target(comk.dependency.Dependency):
                   elif tool == 'preproc':
                      cls = CxxPreprocessedTarget
                   else:
-                     mp.raise_parsing_error('unknown tool “{}” for source file “{}”'.format(tool, file_path))
+                     parser.raise_parsing_error(
+                        'unknown tool “{}” for source file “{}”'.format(tool, file_path)
+                     )
                else:
-                  mp.raise_parsing_error('unsupported source file type “{}”'.format(file_path))
+                  parser.raise_parsing_error('unsupported source file type “{}”'.format(file_path))
 
                # Create the target, passing it the file path as its source.
-               target = cls(mk, file_path, self)
+               target = cls(core, file_path, self)
                # TODO: validate the type of target?
                self.add_dependency(target)
 
@@ -137,12 +139,12 @@ class Target(comk.dependency.Dependency):
    def _build_tool_run(self):
       """Enqueues any jobs necessary to unconditionally build the target."""
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: queuing build tool job(s)', self)
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
-      job = self._get_tool().create_jobs(mk, self, self._on_build_tool_run_complete)
-      mk.job_runner.enqueue(job)
+      job = self._get_tool().create_jobs(core, self, self._on_build_tool_run_complete)
+      core.job_runner.enqueue(job)
 
    def _build_tool_should_run(self):
       """Checks if the target build tool needs to be run to freshen the target.
@@ -151,13 +153,13 @@ class Target(comk.dependency.Dependency):
          True if the build tool needs to be run, or False if the target is up-to-date.
       """
 
-      mk = self._mk()
-      return mk.force_build or mk.metadata.has_target_snapshot_changed(self)
+      core = self._core()
+      return core.force_build or core.metadata.has_target_snapshot_changed(self)
 
    def _on_build_started(self):
       """Invoked after the target’s build is started."""
 
-      log = self._mk().log
+      log = self._core().log
       # Regenerate any out-of-date dependency targets.
       dependency_targets = tuple(filter(lambda dep: isinstance(dep, Target), self._dependencies))
       log(log.HIGH, 'build[{}]: updating {} dependency targets', self, len(dependency_targets))
@@ -173,24 +175,24 @@ class Target(comk.dependency.Dependency):
       """Invoked after the tool stage of the build has completed, regardless of whether a tool was really run.
       """
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: skipping metadata update', self)
       self._on_metadata_updated()
 
    def _on_build_tool_run_complete(self):
       """Invoked after the job that builds the target has completed its execution."""
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: updating metadata', self)
-      mk.metadata.update_target_snapshot(self, mk.dry_run)
+      core.metadata.update_target_snapshot(self, core.dry_run)
       self._on_build_tool_complete()
 
    def _on_dependencies_updated(self):
       """Invoked after all the target’s dependencies have been updated."""
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: all dependencies up-to-date', self)
       # Now that the dependencies are up-to-date, check if any were rebuilt, causing this Target to need to be
       # rebuilt as well.
@@ -203,7 +205,7 @@ class Target(comk.dependency.Dependency):
    def _on_dependency_updated(self):
       """Invoked when the build of a dependency completes successfully."""
 
-      log = self._mk().log
+      log = self._core().log
       self._blocking_dependencies -= 1
       log(log.HIGH, 'build[{}]: 1 dependency updated, {} remaining', self, self._blocking_dependencies)
       if self._blocking_dependencies == 0:
@@ -213,7 +215,7 @@ class Target(comk.dependency.Dependency):
    def _on_metadata_updated(self):
       """Invoked after the metadata for the target has been updated."""
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: unblocking dependents', self)
       # The target is built at this point, so its dependents can be unblocked.
       self._up_to_date = True
@@ -263,7 +265,7 @@ class Target(comk.dependency.Dependency):
          up-to-date, dependent_target will be unblocked immediately.
       """
 
-      log = self._mk().log
+      log = self._core().log
       if self._up_to_date:
          log(log.HIGH, 'build[{}]: skipping', self)
          # Nothing to do, but make sure we unblock the dependent target that called this method.
@@ -288,21 +290,21 @@ class Target(comk.dependency.Dependency):
 class NamedTargetMixIn(comk.dependency.NamedDependencyMixIn):
    """Mixin that provides a name for a Target subclass."""
 
-   def __init__(self, mk, name):
-      """Constructor. Automatically registers the name => target association with the specified Make instance.
+   def __init__(self, core, name):
+      """Constructor. Automatically registers the name => target association with the specified Core instance.
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       str name
          Dependency name.
       """
 
       if not name:
-         mp.raise_parsing_error('missing or empty “name” non-optional attribute')
+         parser.raise_parsing_error('missing or empty “name” non-optional attribute')
 
       comk.dependency.NamedDependencyMixIn.__init__(self, name)
 
-      mk.add_named_target(self, name)
+      core.add_named_target(self, name)
 
 ##############################################################################################################
 
@@ -310,41 +312,41 @@ class FileTarget(comk.dependency.FileDependencyMixIn, Target):
    """Target that generates a file."""
 
    def __init__(self, *args):
-      """Constructor. Automatically registers the path => target association with the specified Make instance.
+      """Constructor. Automatically registers the path => target association with the specified Core instance.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
 
       - OR -
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       str file_path
          Target file path.
       """
 
-      if isinstance(args[0], comk.makefileparser.MakefileParser):
-         mp, parsed = args
+      if isinstance(args[0], comk.projectparser.ProjectParser):
+         parser, parsed = args
 
-         Target.__init__(self, mp, parsed)
+         Target.__init__(self, parser, parsed)
 
-         mk = mp.mk
+         core = parser.core
          file_path = parsed.get('path')
          if not isinstance(file_path, basestring):
-            mp.raise_parsing_error('missing or invalid “path” attribute')
+            parser.raise_parsing_error('missing or invalid “path” attribute')
       else:
-         mk, file_path = args
+         core, file_path = args
 
-         Target.__init__(self, mk)
+         Target.__init__(self, core)
 
       comk.dependency.FileDependencyMixIn.__init__(self, file_path)
 
-      mk.add_file_target(self, self._file_path)
+      core.add_file_target(self, self._file_path)
 
    def _get_build_log_path(self):
-      return os.path.join(self._mk().output_dir, 'log', self._file_path + '.log')
+      return os.path.join(self._core().output_dir, 'log', self._file_path + '.log')
 
    build_log_path = property(_get_build_log_path, doc="""
       Path to the file where the build log for this target (i.e. the captured stderr of the process that
@@ -363,11 +365,11 @@ class ProcessedSourceTarget(FileTarget):
    # Source from which the target is built.
    _source_file_path = None
 
-   def __init__(self, mk, source_file_path, suffix, final_output):
+   def __init__(self, core, source_file_path, suffix, final_output):
       """Constructor.
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       str source_file_path
          Source from which the target is built.
       str suffix
@@ -376,7 +378,7 @@ class ProcessedSourceTarget(FileTarget):
          Target that this target’s output will be linked into.
       """
 
-      FileTarget.__init__(self, mk, os.path.join(mk.output_dir, 'int', source_file_path + suffix))
+      FileTarget.__init__(self, core, os.path.join(core.output_dir, 'int', source_file_path + suffix))
 
       self._source_file_path = source_file_path
       self._final_output = weakref.ref(final_output)
@@ -388,27 +390,27 @@ class ProcessedSourceTarget(FileTarget):
 class CxxPreprocessedTarget(ProcessedSourceTarget):
    """Preprocessed C++ source target."""
 
-   def __init__(self, mk, source_file_path, final_output):
+   def __init__(self, core, source_file_path, final_output):
       """Constructor.
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       str source_file_path
          Source from which the target is built.
       comk.target.Target final_output
          Target that this target’s output will be linked into.
       """
 
-      ProcessedSourceTarget.__init__(self, mk, source_file_path, '.i', final_output)
+      ProcessedSourceTarget.__init__(self, core, source_file_path, '.i', final_output)
 
    def _get_tool(self):
       """See ProcessedSourceTarget._get_tool()."""
 
       # TODO: refactor code shared with CxxObjectTarget._get_tool().
 
-      mk = self._mk()
+      core = self._core()
 
-      cxx = mk.target_platform.get_tool(comk.tool.CxxCompiler)
+      cxx = core.target_platform.get_tool(comk.tool.CxxCompiler)
       cxx.output_file_path = self._file_path
       cxx.add_input(self._source_file_path)
 
@@ -419,7 +421,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
             final_output.configure_compiler(cxx)
 
       # Let the platform configure the compiler.
-      mk.target_platform.configure_tool(cxx)
+      core.target_platform.configure_tool(cxx)
 
       # TODO: add file-specific flags.
       cxx.add_flags(comk.tool.CxxCompiler.CFLAG_PREPROCESS_ONLY)
@@ -432,7 +434,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
       # TODO: refactor code shared with CxxObjectTarget._on_build_started().
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: gathering dependencies', self)
       # TODO: gather implicit dependencies by preprocessing the source, passing
       # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
@@ -443,7 +445,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
 
       # TODO: refactor code shared with CxxObjectTarget._on_implicit_dependencies_gathered().
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: dependencies gathered', self)
       # Resume with the ProcessedSourceTarget build step we hijacked.
       ProcessedSourceTarget._on_build_started(self)
@@ -460,11 +462,11 @@ class ObjectTarget(ProcessedSourceTarget):
 class CxxObjectTarget(ObjectTarget):
    """C++ intermediate object target."""
 
-   def __init__(self, mk, source_file_path, final_output):
+   def __init__(self, core, source_file_path, final_output):
       """Constructor.
 
-      comk.make.Make mk
-         Make instance.
+      comk.core.Core core
+         Core instance.
       str source_file_path
          Source from which the target is built.
       comk.target.Target final_output
@@ -472,8 +474,8 @@ class CxxObjectTarget(ObjectTarget):
       """
 
       ObjectTarget.__init__(
-         self, mk, source_file_path,
-         mk.target_platform.get_tool(comk.tool.CxxCompiler).object_suffix, final_output
+         self, core, source_file_path,
+         core.target_platform.get_tool(comk.tool.CxxCompiler).object_suffix, final_output
       )
 
    def _get_tool(self):
@@ -481,9 +483,9 @@ class CxxObjectTarget(ObjectTarget):
 
       # TODO: refactor code shared with CxxPreprocessedTarget._get_tool().
 
-      mk = self._mk()
+      core = self._core()
 
-      cxx = mk.target_platform.get_tool(comk.tool.CxxCompiler)
+      cxx = core.target_platform.get_tool(comk.tool.CxxCompiler)
       cxx.output_file_path = self._file_path
       cxx.add_input(self._source_file_path)
 
@@ -497,7 +499,7 @@ class CxxObjectTarget(ObjectTarget):
             final_output.configure_compiler(cxx)
 
       # Let the platform configure the compiler.
-      mk.target_platform.configure_tool(cxx)
+      core.target_platform.configure_tool(cxx)
 
       # TODO: add file-specific flags.
       return cxx
@@ -509,7 +511,7 @@ class CxxObjectTarget(ObjectTarget):
 
       # TODO: refactor code shared with CxxPreprocessedTarget._on_build_started().
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: gathering dependencies', self)
       # TODO: gather implicit dependencies by preprocessing the source, passing
       # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
@@ -520,7 +522,7 @@ class CxxObjectTarget(ObjectTarget):
 
       # TODO: refactor code shared with CxxPreprocessedTarget._on_implicit_dependencies_gathered().
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: dependencies gathered', self)
       # Resume with the ObjectTarget build step we hijacked.
       ObjectTarget._on_build_started(self)
@@ -530,31 +532,31 @@ class CxxObjectTarget(ObjectTarget):
 class BinaryTarget(FileTarget):
    """Base class for binary (executable) target classes."""
 
-   def __init__(self, mp, parsed):
-      """Constructor. Automatically registers the path => target association with the specified Make instance.
+   def __init__(self, parser, parsed):
+      """Constructor. Automatically registers the path => target association with the specified Core instance.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
-      FileTarget.__init__(self, mp, parsed)
+      FileTarget.__init__(self, parser, parsed)
 
       libs = parsed.get('libraries')
       if libs:
          if not isinstance(libs, list):
-            mp.raise_parsing_error('attribute “libraries” must be a sequence')
+            parser.raise_parsing_error('attribute “libraries” must be a sequence')
          for i, o in enumerate(libs):
             # For now, only strings representing a library name are supported.
             if isinstance(o, basestring):
                name = o
             else:
-               mp.raise_parsing_error((
+               parser.raise_parsing_error((
                   'elements of the “libraries” attribute must be strings, but element [{}] is not'
                ).format(i))
-            # The makefile probably hasn’t yet been completely parsed, so we can’t check if the library is a
-            # known target (i.e. it’s built by this makefile). For now, just record the dependency as one that
+            # The project probably hasn’t yet been completely parsed, so we can’t check if the library is a
+            # known target (i.e. it’s built by this project). For now, just record the dependency as one that
             # will need to be resolved later, in validate().
             dep = comk.dependency.UndeterminedLibDependency(name)
             self.add_dependency(dep)
@@ -562,10 +564,10 @@ class BinaryTarget(FileTarget):
       tests = parsed.get('tests')
       if tests:
          if not isinstance(tests, list):
-            mp.raise_parsing_error('attribute “tests” must be a sequence')
+            parser.raise_parsing_error('attribute “tests” must be a sequence')
          for i, o in enumerate(tests):
             if not isinstance(o, (ExecutableTestTarget, ToolTestTarget)):
-               mp.raise_parsing_error((
+               parser.raise_parsing_error((
                   'elements of the “tests” attribute must be of type !complemake/target/exetest or ' +
                   '!complemake/target/tooltest, but element [{}] is not'
                ).format(i))
@@ -585,14 +587,14 @@ class BinaryTarget(FileTarget):
    def _get_tool(self):
       """See FileTarget._get_tool()."""
 
-      mk = self._mk()
+      core = self._core()
 
-      lnk = mk.target_platform.get_tool(comk.tool.Linker)
+      lnk = core.target_platform.get_tool(comk.tool.Linker)
       lnk.output_file_path = self._file_path
       # TODO: add file-specific flags.
 
       # Let the platform configure the linker.
-      mk.target_platform.configure_tool(lnk)
+      core.target_platform.configure_tool(lnk)
 
       # Scan this target’s dependencies for linker inputs.
       output_lib_path_added = False
@@ -606,10 +608,10 @@ class BinaryTarget(FileTarget):
             lnk.add_input(dep.file_path)
          elif isinstance(dep, DynLibTarget):
             lnk.add_input_lib(dep.name)
-            # Since we’re linking to a library built by this makefile, make sure to add the output “lib”
+            # Since we’re linking to a library built by this project, make sure to add the output “lib”
             # directory to the library search path.
             if not output_lib_path_added:
-               lnk.add_lib_path(os.path.join(mk.output_dir, 'lib'))
+               lnk.add_lib_path(os.path.join(core.output_dir, 'lib'))
                output_lib_path_added = True
 
       # TODO: add other external dependencies.
@@ -619,12 +621,12 @@ class BinaryTarget(FileTarget):
    def validate(self):
       """See FileTarget.validate()."""
 
-      mk = self._mk()
+      core = self._core()
       # Replace any UndeterminedLibDependency instances with either known Target instances or with
       # ExternalLibDependency instances.
       for i, dependency in enumerate(self._dependencies):
          if isinstance(dependency, comk.dependency.UndeterminedLibDependency):
-            target = mk.get_named_target(dependency.name, None)
+            target = core.get_named_target(dependency.name, None)
             if target:
                dependency = target
             else:
@@ -639,69 +641,69 @@ class BinaryTarget(FileTarget):
 class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    """Base for named binary (executable) target classes."""
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
-      NamedTargetMixIn.__init__(self, mp.mk, parsed.get('name', ''))
-      BinaryTarget.__init__(self, mp, parsed)
+      NamedTargetMixIn.__init__(self, parser.core, parsed.get('name', ''))
+      BinaryTarget.__init__(self, parser, parsed)
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/target/exe', yaml.Kind.MAPPING)
+@comk.projectparser.ProjectParser.local_tag('complemake/target/exe', yaml.Kind.MAPPING)
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to the output
    base directory.
    """
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
       # Default the “path” attribute before constructing the base class.
-      mk = mp.mk
+      core = parser.core
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         mk.output_dir, 'bin', mk.target_platform.exe_file_name(parsed.get('name', ''))
+         core.output_dir, 'bin', core.target_platform.exe_file_name(parsed.get('name', ''))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, parsed)
+      NamedBinaryTarget.__init__(self, parser, parsed)
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/target/dynlib', yaml.Kind.MAPPING)
+@comk.projectparser.ProjectParser.local_tag('complemake/target/dynlib', yaml.Kind.MAPPING)
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the output
    base directory.
    """
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
       # Default the “path” attribute before constructing the base class.
-      mk = mp.mk
+      core = parser.core
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         mk.output_dir, 'lib', mk.target_platform.dynlib_file_name(parsed.get('name', ''))
+         core.output_dir, 'lib', core.target_platform.dynlib_file_name(parsed.get('name', ''))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, parsed)
+      NamedBinaryTarget.__init__(self, parser, parsed)
 
    def configure_compiler(self, tool):
       """See NamedBinaryTarget.configure_compiler()."""
@@ -731,10 +733,10 @@ class TestTargetMixIn(object):
    # Transformations to apply to the output.
    _output_transforms = None
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -743,7 +745,7 @@ class TestTargetMixIn(object):
       expected_output_file_path = parsed.get('expected output')
       if expected_output_file_path:
          if not isinstance(expected_output_file_path, basestring):
-            mp.raise_parsing_error('attribute “expected output” must be a string'.format(self))
+            parser.raise_parsing_error('attribute “expected output” must be a string'.format(self))
          dep = comk.dependency.OutputRerefenceDependency(expected_output_file_path)
          self.add_dependency(dep)
 
@@ -755,29 +757,29 @@ class TestTargetMixIn(object):
       elif isinstance(output_transforms, list):
          for i, o in enumerate(output_transforms):
             if not isinstance(o, OutputTransform):
-               mp.raise_parsing_error((
+               parser.raise_parsing_error((
                   'elements of “output transform” attribute must be of type ' +
                   '!complemake/target/*-output-transform, but element [{}] is not'
                ).format(i))
          self._output_transforms = output_transforms
       else:
-         mp.raise_parsing_error(
+         parser.raise_parsing_error(
             'attribute “output transform” must be a sequence of, or a single ' +
             '!complemake/target/output-filter object'.format(self)
          )
 
       script_file_path = parsed.get('script')
       if script_file_path:
-         # TODO: support “script” referencing a binary built by the same makefile.
+         # TODO: support “script” referencing a binary built by the same project.
          # TODO: support “script” being a mapping with more attributes, e.g. command-line args.
          if not isinstance(script_file_path, basestring):
-            mp.raise_parsing_error('attribute “script” must be a string'.format(self))
+            parser.raise_parsing_error('attribute “script” must be a string'.format(self))
          dep = comk.dependency.TestExecScriptDependency(script_file_path)
          self.add_dependency(self, dep)
 
    def _transform_comparison_operand(self, o):
       """Transforms a comparison operand according to any “output transform” attributes specified in the
-      makefile, and returns the result.
+      project, and returns the result.
 
       Some transformations require that the operand is a string; this method will convert a bytes instance
       into a str in a way that mimic what an io.TextIOBase object would do. This allows to automatically
@@ -795,35 +797,35 @@ class TestTargetMixIn(object):
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/target/tooltest', yaml.Kind.MAPPING)
+@comk.projectparser.ProjectParser.local_tag('complemake/target/tooltest', yaml.Kind.MAPPING)
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
-      NamedTargetMixIn.__init__(self, mp.mk, parsed.get('name', ''))
-      Target.__init__(self, mp, parsed)
-      TestTargetMixIn.__init__(self, mp, parsed)
+      NamedTargetMixIn.__init__(self, parser.core, parsed.get('name', ''))
+      Target.__init__(self, parser, parsed)
+      TestTargetMixIn.__init__(self, parser, parsed)
 
    def _build_tool_run(self):
       """See Target._build_tool_run()."""
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: no job to run for a ToolTestTarget', self)
       self._on_build_tool_run_complete()
 
    def _on_build_tool_output_validated(self):
       """Invoked after the test’s output has been validated."""
 
-      log = self._mk().log
+      log = self._core().log
       log(log.HIGH, 'build[{}]: tool output validated', self)
       # Resume with the Target build step we hijacked.
       Target._on_build_tool_run_complete(self)
@@ -832,8 +834,8 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
       """See Target._on_build_tool_run_complete(). Overridden to perform any comparisons defined for the test.
       """
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: validating tool output', self)
       # Extract and transform the contents of the two dependencies to compare, and generate a display name for
       # them.
@@ -884,11 +886,11 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, comk.dependency.OutputRerefenceDependency)):
             static_cmp_operands += 1
       if static_cmp_operands != 2:
-         raise comk.make.MakefileError('{}: need exactly two files/outputs to compare'.format(self))
+         raise comk.core.ProjectError('{}: need exactly two files/outputs to compare'.format(self))
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/target/exetest', yaml.Kind.MAPPING)
+@comk.projectparser.ProjectParser.local_tag('complemake/target/exetest', yaml.Kind.MAPPING)
 class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative to the
    output base directory.
@@ -904,24 +906,24 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    # current logic in add_dependency().
    _uses_abaclade_testing = None
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
 
       # Default the “path” attribute before constructing the base class.
-      mk = mp.mk
+      core = parser.core
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         mk.output_dir, 'bin', 'test', mk.target_platform.exe_file_name(parsed.get('name', ''))
+         core.output_dir, 'bin', 'test', core.target_platform.exe_file_name(parsed.get('name', ''))
       ))
 
-      NamedBinaryTarget.__init__(self, mp, parsed)
-      TestTargetMixIn.__init__(self, mp, parsed)
+      NamedBinaryTarget.__init__(self, parser, parsed)
+      TestTargetMixIn.__init__(self, parser, parsed)
 
    def add_dependency(self, dep):
       """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
@@ -944,21 +946,21 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          Modified environment, or None if no environment changes are needed to run the test.
       """
 
-      # If the build target is linked to a library built by this same makefile, make sure we add
-      # output_dir/lib to the library path.
+      # If the build target is linked to a library built by this same project, make sure we add output_dir/lib
+      # to the library path.
       env = None
       if any(isinstance(dep, DynLibTarget) for dep in self._dependencies):
-         mk = self._mk()
-         env = mk.target_platform.add_dir_to_dynlib_env_path(
-            os.environ.copy(), os.path.join(mk.output_dir, 'lib')
+         core = self._core()
+         env = core.target_platform.add_dir_to_dynlib_env_path(
+            os.environ.copy(), os.path.join(core.output_dir, 'lib')
          )
       return env
 
    def _on_build_tool_run_complete(self):
       """See NamedBinaryTarget._on_build_tool_run_complete(). Overridden to execute the freshly-built test."""
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: executing test', self)
 
       # Prepare the command line.
@@ -980,7 +982,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       # If we’re using a script to run this test, tweak the Popen invocation to run a possibly non-executable
       # file.
       if len(args) > 1:
-         mk.target_platform.adjust_popen_args_for_script(popen_args)
+         core.target_platform.adjust_popen_args_for_script(popen_args)
 
       # If the build target uses abc::testing, run it with the special abc::testing job, AbacladeTestJob.
       if self._uses_abaclade_testing:
@@ -991,18 +993,18 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       # use it in _on_build_tool_run_complete() if we need to, without disk access.
       job = job_cls(
          self._on_test_run_complete, ('TEST', self._name), popen_args,
-         mk.log, self.build_log_path, self.file_path + '.out'
+         core.log, self.build_log_path, self.file_path + '.out'
       )
       # TODO: FIXME? How can this catch an exception if the job is not started synchronously?
       try:
-         mk.job_runner.enqueue(job)
+         core.job_runner.enqueue(job)
          started = True
       except OSError as x:
          # On POSIX, x.errno == ENOEXEC (8, “Exec format error”) indicates that the binary is for a different
          # machine/architecture.
          # On Windows, x.winerror == ERROR_BAD_EXE_FORMAT (193, “%1 is not a valid Win32 application”) for the
          # same condition, but Python properly maps it to errno 8.
-         if x.errno == 8 and mk.cross_build:
+         if x.errno == 8 and core.cross_build:
             started = False
          else:
             # Not something we consider acceptable.
@@ -1015,8 +1017,8 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    def _on_test_run_complete(self):
       """Invoked after the test has been run."""
 
-      mk = self._mk()
-      log = mk.log
+      core = self._core()
+      log = core.log
       log(log.HIGH, 'build[{}]: updating dependencies', self)
 
       # Extract and transform the contents of the two dependencies to compare, and generate a display name for
@@ -1073,7 +1075,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
             static_cmp_operands += 1
       if static_cmp_operands != 0 and static_cmp_operands != 1:
          # Expected a file against which to compare the test’s output.
-         raise comk.make.MakefileError(
+         raise comk.core.ProjectError(
             '{}: can’t compare the test output against more than one file'.format(self)
          )
 
@@ -1086,7 +1088,7 @@ class OutputTransform(object):
 
 ##############################################################################################################
 
-@comk.makefileparser.MakefileParser.local_tag('complemake/target/filter-output-transform', yaml.Kind.SCALAR)
+@comk.projectparser.ProjectParser.local_tag('complemake/target/filter-output-transform', yaml.Kind.SCALAR)
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a specific
    regular expression.
@@ -1095,10 +1097,10 @@ class FilterOutputTransform(OutputTransform):
    # Filter (regex) to apply.
    _re = None
 
-   def __init__(self, mp, parsed):
+   def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.makefileparser.MakefileParser mp
+      comk.projectparser.ProjectParser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
