@@ -93,8 +93,8 @@ class Project(object):
       """
 
       targets = parsed.get('targets')
-      if not isinstance(targets, list):
-         parser.raise_parsing_error('attribute “targets” must be a sequence')
+      if not targets or not isinstance(targets, list):
+         parser.raise_parsing_error('attribute “targets” must be a non-empty sequence')
       for i, o in enumerate(targets):
          if not isinstance(o, comk.target.Target):
             parser.raise_parsing_error((
