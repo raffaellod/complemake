@@ -247,13 +247,16 @@ class Generator(object):
                s = unicode(o)
             else:
                s = o
-            if self._canonical or self._safe_string_re.match(s):
-               # The string doesn’t need quotes or an explicit tag.
+            if self._canonical:
+               # TODO: escape characters and quotes in s.
+               self.write_scalar(u'!!str', u'"{}"'.format(s))
+            elif self._safe_string_re.match(s):
+               # The string doesn’t need quotes.
                self._dst_file.write(s)
             else:
                # The string needs quotes.
                # TODO: escape characters and quotes in s.
-               self.write_scalar(u'!!str', u'"{}"'.format(s))
+               self._dst_file.write(u'"{}"'.format(s))
          elif isinstance(o, int):
             s = unistr(o)
             if self._canonical:
