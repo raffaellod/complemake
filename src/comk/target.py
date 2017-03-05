@@ -141,7 +141,7 @@ class Target(comk.dependency.Dependency):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: queuing build tool job(s)', self)
+      log(log.HIGH, 'target[{}]: queuing build tool job(s)', self)
       # Instantiate the appropriate tool, and have it schedule any applicable jobs.
       job = self._get_tool().create_jobs(core, self, self._on_build_tool_run_complete)
       core.job_runner.enqueue(job)
@@ -162,7 +162,7 @@ class Target(comk.dependency.Dependency):
       log = self._core().log
       # Regenerate any out-of-date dependency targets.
       dependency_targets = tuple(filter(lambda dep: isinstance(dep, Target), self._dependencies))
-      log(log.HIGH, 'build[{}]: updating {} dependency targets', self, len(dependency_targets))
+      log(log.HIGH, 'target[{}]: updating {} dependency targets', self, len(dependency_targets))
       if dependency_targets:
          self._blocking_dependencies = len(dependency_targets)
          for dependency_target in dependency_targets:
@@ -176,7 +176,7 @@ class Target(comk.dependency.Dependency):
       """
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: skipping metadata update', self)
+      log(log.HIGH, 'target[{}]: skipping metadata update', self)
       self._on_metadata_updated()
 
    def _on_build_tool_run_complete(self):
@@ -184,7 +184,7 @@ class Target(comk.dependency.Dependency):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: updating metadata', self)
+      log(log.HIGH, 'target[{}]: updating metadata', self)
       core.metadata.update_target_snapshot(self, core.dry_run)
       self._on_build_tool_complete()
 
@@ -193,7 +193,7 @@ class Target(comk.dependency.Dependency):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: all dependencies up-to-date', self)
+      log(log.HIGH, 'target[{}]: all dependencies up-to-date', self)
       # Now that the dependencies are up-to-date, check if any were rebuilt, causing this Target to need to be
       # rebuilt as well.
       if self._build_tool_should_run():
@@ -207,7 +207,7 @@ class Target(comk.dependency.Dependency):
 
       log = self._core().log
       self._blocking_dependencies -= 1
-      log(log.HIGH, 'build[{}]: 1 dependency updated, {} remaining', self, self._blocking_dependencies)
+      log(log.HIGH, 'target[{}]: 1 dependency updated, {} remaining', self, self._blocking_dependencies)
       if self._blocking_dependencies == 0:
          # All dependencies up-to-date, continue with the build.
          self._on_dependencies_updated()
@@ -216,14 +216,14 @@ class Target(comk.dependency.Dependency):
       """Invoked after the metadata for the target has been updated."""
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: unblocking dependents', self)
+      log(log.HIGH, 'target[{}]: unblocking dependents', self)
       # The target is built at this point, so its dependents can be unblocked.
       self._up_to_date = True
       self._building = False
       for dependent_target in self._blocked_dependents:
          dependent_target()._on_dependency_updated()
       self._blocked_dependents = None
-      log(log.HIGH, 'build[{}]: end', self)
+      log(log.HIGH, 'target[{}]: end', self)
 
    def dump_dependencies(self, indent = ''):
       """TODO: comment."""
@@ -267,12 +267,12 @@ class Target(comk.dependency.Dependency):
 
       log = self._core().log
       if self._up_to_date:
-         log(log.HIGH, 'build[{}]: skipping', self)
+         log(log.HIGH, 'target[{}]: skipping', self)
          # Nothing to do, but make sure we unblock the dependent target that called this method.
          if dependent_target:
             dependent_target._on_dependency_updated()
       else:
-         log(log.HIGH, 'build[{}]: begin', self)
+         log(log.HIGH, 'target[{}]: begin', self)
          if dependent_target:
             # Add the dependent target to those we’ll unblock when this build completes.
             self._blocked_dependents.add(weakref.ref(dependent_target))
@@ -435,7 +435,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       # TODO: refactor code shared with CxxObjectTarget._on_build_started().
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: gathering dependencies', self)
+      log(log.HIGH, 'target[{}]: gathering dependencies', self)
       # TODO: gather implicit dependencies by preprocessing the source, passing
       # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
       self._on_implicit_dependencies_gathered()
@@ -446,7 +446,7 @@ class CxxPreprocessedTarget(ProcessedSourceTarget):
       # TODO: refactor code shared with CxxObjectTarget._on_implicit_dependencies_gathered().
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: dependencies gathered', self)
+      log(log.HIGH, 'target[{}]: dependencies gathered', self)
       # Resume with the ProcessedSourceTarget build step we hijacked.
       ProcessedSourceTarget._on_build_started(self)
 
@@ -512,7 +512,7 @@ class CxxObjectTarget(ObjectTarget):
       # TODO: refactor code shared with CxxPreprocessedTarget._on_build_started().
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: gathering dependencies', self)
+      log(log.HIGH, 'target[{}]: gathering dependencies', self)
       # TODO: gather implicit dependencies by preprocessing the source, passing
       # self._on_implicit_dependencies_gathered as the on_complete handler, instead of doing this:
       self._on_implicit_dependencies_gathered()
@@ -523,7 +523,7 @@ class CxxObjectTarget(ObjectTarget):
       # TODO: refactor code shared with CxxPreprocessedTarget._on_implicit_dependencies_gathered().
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: dependencies gathered', self)
+      log(log.HIGH, 'target[{}]: dependencies gathered', self)
       # Resume with the ObjectTarget build step we hijacked.
       ObjectTarget._on_build_started(self)
 
@@ -819,14 +819,14 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
       """See Target._build_tool_run()."""
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: no job to run for a ToolTestTarget', self)
+      log(log.HIGH, 'target[{}]: no job to run for a ToolTestTarget', self)
       self._on_build_tool_run_complete()
 
    def _on_build_tool_output_validated(self):
       """Invoked after the test’s output has been validated."""
 
       log = self._core().log
-      log(log.HIGH, 'build[{}]: tool output validated', self)
+      log(log.HIGH, 'target[{}]: tool output validated', self)
       # Resume with the Target build step we hijacked.
       Target._on_build_tool_run_complete(self)
 
@@ -836,7 +836,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: validating tool output', self)
+      log(log.HIGH, 'target[{}]: validating tool output', self)
       # Extract and transform the contents of the two dependencies to compare, and generate a display name for
       # them.
       cmp_names = []
@@ -961,7 +961,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: executing test', self)
+      log(log.HIGH, 'target[{}]: executing test', self)
 
       # Prepare the command line.
       for dep in self._dependencies:
@@ -1019,7 +1019,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
 
       core = self._core()
       log = core.log
-      log(log.HIGH, 'build[{}]: updating dependencies', self)
+      log(log.HIGH, 'target[{}]: updating dependencies', self)
 
       # Extract and transform the contents of the two dependencies to compare, and generate a display name for
       # them.
