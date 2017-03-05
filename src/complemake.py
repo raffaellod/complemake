@@ -127,16 +127,16 @@ def main(args):
    project_path = args.project
    if not project_path:
       # Check if the current directory contains a single Complemake file.
-      for file_path in os.listdir(os.getcwd()):
-         if file_path.endswith('.comk'):
+      for file_name in os.listdir(os.getcwd()):
+         if file_name.endswith('.comk'):
             if project_path:
                sys.stderr.write(
                   'error: multiple projects found in the current directory, please specify one explicitly ' +
                   'with --project PROJECT.comk\n'
                )
                return 1
-            project_path = file_path
-      del file_path
+            project_path = file_name
+      del file_name
       # Still no project?
       if not project_path:
          sys.stderr.write(
