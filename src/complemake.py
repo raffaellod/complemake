@@ -123,29 +123,17 @@ def main(args):
       core.target_platform.set_tool(comk.tool.Linker, args.tool_ld)
    core.log.verbosity += args.verbose
 
-   # Check for a project.
-   project_path = args.project
-   if not project_path:
-      # Check if the current directory contains a single Complemake file.
-      for file_name in os.listdir(os.getcwd()):
-         if file_name.endswith('.comk'):
-            if project_path:
-               sys.stderr.write(
-                  'error: multiple projects found in the current directory, please specify one explicitly ' +
-                  'with --project PROJECT.comk\n'
-               )
-               return 1
-            project_path = file_name
-      del file_name
-      # Still no project?
-      if not project_path:
+   # Find a project if one was not specified.
+   if not args.project:
+      try:
+         args.project = core.find_project(os.getcwd())
+      except comk.core.AmbiguousProjectError as x:
          sys.stderr.write(
-            'error: no projects in current directory, please specify one explicitly with --project ' +
-            'PROJECT.comk\n'
+            'error: could not determine which project to build in the current folder; please specify one ' +
+            'explicitly with --project PROJECT.comk\n'
          )
          return 1
-   # Load the project.
-   core.parse(project_path)
+   core.parse(args.project)
 #   core.print_target_graphs()
 
    # If any targets were specified, only a subset of the targets should be built; otherwise all named targets

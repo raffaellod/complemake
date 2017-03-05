@@ -34,6 +34,13 @@ import yaml
 
 ##############################################################################################################
 
+class AmbiguousProjectError(Exception):
+   """Indicates that 0 or more than 1 projects were found in a given folder."""
+
+   pass
+
+##############################################################################################################
+
 class ProjectError(Exception):
    """Indicates a semantical error in a project."""
 
@@ -241,6 +248,28 @@ class Core(object):
    dry_run = property(_get_dry_run, _set_dry_run, doc="""
       If True, commands will only be printed, not executed; if False, they will be printed and executed.
    """)
+
+   def find_project(self, path):
+      """Finds and returns a single project file in the specified folder, or raises an error if 0 or >1
+      project files could be found.
+
+      str path
+         Folder to look into.
+      str return
+         Selected project.
+      """
+
+      project_path = None
+      # Check if the current directory contains a single Complemake file.
+      for file_name in os.listdir(path):
+         if file_name.endswith('.comk'):
+            if project_path:
+               raise AmbiguousProjectError('multiple projects found in “{}”'.format(path))
+            project_path = os.path.join(path, file_name)
+      if project_path:
+         return project_path
+      else:
+         raise AmbiguousProjectError('no projects found in “{}”'.format(path))
 
    def _get_force_build(self):
       return self._force_build
