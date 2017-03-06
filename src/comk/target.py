@@ -19,6 +19,7 @@
 
 """Classes implementing different types of build target, each aware of how to build itself."""
 
+import io
 import locale
 import os
 import re
@@ -846,7 +847,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, comk.dependency.OutputRerefenceDependency)):
             # Add as comparison operand the contents of this dependency file.
             cmp_names.append(dep.file_path)
-            with open(core.inproject_path(dep.file_path), 'rb') as comparand:
+            with io.open(core.inproject_path(dep.file_path), 'rb') as comparand:
                cmp_operands.append(self._transform_comparison_operand(comparand.read()))
 
       # At this point we expect 0 <= len(cmp_operands) <= 2, but we’ll check that a few more lines below.
@@ -1029,7 +1030,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          if isinstance(dep, comk.dependency.OutputRerefenceDependency):
             # Add as comparison operand the contents of this dependency file.
             cmp_names.append(dep.file_path)
-            with open(core.inproject_path(dep.file_path), 'rb') as comparand:
+            with io.open(core.inproject_path(dep.file_path), 'rb') as comparand:
                cmp_operands.append(self._transform_comparison_operand(comparand.read()))
 
       # At this point we expect 0 <= len(cmp_operands) <= 2, but we’ll check that a few more lines below.

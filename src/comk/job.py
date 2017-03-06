@@ -249,7 +249,6 @@ class ExternalCmdJob(AsynchronousJob):
       del err_out
       # Make sure that the directory in which we’ll write stdout exists.
       comk.makedirs(os.path.dirname(self._stderr_file_path))
-      # Use io.open() instead of just open() for Python 2.x.
       with io.open(self._stderr_file_path, 'w') as stderr:
          for line in stderr_text_pipe:
             self._stderr_line_read(line.rstrip('\r\n'))
@@ -378,7 +377,7 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
       comk.makedirs(os.path.dirname(self._stdout_file_path))
       # Initialize buffering stdout in memory and on disk.
       self._stdout_bytes = b''
-      self._stdout = open(self._stdout_file_path, 'wb')
+      self._stdout = io.open(self._stdout_file_path, 'wb')
 
       return ExternalCmdJob.start(self, runner)
 
