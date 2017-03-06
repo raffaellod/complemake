@@ -84,7 +84,7 @@ class TimestampTZInfo(datetime.tzinfo):
          Timezone minute part.
       """
 
-      self._td = datetime.timedelta(hours = hour, minutes = minute)
+      self._td = datetime.timedelta(hours=hour, minutes=minute)
       self._tz = tz
 
    def __eq__(self, other):

@@ -275,7 +275,7 @@ class Tool(object):
          # Get the compiler-specific command-line argument to specify an output file path.
          format = self._translate_abstract_flag(self.FLAG_OUTPUT_PATH_FORMAT)
          # Add the output file path.
-         args.append(format.format(path = self._output_file_path))
+         args.append(format.format(path=self._output_file_path))
 
       self._create_job_add_inputs(args)
 

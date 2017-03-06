@@ -602,7 +602,7 @@ class Parser(object):
          Python object corresponding to the contents of the file.
       """
 
-      with io.open(file_path, 'rt', encoding = 'utf-8') as file:
+      with io.open(file_path, 'rt', encoding='utf-8') as file:
          return self.parse(file_path, file)
 
    def parse_string(self, s):

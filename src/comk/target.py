@@ -225,7 +225,7 @@ class Target(comk.dependency.Dependency):
       self._blocked_dependents = None
       log(log.HIGH, 'target[{}]: end', self)
 
-   def dump_dependencies(self, indent = ''):
+   def dump_dependencies(self, indent=''):
       """TODO: comment."""
 
       for dep in self._dependencies:
@@ -1122,7 +1122,7 @@ class FilterOutputTransform(OutputTransform):
       else:
          unistr = str
       if isinstance(o, bytes):
-         o = unistr(o, encoding = locale.getpreferredencoding())
+         o = unistr(o, encoding=locale.getpreferredencoding())
       elif not isinstance(o, unistr):
          raise TypeError('cannot transform objects of type {}'.format(type(o).__name__))
       return '\n'.join(self._re.findall(o))

@@ -95,7 +95,7 @@ class Generator(object):
       """
 
       self._reset()
-      self._dst_file = io.open(file_path, 'wt', encoding = 'utf-8')
+      self._dst_file = io.open(file_path, 'wt', encoding='utf-8')
       try:
          self.write_doc_start()
          self.produce_from_object(root)
