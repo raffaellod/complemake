@@ -837,6 +837,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
       core = self._core()
       log = core.log
       log(log.HIGH, 'target[{}]: validating tool output', self)
+
       # Extract and transform the contents of the two dependencies to compare, and generate a display name for
       # them.
       cmp_names = []
@@ -845,7 +846,7 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, comk.dependency.OutputRerefenceDependency)):
             # Add as comparison operand the contents of this dependency file.
             cmp_names.append(dep.file_path)
-            with open(dep.file_path, 'rb') as comparand:
+            with open(core.inproject_path(dep.file_path), 'rb') as comparand:
                cmp_operands.append(self._transform_comparison_operand(comparand.read()))
 
       # At this point we expect 0 <= len(cmp_operands) <= 2, but we’ll check that a few more lines below.
@@ -951,9 +952,8 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       env = None
       if any(isinstance(dep, DynLibTarget) for dep in self._dependencies):
          core = self._core()
-         env = core.target_platform.add_dir_to_dynlib_env_path(
-            os.environ.copy(), os.path.join(core.output_dir, 'lib')
-         )
+         lib_dir = core.inproject_path(os.path.join(core.output_dir, 'lib'))
+         env = core.target_platform.add_dir_to_dynlib_env_path(os.environ.copy(), lib_dir)
       return env
 
    def _on_build_tool_run_complete(self):
@@ -1029,7 +1029,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
          if isinstance(dep, comk.dependency.OutputRerefenceDependency):
             # Add as comparison operand the contents of this dependency file.
             cmp_names.append(dep.file_path)
-            with open(dep.file_path, 'rb') as comparand:
+            with open(core.inproject_path(dep.file_path), 'rb') as comparand:
                cmp_operands.append(self._transform_comparison_operand(comparand.read()))
 
       # At this point we expect 0 <= len(cmp_operands) <= 2, but we’ll check that a few more lines below.

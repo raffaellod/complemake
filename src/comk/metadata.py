@@ -130,17 +130,19 @@ class FileSignature(object):
       return self
 
    @classmethod
-   def generate(cls, file_path):
+   def generate(cls, file_path, inproject_file_path):
       """Generates a signature for the specified file.
 
       str file_path
          Path to the file for which a signature should be generated.
+      str inproject_file_path
+         Path to the file from the project path.
       comk.metadata.FileSignature return
          Generated signature.
       """
 
       self = cls(file_path)
-      self._mtime = datetime.datetime.fromtimestamp(int(os.path.getmtime(file_path)))
+      self._mtime = datetime.datetime.fromtimestamp(int(os.path.getmtime(inproject_file_path)))
       return self
 
 ##############################################################################################################
@@ -227,12 +229,14 @@ class TargetSnapshot(object):
                self._output_signatures[o._file_path] = o
       else:
          self._target = target
+         # TODO: improve this hacky way of getting a Core instance.
+         core = target._core()
          # Collect signatures for all the target’s dependencies’ generated files (inputs).
          for dep in target.get_dependencies():
-            mds.get_signatures(dep.get_generated_files(), self._input_signatures, USE_CACHE)
+            mds.get_signatures(dep.get_generated_files(), self._input_signatures, USE_CACHE, core)
          # Collect signatures for all the target’s generated files (outputs).
          if isinstance(target, comk.target.FileTarget):
-            mds.get_signatures(target.get_generated_files(), self._output_signatures, USE_CACHE)
+            mds.get_signatures(target.get_generated_files(), self._output_signatures, USE_CACHE, core)
 
    def __yaml__(self, yg):
       """TODO: comment."""
@@ -327,10 +331,12 @@ class TargetSnapshot(object):
       """
 
       if isinstance(self._target, comk.target.FileTarget):
+         # TODO: improve this hacky way of getting a Core instance.
+         core = self._target._core()
          # Recreate signatures for all the target’s generated files (outputs).
          mds.get_signatures(
             self._target.get_generated_files(), self._output_signatures,
-            ASSUME_NEW if dry_run else UPDATE_CACHE
+            ASSUME_NEW if dry_run else UPDATE_CACHE, core
          )
 
 ##############################################################################################################
@@ -410,7 +416,7 @@ class MetadataStore(object):
       yg.produce_from_object(self._stored_target_snapshots.values())
       yg.write_mapping_end()
 
-   def get_signatures(self, file_paths, out, mode):
+   def get_signatures(self, file_paths, out, mode, core):
       """Retrieves the signatures for the specified file paths and stores them in the provided dictionary.
 
       If file_paths enumerates output files (which may not exist yet), signatures will be cached because we
@@ -432,6 +438,8 @@ class MetadataStore(object):
          matched by a real file. If UPDATE_CACHE, the signatures cache will not be read, but newly-read
          signatures will be written to it. Otherwise, signatures will first be looked up in the cache, and
          stored in it only if missing.
+      comk.core.Core core
+         Core instance.
       """
 
       for file_path in file_paths:
@@ -447,7 +455,7 @@ class MetadataStore(object):
             else:
                # Need to read this file’s signature.
                try:
-                  fs = FileSignature.generate(file_path)
+                  fs = FileSignature.generate(file_path, core.inproject_path(file_path))
                except (comk.FileNotFoundErrorCompat, OSError):
                   fs = None
             # Cache this signature.

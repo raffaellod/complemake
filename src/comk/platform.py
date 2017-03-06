@@ -448,7 +448,7 @@ class DarwinPlatform(Platform):
       lib_path = env.get('DYLD_LIBRARY_PATH', '')
       if lib_path:
          lib_path += ':'
-      lib_path += os.path.abspath(dir)
+      lib_path += dir
       env['DYLD_LIBRARY_PATH'] = lib_path
       return env
 
@@ -487,7 +487,7 @@ class FreeBsdPlatform(Platform):
       lib_path = env.get('LD_LIBRARY_PATH', '')
       if lib_path:
          lib_path += ':'
-      lib_path += os.path.abspath(dir)
+      lib_path += dir
       env['LD_LIBRARY_PATH'] = lib_path
       return env
 
@@ -527,7 +527,7 @@ class GnuPlatform(Platform):
       lib_path = env.get('LD_LIBRARY_PATH', '')
       if lib_path:
          lib_path += ':'
-      lib_path += os.path.abspath(dir)
+      lib_path += dir
       env['LD_LIBRARY_PATH'] = lib_path
       return env
 
@@ -568,7 +568,7 @@ class WinPlatform(Platform):
       lib_path = env.get('PATH', '')
       if lib_path:
          lib_path += ';'
-      lib_path += os.path.abspath(dir)
+      lib_path += dir
       env['PATH'] = lib_path
       return env
 

@@ -281,6 +281,9 @@ class Tool(object):
 
       popen_args = {
          'args': args,
+         # By default, all tools are invoked from the project directory, so they can find files with the same
+         # relative paths used in the project file.
+         'cwd' : core.project_path,
       }
       # Forward on_complete_fn directly to Job. More complex Tool subclasses that require multiple jobs will
       # want to only do so with the last job.

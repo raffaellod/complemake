@@ -172,6 +172,7 @@ class Core(object):
       self._metadata = None
       self._named_targets = {}
       self._output_dir = ''
+      self._project_path = ''
       self._target_platform = None
       self._targets = set()
 
@@ -249,27 +250,25 @@ class Core(object):
       If True, commands will only be printed, not executed; if False, they will be printed and executed.
    """)
 
-   def find_project(self, path):
-      """Finds and returns a single project file in the specified folder, or raises an error if 0 or >1
+   def find_project_file(self):
+      """Finds and returns a single project file in the self.project_path, or raises an error if 0 or >1
       project files could be found.
 
-      str path
-         Folder to look into.
       str return
          Selected project.
       """
 
-      project_path = None
+      project_file_path = None
       # Check if the current directory contains a single Complemake file.
-      for file_name in os.listdir(path):
+      for file_name in os.listdir(self._project_path):
          if file_name.endswith('.comk'):
-            if project_path:
-               raise AmbiguousProjectError('multiple projects found in “{}”'.format(path))
-            project_path = os.path.join(path, file_name)
-      if project_path:
-         return project_path
+            if project_file_path:
+               raise AmbiguousProjectError('multiple projects found in “{}”'.format(self._project_path))
+            project_file_path = os.path.join(self._project_path, file_name)
+      if project_file_path:
+         return project_file_path
       else:
-         raise AmbiguousProjectError('no projects found in “{}”'.format(path))
+         raise AmbiguousProjectError('no projects found in “{}”'.format(self._project_path))
 
    def _get_force_build(self):
       return self._force_build
@@ -327,6 +326,19 @@ class Core(object):
       if target is self._RAISE_IF_NOT_FOUND:
          raise TargetReferenceError('undefined target: {}'.format(name))
       return target
+
+   def inproject_path(self, path):
+      """Prepends the project’s path to a non-absolute path, leaving absolute paths unchanged.
+
+      str path
+         Input path.
+      str return
+         Resulting path.
+      """
+
+      if not os.path.isabs(path):
+         path = os.path.join(self._project_path, path)
+      return os.path.normpath(path)
 
    def _get_job_runner(self):
       return self._job_runner
@@ -399,6 +411,14 @@ class Core(object):
          self._metadata = comk.metadata.MetadataParser(self).parse_file(metadata_file_path)
       except (comk.FileNotFoundErrorCompat, OSError):
          self._metadata = comk.metadata.MetadataStore(self, metadata_file_path)
+
+   def _get_project_path(self):
+      return self._project_path
+
+   def _set_project_path(self, project_path):
+      self._project_path = project_path
+
+   project_path = property(_get_project_path, _set_project_path, doc='Base path of the project.')
 
    def _get_target_platform(self):
       if not self._target_platform:

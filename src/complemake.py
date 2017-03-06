@@ -118,6 +118,7 @@ def main(args):
       core.job_runner.running_jobs_max = args.jobs
    core.keep_going = args.keep_going
    core.output_dir = args.outdir
+   core.project_path = os.getcwd()
    if args.target_system_type:
       core.target_platform = args.target_system_type
    if args.tool_cxx:
@@ -132,7 +133,7 @@ def main(args):
    # Find a project if one was not specified.
    if not args.project:
       try:
-         args.project = core.find_project(os.getcwd())
+         args.project = core.find_project_file()
       except comk.core.AmbiguousProjectError as x:
          sys.stderr.write(
             'error: could not determine which project to build in the current folder; please specify one ' +
