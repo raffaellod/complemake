@@ -393,7 +393,7 @@ class Core(object):
       # Make sure the project doesn’t define circular dependencies.
       self.validate_dependency_graph()
 
-      metadata_file_path = os.path.join(os.path.dirname(file_path), '.comk-metadata')
+      metadata_file_path = os.path.join(self._output_dir, '.comk-metadata')
       # Try loading an existing metadata store, or default to creating a new one.
       try:
          self._metadata = comk.metadata.MetadataParser(self).parse_file(metadata_file_path)
