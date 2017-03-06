@@ -18,10 +18,10 @@
 #-------------------------------------------------------------------------------------------------------------
 
 --- !complemake/project
-brief: Complemake Test Library Project 10.
+brief: Complemake Test Simple Library 1.
 targets:
    - !complemake/target/dynlib
-      name: proj10
-      brief: Test Library 10
+      name: simple1
+      brief: Test Simple Library 1
       sources:
-      -  src/proj10.cxx
+      -  src/simple1.cxx

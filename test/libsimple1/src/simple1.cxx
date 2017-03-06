@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with Com
 <http://www.gnu.org/licenses/>.
 ------------------------------------------------------------------------------------------------------------*/
 
-#include <proj10.hxx>
+#include <simple1.hxx>
 
 int simple1_function(int arg) {
    return arg + 1;
