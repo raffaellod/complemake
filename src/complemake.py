@@ -82,6 +82,11 @@ def main(args):
            'current directory contains a single file matching *.comk, that file will be used as the project.'
    )
    argparser.add_argument(
+      '-o', '--outdir', metavar='/path/to/output/dir', default='',
+      help='Location where all Complemake output for the project should be stored. Defaults to the ' +
+           'project’s directory.'
+   )
+   argparser.add_argument(
       '-g', '--target-system-type', metavar='SYSTEM-TYPE',
       help='Use SYSTEM-TYPE (e.g. dash-separated triplet) as the build target system type.'
    )
@@ -112,6 +117,7 @@ def main(args):
    if args.jobs:
       core.job_runner.running_jobs_max = args.jobs
    core.keep_going = args.keep_going
+   core.output_dir = args.outdir
    if args.target_system_type:
       core.target_platform = args.target_system_type
    if args.tool_cxx:
