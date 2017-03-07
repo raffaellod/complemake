@@ -120,7 +120,7 @@ def main(args):
    core.output_dir = args.outdir
    core.project_path = os.getcwd()
    if args.target_system_type:
-      core.target_platform = args.target_system_type
+      core.set_target_platform(args.target_system_type)
    if args.tool_cxx:
       core.target_platform.set_tool(comk.tool.CxxCompiler, args.tool_cxx)
       if not args.tool_ld:

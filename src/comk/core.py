@@ -454,6 +454,11 @@ class Core(object):
          Path to the project to parse.
       """
 
+      # Ensure we have a target platform.
+      if not self._target_platform:
+         self._target_platform = comk.platform.Platform.detect_host()
+         self._cross_build = False
+
       parser = comk.projectparser.ProjectParser(self)
       # parser.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._targets on construction. By collecting all targets upfront we
@@ -498,11 +503,19 @@ class Core(object):
 
    def _get_target_platform(self):
       if not self._target_platform:
-         self._target_platform = comk.platform.Platform.detect_host()
-         self._cross_build = False
+         raise RuntimeError(
+            'Core.set_target_platform() or Core.parse() must be called before using Core.target_platform'
+         )
       return self._target_platform
 
-   def _set_target_platform(self, o):
+   def set_target_platform(self, o):
+      """Assigns a target platform, setting self.cross_build accordingly.
+
+      object o
+         Either a string system tuple to be parsed, or a pre-parsed comk.platform.SystemType, or directly a
+         comk.platform.Platform instance.
+      """
+
       if self._target_platform:
          raise Exception('cannot set target platform after it’s already been assigned or detected')
       if isinstance(o, basestring):
@@ -517,7 +530,7 @@ class Core(object):
       self._target_platform = o
       self._cross_build = (o.system_type() != self._host_platform.system_type())
 
-   target_platform = property(_get_target_platform, _set_target_platform, doc="""
+   target_platform = property(_get_target_platform, doc="""
       Platform under which the generated outputs will execute.
    """)
 
@@ -547,8 +560,7 @@ class Core(object):
       child._keep_going                  = self._keep_going
       # TODO: inject a “log prefixer” to allow distinguishing the child’s log output from self’s.
       child._log                         = self._log
-      # Need to use the setter for this one.
-      child.target_platform              = self.target_platform
+      child.set_target_platform(self._target_platform)
       return child
 
    def validate_dependency_graph(self):
