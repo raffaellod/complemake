@@ -597,8 +597,6 @@ class BinaryTarget(FileTarget):
       # Let the platform configure the linker.
       core.target_platform.configure_tool(lnk)
 
-      # Scan this target’s dependencies for linker inputs.
-      output_lib_path_added = False
       # At this point all the dependencies are available, so add them as inputs.
       for dep in self._dependencies:
          if isinstance(dep, comk.dependency.ExternalLibDependency):
@@ -609,11 +607,6 @@ class BinaryTarget(FileTarget):
             lnk.add_input(dep.file_path)
          elif isinstance(dep, DynLibTarget):
             lnk.add_input_lib(dep.name)
-            # Since we’re linking to a library built by this project, make sure to add the output “lib”
-            # directory to the library search path.
-            if not output_lib_path_added:
-               lnk.add_lib_path(os.path.join(core.output_dir, core.LIB_DIR))
-               output_lib_path_added = True
 
       # TODO: add other external dependencies.
 

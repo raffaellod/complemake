@@ -24,6 +24,8 @@ This file contains Complemake and other core classes.
 See [DOC:6931 Complemake] for more information.
 """
 
+from __future__ import absolute_import
+
 """DOC:6931 Complemake
 
 Complemake was created to satisfy these requirements:
@@ -65,6 +67,7 @@ TODO: link to documentation for abc::testing support in Complemake.
 """
 
 import os
+import platform as pyplatform
 import sys
 
 FileNotFoundErrorCompat = getattr(__builtins__, 'FileNotFoundError', IOError)
@@ -95,6 +98,34 @@ def derived_classes(base_cls):
             yield derived_cls
             yielded.add(derived_cls)
             classes_to_scan.append(derived_cls)
+
+_per_user_comk_dir = None
+
+def get_per_user_comk_dir():
+   """Returns the path to a per-user folder for Complemake to store files shared across projects.
+
+   str return
+      Per-user Complemake folder path.
+   """
+
+   global _per_user_comk_dir
+   if not _per_user_comk_dir:
+      if pyplatform.system() == 'Windows':
+         import ctypes
+         SHGetFolderPath = ctypes.windll.shell32.SHGetFolderPathW
+         SHGetFolderPath.argtypes = (
+            ctypes.wintypes.HWND, ctypes.c_int, ctypes.wintypes.HANDLE, ctypes.wintypes.DWORD,
+            ctypes.wintypes.LPCWSTR
+         )
+         # <user name>\Application Data
+         CSIDL_APPDATA = 26
+
+         path = ctypes.wintypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+         SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, path)
+         _per_user_comk_dir = os.path.join(path.value, 'Complemake')
+      else:
+         _per_user_comk_dir = os.path.join(os.environ['HOME'], '.comk')
+   return _per_user_comk_dir
 
 def makedirs(path):
    """Implementation of os.makedirs(exists_ok=True) for both Python 2.7 and 3.x.

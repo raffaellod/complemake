@@ -31,6 +31,9 @@ import comk.projectparser
 import comk.target
 import yaml
 
+if sys.hexversion >= 0x03000000:
+   basestring = str
+
 
 ##############################################################################################################
 
@@ -90,6 +93,9 @@ class TargetReferenceError(ProjectError):
 class Project(object):
    """Stores the attributes of a YAML complemake/project object."""
 
+   # Set of comk.dependency.ExternalProjectDependency instances parsed from the project’s “deps” attribute.
+   _external_dependencies = None
+
    def __init__(self, parser, parsed):
       """Constructor.
 
@@ -98,6 +104,20 @@ class Project(object):
       object parsed
          Parsed YAML object to be used to construct the new instance.
       """
+
+      self._external_dependencies = set()
+      deps = parsed.get('deps')
+      if deps:
+         if not isinstance(deps, list):
+            parser.raise_parsing_error('attribute “deps” must be a sequence')
+         for i, o in enumerate(deps):
+            # For now, everything in “deps” is assumed to be an ExternalProjectDependency.
+            if not isinstance(o, dict):
+               parser.raise_parsing_error((
+                  'elements of the “deps” attribute must be mappings, but element [{}] is not'
+               ).format(i))
+            dep = comk.dependency.ExternalProjectDependency(parser, o)
+            self._external_dependencies.add(dep)
 
       targets = parsed.get('targets')
       if not targets or not isinstance(targets, list):
@@ -108,6 +128,13 @@ class Project(object):
                'elements of the “targets” attribute must be of type !complemake/target/*, but element [{}] ' +
                'is not'
             ).format(i))
+
+   def _get_external_dependencies(self):
+      return self._external_dependencies
+
+   external_dependencies = property(_get_external_dependencies, doc="""
+      Returns the external dependencies declared in the project.
+   """)
 
 ##############################################################################################################
 
@@ -127,6 +154,10 @@ class Core(object):
    _cross_build = None
    # See Core.dry_run.
    _dry_run = None
+   # Set of comk.dependency.ExternalProjectDependency instances parsed from the project’s “deps” attribute.
+   _external_dependencies = None
+   # External dependencies collected for this project, including, those from dependent projects.
+   _external_dependencies_incl_transitive = None
    # Targets explicitly or implicitly defined (e.g. intermediate targets) in the project that have a file path
    # assigned (file path -> Target).
    _file_targets = None
@@ -166,6 +197,8 @@ class Core(object):
 
       self._cross_build = None
       self._dry_run = False
+      self._external_dependencies = set()
+      self._external_dependencies_incl_transitive = set()
       self._file_targets = {}
       self._force_build = False
       self._force_test = False
@@ -233,6 +266,16 @@ class Core(object):
       """
 
       try:
+         # Ensure all external dependencies are up to date.
+         # In this first implementation, we don’t try to parallelize builds; we just build one dependency at a
+         # time. Note that each of these builds may in turn create a new Core instance and work on its own job
+         # runner.
+         # TODO: more fine grained: intelligently select dependencies to rebuild our targets.
+         # TODO: even more fine grained: reach into the project files for each dependency, and selectively
+         # rebuild targets within each dependency so that our targets can be build. This would allow to share
+         # the job runner, so that the entire build can be fully parallelized, including dependencies.
+         for dep in self._external_dependencies:
+            dep.build()
          # Begin building the selected targets.
          for target in targets:
             target.start_build()
@@ -294,6 +337,25 @@ class Core(object):
       If True, all test targets are executed unconditionally; if False, test targets are only executed if
       triggered by their dependencies.
    """)
+
+   def get_external_dependencies(self):
+      """Returns a set containing the external dependencies declared in the project.
+
+      set(comk.dependency.ExternalProjectDependency) return
+         Dependencies for the project.
+      """
+
+      return self._external_dependencies
+
+   def get_external_dependencies_incl_transitive(self):
+      """Returns a set containing the external dependencies declared in the project, including any transitive
+      dependencies.
+
+      set(comk.dependency.ExternalProjectDependency) return
+         Transitive dependencies for the project.
+      """
+
+      return self._external_dependencies_incl_transitive
 
    def get_file_target(self, file_path, fallback = _RAISE_IF_NOT_FOUND):
       """Returns a file target given its file path, raising an exception if no such target exists and no
@@ -403,6 +465,8 @@ class Core(object):
          parser.raise_parsing_error(
             'the top level object of a Complemake file must be of type complemake/project'
          )
+      self._external_dependencies = project.external_dependencies
+      self._external_dependencies_incl_transitive.update(self._external_dependencies)
       # Validate each target.
       for target in self._targets:
          target.validate()
@@ -416,13 +480,21 @@ class Core(object):
       except (comk.FileNotFoundErrorCompat, OSError):
          self._metadata = comk.metadata.MetadataStore(self, metadata_file_path)
 
+   def prepare_external_dependencies(self):
+      """Updates all external dependencies and collects any transitive dependencies."""
+
+      for dep in self._external_dependencies:
+         dep.update()
+         dep_core = dep.create_core()
+         self._external_dependencies_incl_transitive.update(dep_core._external_dependencies_incl_transitive)
+
    def _get_project_path(self):
       return self._project_path
 
    def _set_project_path(self, project_path):
       self._project_path = project_path
 
-   project_path = property(_get_project_path, _set_project_path, doc='Base path of the project.')
+   project_path = property(_get_project_path, _set_project_path, doc="""Base path of the project.""")
 
    def _get_target_platform(self):
       if not self._target_platform:
@@ -460,6 +532,25 @@ class Core(object):
          target.dump_dependencies('  ')
       print('')
 
+   def spawn_child(self):
+      """Creates and returns a new instance of Core with similar configuration as self.
+
+      comk.core.Core return
+         Child Core instance.
+      """
+
+      child = comk.core.Core()
+      child._dry_run                     = self._dry_run
+      child._force_build                 = self._force_build
+      child._force_test                  = self._force_test
+      child._job_runner.running_jobs_max = self._job_runner.running_jobs_max
+      child._keep_going                  = self._keep_going
+      # TODO: inject a “log prefixer” to allow distinguishing the child’s log output from self’s.
+      child._log                         = self._log
+      # Need to use the setter for this one.
+      child.target_platform              = self.target_platform
+      return child
+
    def validate_dependency_graph(self):
       """Ensures that no cycles exist in the targets dependency graph.
 
@@ -469,7 +560,7 @@ class Core(object):
       See also the recursion step Core._validate_dependency_subtree().
       """
 
-      # No previous ancerstors considered for the targets enumerated by this function.
+      # No previous ancestors considered for the targets enumerated by this function.
       dependents = []
       # No subtrees validated yet.
       validated_subtrees = set()

@@ -141,6 +141,7 @@ def main(args):
          )
          return 1
    core.parse(args.project)
+   core.prepare_external_dependencies()
 #   core.print_target_graphs()
 
    # If any targets were specified, only a subset of the targets should be built; otherwise all named targets

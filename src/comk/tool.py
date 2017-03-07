@@ -182,12 +182,14 @@ class Tool(object):
 
       self._input_file_paths.append(input_file_path)
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """Builds the flags portion of the tool’s command line.
 
       The default implementation applies the flags added with Tool.add_flags() after translating them using
       Tool._translate_abstract_flag().
 
+      comk.Core core
+         Core instance.
       list(str*) args
          Arguments list.
       """
@@ -266,7 +268,7 @@ class Tool(object):
       # Build the arguments list.
       args = [self._file_path]
 
-      self._create_job_add_flags(args)
+      self._create_job_add_flags(core, args)
       type(self)._create_job_add_flags_from_env_overrides(args)
 
       if self._output_file_path:
@@ -474,13 +476,14 @@ class CxxCompiler(Tool):
 
       self._macros[name] = expansion
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See Tool._create_job_add_flags()."""
 
-      # TODO: remove hard-coded dirs.
-      self.add_include_dir(comk.core.Core.INCLUDE_DIR)
+      for dep in core.get_external_dependencies_incl_transitive():
+         self.add_include_dir(dep.get_path(core.INCLUDE_DIR))
+      self.add_include_dir(core.INCLUDE_DIR)
 
-      Tool._create_job_add_flags(self, args)
+      Tool._create_job_add_flags(self, core, args)
 
       # Add any preprocessor macros.
       if self._macros:
@@ -544,7 +547,7 @@ class ClangxxCompiler(CxxCompiler):
    }
 
    # See CxxCompiler.object_suffix.
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See CxxCompiler._create_job_add_flags()."""
 
       args.extend([
@@ -554,7 +557,7 @@ class ClangxxCompiler(CxxCompiler):
          '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
       ])
 
-      CxxCompiler._create_job_add_flags(self, args)
+      CxxCompiler._create_job_add_flags(self, core, args)
 
       args.extend([
          '-ggdb',                  # Generate debug info compatible with GDB.
@@ -627,7 +630,7 @@ class GxxCompiler(CxxCompiler):
    }
 
    # See CxxCompiler.object_suffix.
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See CxxCompiler._create_job_add_flags()."""
 
       args.extend([
@@ -642,7 +645,7 @@ class GxxCompiler(CxxCompiler):
             '-fdiagnostics-color=always', # Show messages in color. Needed since we pipe stdout.
          ])
 
-      CxxCompiler._create_job_add_flags(self, args)
+      CxxCompiler._create_job_add_flags(self, core, args)
 
       args.extend([
          '-ggdb',                  # Generate debug info compatible with GDB.
@@ -717,7 +720,7 @@ class MscCompiler(CxxCompiler):
       CxxCompiler.CFLAG_PREPROCESS_ONLY       : '/P',
    }
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See CxxCompiler._create_job_add_flags()."""
 
       args.extend([
@@ -729,7 +732,7 @@ class MscCompiler(CxxCompiler):
          '/TP',        # Force all sources to be compiled as C++.
       ])
 
-      CxxCompiler._create_job_add_flags(self, args)
+      CxxCompiler._create_job_add_flags(self, core, args)
 
       if CxxCompiler.CFLAG_PREPROCESS_ONLY in self._abstract_flags:
          args.extend([
@@ -850,10 +853,14 @@ class Linker(Tool):
 
       self._lib_paths.append(lib_path)
 
-   def _create_job_add_inputs(self, args):
-      """See Tool._create_job_add_inputs()."""
+   def _create_job_add_flags(self, core, args):
+      """See Tool._create_job_add_flags()."""
 
-      Tool._create_job_add_inputs(self, args)
+      for dep in core.get_external_dependencies_incl_transitive():
+         self.add_lib_path(dep.get_path(core.LIB_DIR))
+      self.add_lib_path(os.path.join(core.output_dir, core.LIB_DIR))
+
+      Tool._create_job_add_flags(self, core, args)
 
       # Add the library search directories.
       if self._lib_paths:
@@ -861,6 +868,12 @@ class Linker(Tool):
          format = self._translate_abstract_flag(self.LDFLAG_ADD_LIB_DIR_FORMAT)
          for dir in self._lib_paths:
             args.append(format.format(dir=dir))
+
+   def _create_job_add_inputs(self, args):
+      """See Tool._create_job_add_inputs()."""
+
+      Tool._create_job_add_inputs(self, args)
+
       # Add the libraries.
       if self._input_libs:
          # Get the compiler-specific command-line argument to add a library.
@@ -901,10 +914,10 @@ class ClangGnuLdLinker(Linker):
       Linker.LDFLAG_DYNLIB            : '-shared',
    }
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See Linker._create_job_add_flags()."""
 
-      Linker._create_job_add_flags(self, args)
+      Linker._create_job_add_flags(self, core, args)
 
       args.extend([
          '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
@@ -950,10 +963,10 @@ class ClangMachOLdLinker(Linker):
       Linker.LDFLAG_DYNLIB            : '-shared',
    }
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See Linker._create_job_add_flags()."""
 
-      Linker._create_job_add_flags(self, args)
+      Linker._create_job_add_flags(self, core, args)
 
       args.extend([
          '-ggdb',           # Generate debug info compatible with GDB.
@@ -1039,10 +1052,10 @@ class GxxGnuLdLinker(Linker):
       Linker.LDFLAG_DYNLIB            : '-shared',
    }
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See Linker._create_job_add_flags()."""
 
-      Linker._create_job_add_flags(self, args)
+      Linker._create_job_add_flags(self, core, args)
 
       args.extend([
          '-Wl,--as-needed', # Only link to libraries containing symbols actually used.
@@ -1100,14 +1113,14 @@ class MsLinker(Linker):
       Linker.LDFLAG_DYNLIB            : '/DLL',
    }
 
-   def _create_job_add_flags(self, args):
+   def _create_job_add_flags(self, core, args):
       """See Linker._create_job_add_flags()."""
 
       args.extend([
          '/NOLOGO',              # Suppress brand banner display.
       ])
 
-      Linker._create_job_add_flags(self, args)
+      Linker._create_job_add_flags(self, core, args)
 
       pdb_file_path = os.path.splitext(self._output_file_path)[0] + '.pdb'
       args.extend([
