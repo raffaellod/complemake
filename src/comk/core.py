@@ -493,6 +493,17 @@ class Core(object):
          dep_core = dep.create_core()
          self._external_dependencies_incl_transitive.update(dep_core._external_dependencies_incl_transitive)
 
+   def print_target_graphs(self):
+      """Prints to stdout a graph with all the targets’ dependencies and one with their reverse dependencies.
+      """
+
+      print('Dependencies')
+      print('------------')
+      for target in self._named_targets.values():
+         print(str(target))
+         target.dump_dependencies('  ')
+      print('')
+
    def _get_project_path(self):
       return self._project_path
 
@@ -500,13 +511,6 @@ class Core(object):
       self._project_path = project_path
 
    project_path = property(_get_project_path, _set_project_path, doc="""Base path of the project.""")
-
-   def _get_target_platform(self):
-      if not self._target_platform:
-         raise RuntimeError(
-            'Core.set_target_platform() or Core.parse() must be called before using Core.target_platform'
-         )
-      return self._target_platform
 
    def set_target_platform(self, o):
       """Assigns a target platform, setting self.cross_build accordingly.
@@ -530,21 +534,6 @@ class Core(object):
       self._target_platform = o
       self._cross_build = (o.system_type() != self._host_platform.system_type())
 
-   target_platform = property(_get_target_platform, doc="""
-      Platform under which the generated outputs will execute.
-   """)
-
-   def print_target_graphs(self):
-      """Prints to stdout a graph with all the targets’ dependencies and one with their reverse dependencies.
-      """
-
-      print('Dependencies')
-      print('------------')
-      for target in self._named_targets.values():
-         print(str(target))
-         target.dump_dependencies('  ')
-      print('')
-
    def spawn_child(self):
       """Creates and returns a new instance of Core with similar configuration as self.
 
@@ -562,6 +551,17 @@ class Core(object):
       child._log                         = self._log
       child.set_target_platform(self._target_platform)
       return child
+
+   def _get_target_platform(self):
+      if not self._target_platform:
+         raise RuntimeError(
+            'Core.set_target_platform() or Core.parse() must be called before using Core.target_platform'
+         )
+      return self._target_platform
+
+   target_platform = property(_get_target_platform, doc="""
+      Platform under which the generated outputs will execute.
+   """)
 
    def validate_dependency_graph(self):
       """Ensures that no cycles exist in the targets dependency graph.
