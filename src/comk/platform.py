@@ -21,18 +21,15 @@
 Complemake.
 """
 
+from __future__ import absolute_import
+
 import os
+import platform as pyplatform
 import re
 import sys
 
 import comk
 import comk.tool
-
-import imp
-tpl = imp.find_module('platform', sys.path[1:])
-pyplatform = imp.load_module('pyplatform', *tpl)
-tpl[0].close()
-del tpl
 
 
 ##############################################################################################################
