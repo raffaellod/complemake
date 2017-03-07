@@ -27,6 +27,7 @@ import shlex
 import subprocess
 
 import comk
+import comk.core
 import comk.job
 import comk.logging
 import comk.version
@@ -477,7 +478,7 @@ class CxxCompiler(Tool):
       """See Tool._create_job_add_flags()."""
 
       # TODO: remove hard-coded dirs.
-      self.add_include_dir('include')
+      self.add_include_dir(comk.core.Core.INCLUDE_DIR)
 
       Tool._create_job_add_flags(self, args)
 

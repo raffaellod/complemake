@@ -612,7 +612,7 @@ class BinaryTarget(FileTarget):
             # Since we’re linking to a library built by this project, make sure to add the output “lib”
             # directory to the library search path.
             if not output_lib_path_added:
-               lnk.add_lib_path(os.path.join(core.output_dir, 'lib'))
+               lnk.add_lib_path(os.path.join(core.output_dir, core.LIB_DIR))
                output_lib_path_added = True
 
       # TODO: add other external dependencies.
@@ -675,7 +675,7 @@ class ExecutableTarget(NamedBinaryTarget):
       core = parser.core
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         core.output_dir, 'bin', core.target_platform.exe_file_name(parsed.get('name', ''))
+         core.output_dir, core.BIN_DIR, core.target_platform.exe_file_name(parsed.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, parser, parsed)
@@ -699,9 +699,9 @@ class DynLibTarget(NamedBinaryTarget):
 
       # Default the “path” attribute before constructing the base class.
       core = parser.core
-      # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         core.output_dir, 'lib', core.target_platform.dynlib_file_name(parsed.get('name', ''))
+         # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
+         core.output_dir, core.LIB_DIR, core.target_platform.dynlib_file_name(parsed.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, parser, parsed)
@@ -921,7 +921,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       core = parser.core
       # parsed['name'] may be missing, but NamedTargetMixIn will catch that.
       parsed.setdefault('path', os.path.join(
-         core.output_dir, 'bin', 'test', core.target_platform.exe_file_name(parsed.get('name', ''))
+         core.output_dir, core.BIN_DIR, 'test', core.target_platform.exe_file_name(parsed.get('name', ''))
       ))
 
       NamedBinaryTarget.__init__(self, parser, parsed)
@@ -953,7 +953,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       env = None
       if any(isinstance(dep, DynLibTarget) for dep in self._dependencies):
          core = self._core()
-         lib_dir = core.inproject_path(os.path.join(core.output_dir, 'lib'))
+         lib_dir = core.inproject_path(os.path.join(core.output_dir, core.LIB_DIR))
          env = core.target_platform.add_dir_to_dynlib_env_path(os.environ.copy(), lib_dir)
       return env
 

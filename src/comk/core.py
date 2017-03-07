@@ -153,6 +153,10 @@ class Core(object):
    # All targets explicitly or implicitly defined in the project.
    _targets = None
 
+   BIN_DIR = 'bin'
+   INCLUDE_DIR = 'include'
+   LIB_DIR = 'lib'
+
    # Special value used with get_target_by_*() to indicate that a target not found should result in an
    # exception.
    _RAISE_IF_NOT_FOUND = object()
