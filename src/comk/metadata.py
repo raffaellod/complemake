@@ -26,6 +26,7 @@ import yaml
 import yaml.generator
 import yaml.parser
 
+import comk.dependency
 import comk.target
 
 if sys.hexversion >= 0x03000000:
@@ -233,7 +234,8 @@ class TargetSnapshot(object):
          core = target._core()
          # Collect signatures for all the target’s dependencies’ generated files (inputs).
          for dep in target.get_dependencies():
-            mds.get_signatures(dep.get_generated_files(), self._input_signatures, USE_CACHE, core)
+            if isinstance(dep, comk.dependency.FileDependencyMixIn):
+               mds.get_signatures(dep.get_generated_files(), self._input_signatures, USE_CACHE, core)
          # Collect signatures for all the target’s generated files (outputs).
          if isinstance(target, comk.target.FileTarget):
             mds.get_signatures(target.get_generated_files(), self._output_signatures, USE_CACHE, core)
