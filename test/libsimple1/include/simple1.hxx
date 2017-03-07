@@ -16,4 +16,30 @@ You should have received a copy of the GNU General Public License along with Com
 <http://www.gnu.org/licenses/>.
 ------------------------------------------------------------------------------------------------------------*/
 
-int simple1_function(int arg);
+#ifdef COMPLEMAKE_BUILD_SIMPLE1
+   #ifdef _WIN32
+      #if defined(_MSC_VER) || defined(__clang__)
+         #define SIMPLE1_SYM __declspec(dllimport)
+      #elif defined(__GNUC__)
+         #define SIMPLE1_SYM __attribute__((dllimport))
+      #endif
+   #else
+      #if defined(__clang__) || defined(__GNUC__)
+         #define SIMPLE1_SYM __attribute__((visibility("default")))
+      #endif
+   #endif
+#else
+   #ifdef _WIN32
+      #if defined(_MSC_VER) || defined(__clang__)
+         #define SIMPLE1_SYM __declspec(dllexport)
+      #elif defined(__GNUC__)
+         #define SIMPLE1_SYM __attribute__((dllexport))
+      #endif
+   #else
+      #if defined(__clang__) || defined(__GNUC__)
+         #define SIMPLE1_SYM __attribute__((visibility("default")))
+      #endif
+   #endif
+#endif
+
+int SIMPLE1_SYM simple1_function(int arg);
