@@ -242,14 +242,14 @@ class ExternalCmdJob(AsynchronousJob):
          err_out = self._popen.stderr
       # Always read the file as text.
       if sys.hexversion >= 0x03000000:
-         stderr_text_pipe = io.TextIOWrapper(err_out)
+         stderr_text_pipe = io.TextIOWrapper(err_out, errors='replace')
       else:
          # Create a 3.x text I/O object for the 2.x file opened by subprocess.Popen.
          stderr_text_pipe = io.open(err_out.fileno(), 'r', closefd=False)
       del err_out
       # Make sure that the directory in which we’ll write stdout exists.
       comk.makedirs(os.path.dirname(self._stderr_file_path))
-      with io.open(self._stderr_file_path, 'w') as stderr:
+      with io.open(self._stderr_file_path, 'w', errors='replace') as stderr:
          for line in stderr_text_pipe:
             self._stderr_line_read(line.rstrip('\r\n'))
             stderr.write(line)
