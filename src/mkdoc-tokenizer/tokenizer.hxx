@@ -1,6 +1,6 @@
 ﻿/* -*- coding: utf-8; mode: c++; tab-width: 3; indent-tabs-mode: nil -*-
 
-Copyright 2014 Raffaello D. Di Napoli
+Copyright 2014, 2017 Raffaello D. Di Napoli
 
 This file is part of Complemake.
 
@@ -19,12 +19,12 @@ You should have received a copy of the GNU General Public License along with Com
 #ifndef _TOKENIZER_HXX
 #define _TOKENIZER_HXX
 
-#include <abaclade.hxx>
-#ifdef ABC_CXX_PRAGMA_ONCE
+#include <lofty.hxx>
+#ifdef LOFTY_CXX_PRAGMA_ONCE
    #pragma once
 #endif
-#include <abaclade/app.hxx>
-#include <abaclade/io/text/file.hxx>
+#include <lofty/app.hxx>
+#include <lofty/io/text/file.hxx>
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ You should have received a copy of the GNU General Public License along with Com
 
 /*! Characer types. Used to group evolutions by character type, to avoid repetitions: for example,
 all evolutions for ‘A’ will always apply to ‘B’. */
-ABC_ENUM_AUTO_VALUES(char_type,
+LOFTY_ENUM_AUTO_VALUES(char_type,
    amp,   //! Ampersand.
    aster, //! Asterisk/star.
    bksl,  //! Backslash.
@@ -62,7 +62,7 @@ ABC_ENUM_AUTO_VALUES(char_type,
 );
 
 //! Tokenizer state.
-ABC_ENUM_AUTO_VALUES(tokenizer_state,
+LOFTY_ENUM_AUTO_VALUES(tokenizer_state,
    amp,  //! Ampersand.
    amp2, //! Two ampersands.
    arw,  //! Arrow “->”.
@@ -113,7 +113,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_state,
 );
 
 //! Tokenizer action.
-ABC_ENUM_AUTO_VALUES(tokenizer_action,
+LOFTY_ENUM_AUTO_VALUES(tokenizer_action,
    //! Accumulate the character into the current token.
    accumulate,
    //! Error; will cause the tokenizer to stop.
@@ -133,7 +133,7 @@ ABC_ENUM_AUTO_VALUES(tokenizer_action,
 );
 
 //! Possible output token types.
-ABC_ENUM_AUTO_VALUES(token_type,
+LOFTY_ENUM_AUTO_VALUES(token_type,
    ampersand,
    assign,
    asterisk,
@@ -217,7 +217,7 @@ public:
    explicit token(token_type tt) :
       m_tt(tt) {
    }
-   explicit token(abc::mstr && s) :
+   explicit token(lofty::mstr && s) :
       m_s(std::move(s)),
       m_tt(token_type::error) {
    }
@@ -241,7 +241,7 @@ public:
 
 public:
    //! Token text.
-   abc::dmstr m_s;
+   lofty::dmstr m_s;
    //! Token type.
    token_type m_tt;
 };
@@ -272,7 +272,7 @@ public:
    sAll
       String to tokenize.
    */
-   explicit token_iterator(abc::mstr && sAll);
+   explicit token_iterator(lofty::mstr && sAll);
 
    /*! Dereferencing operator.
 
@@ -339,9 +339,9 @@ private:
 
 private:
    //! String to tokenize.
-   abc::dmstr m_sAll;
+   lofty::dmstr m_sAll;
    //! Iterator to the current character in m_sAll.
-   abc::dmstr::const_iterator m_itAllCurr;
+   lofty::dmstr::const_iterator m_itAllCurr;
    //! Current state of the tokenizer.
    tokenizer_state m_stateCurr;
    //! Current token.

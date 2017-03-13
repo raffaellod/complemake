@@ -1,6 +1,6 @@
 ﻿/* -*- coding: utf-8; mode: c++; tab-width: 3; indent-tabs-mode: nil -*-
 
-Copyright 2014 Raffaello D. Di Napoli
+Copyright 2014, 2017 Raffaello D. Di Napoli
 
 This file is part of Complemake.
 
@@ -19,8 +19,8 @@ You should have received a copy of the GNU General Public License along with Com
 #ifndef _PARSER_HXX
 #define _PARSER_HXX
 
-#include <abaclade.hxx>
-#ifdef ABC_CXX_PRAGMA_ONCE
+#include <lofty.hxx>
+#ifdef LOFTY_CXX_PRAGMA_ONCE
    #pragma once
 #endif
 #include "tokenizer.hxx"

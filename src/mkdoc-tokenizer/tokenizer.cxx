@@ -1,6 +1,6 @@
 ﻿/* -*- coding: utf-8; mode: c++; tab-width: 3; indent-tabs-mode: nil -*-
 
-Copyright 2014 Raffaello D. Di Napoli
+Copyright 2014, 2017 Raffaello D. Di Napoli
 
 This file is part of Complemake.
 
@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with Com
 <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------------------------*/
 
-#include <abaclade.hxx>
+#include <lofty.hxx>
 
 #include "tokenizer.hxx"
 
@@ -175,20 +175,20 @@ token_iterator::output_token_t const token_iterator::smc_ttStateOutputs[
 
 token_iterator const token_iterator::smc_itEnd((token_type(token_type::end)));
 
-/*explicit*/ token_iterator::token_iterator(abc::mstr && sAll) :
+/*explicit*/ token_iterator::token_iterator(lofty::mstr && sAll) :
    m_sAll(std::move(sAll)),
    m_itAllCurr(m_sAll.cbegin()),
    m_stateCurr(tokenizer_state::bol) {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    // Find the first token.
    operator++();
 }
 
 token_iterator & token_iterator::operator++() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
-   auto ftwErr(abc::io::text::stderr());
+   auto ftwErr(lofty::io::text::stderr());
 
    tokenizer_state statePushed;
    bool bYield = false;
@@ -196,7 +196,7 @@ token_iterator & token_iterator::operator++() {
       char32_t ch = *m_itAllCurr++;
       // Determine the type of the current character.
       char_type cht;
-      if (static_cast<std::size_t>(ch) < ABC_COUNTOF(smc_chtMap)) {
+      if (static_cast<std::size_t>(ch) < LOFTY_COUNTOF(smc_chtMap)) {
          cht = smc_chtMap[static_cast<std::uint8_t>(ch)];
       } else {
          cht = char_type::ltr;
@@ -204,7 +204,7 @@ token_iterator & token_iterator::operator++() {
 
       evo_t const & evo = smc_evos[m_stateCurr.base()][cht.base()];
       /*ftwErr->print(
-         ABC_SL("evolution: (state: {}, char_type: {} ‘{}’) -> (state: {}, action: {})\n"),
+         LOFTY_SL("evolution: (state: {}, char_type: {} ‘{}’) -> (state: {}, action: {})\n"),
          m_stateCurr, cht, ch, tokenizer_state(evo.stateNext), tokenizer_action(evo.actionNext)
       );*/
 
@@ -225,7 +225,7 @@ token_iterator & token_iterator::operator++() {
             break;
          case tokenizer_action::error:
             // Error; will cause the tokenizer to stop.
-            ftwErr->write_line(ABC_SL("ERROR"));
+            ftwErr->write_line(LOFTY_SL("ERROR"));
             bYield = true;
             break;
          case tokenizer_action::pop_state:
@@ -259,7 +259,7 @@ token_iterator & token_iterator::operator++() {
 }
 
 void token_iterator::finalize_next_token() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    // Determine the output token type for the current final state.
    output_token_t const & ot = smc_ttStateOutputs[m_stateCurr.base()];
@@ -276,7 +276,7 @@ void token_iterator::finalize_next_token() {
 }
 
 void token_iterator::get_comment_token_type() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    // Check for “/*!” and “//!”.
    if (m_tkNext.m_s[2] == '!') {
@@ -288,7 +288,7 @@ void token_iterator::get_comment_token_type() {
 }
 
 void token_iterator::get_compound_assignm_token_type() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    char ch0(static_cast<char>(m_tkNext.m_s[0]));
    switch (ch0) {
@@ -316,13 +316,13 @@ void token_iterator::get_compound_assignm_token_type() {
 }
 
 void token_iterator::get_cpreproc_token_type() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    // TODO
 }
 
 void token_iterator::get_punctuation_token_type() {
-   ABC_TRACE_FUNC(this);
+   LOFTY_TRACE_FUNC(this);
 
    switch (static_cast<char>(m_tkNext.m_s[0])) {
       case '(': m_tkNext.m_tt = token_type::parenl;    break;

@@ -11,8 +11,8 @@ featuring:
 •  Simple, YAML-based syntax
 •  Minimal instructions required in each project, and no toolchain-specific
    commands/flags;
-•  Integration with Abaclade’s abc::testing framework, providing a fluid
-   automated testing experience (see <https://github.com/raffaellod/abaclade>);
+•  Integration with lofty::testing framework, providing a fluid automated
+   testing experience (see <https://github.com/raffaellod/lofty>);
 •  Command-line options generally compatible with GNU make, to be immediately
    usable by GNU make users.
 •  No GNU Autotools
@@ -128,7 +128,7 @@ Future plans include removal of the dependency on Python.
 8.1. Some history
 -----------------
 
-Complemake is a spin-off of Abaclade (<https://github.com/raffaellod/abaclade>);
+Complemake is a spin-off of Lofty (<https://github.com/raffaellod/lofty>);
 its creation became a necessity as the number of fixes to the different build
 systems in use (the traditional make utility and MSBuild) started becoming
 excessive:
@@ -154,7 +154,7 @@ excessive:
 ---------------------------------
 
 Though not yet as complete as it should be, Complemake is the recommended
-utility to build projects using Abaclade.
+utility to build projects using Lofty.
 
 
 8.3. Project goals
@@ -162,7 +162,7 @@ utility to build projects using Abaclade.
 
 Complemake has met or is targeting these goals:
 
-1. Offer a fast way of setting up C++ projects using Abaclade;
+1. Offer a fast way of setting up C++ projects using Lofty;
 
 2. Use all available resources for builds;
 

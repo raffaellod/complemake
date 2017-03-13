@@ -1,6 +1,6 @@
 ﻿/* -*- coding: utf-8; mode: c++; tab-width: 3; indent-tabs-mode: nil -*-
 
-Copyright 2014 Raffaello D. Di Napoli
+Copyright 2014, 2017 Raffaello D. Di Napoli
 
 This file is part of Complemake.
 
@@ -16,9 +16,9 @@ You should have received a copy of the GNU General Public License along with Com
 <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------------------------*/
 
-#include <abaclade.hxx>
-#include <abaclade/app.hxx>
-#include <abaclade/io/text/file.hxx>
+#include <lofty.hxx>
+#include <lofty/app.hxx>
+#include <lofty/io/text/file.hxx>
 
 #include "tokenizer.hxx"
 #include "parser.hxx"
@@ -27,23 +27,25 @@ You should have received a copy of the GNU General Public License along with Com
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // mkdoc_tokenizer_app
 
-class mkdoc_tokenizer_app : public abc::app {
+class mkdoc_tokenizer_app : public lofty::app {
 public:
    //! See app::main().
-   virtual int main(abc::mvector<abc::istr const> const & vsArgs) {
-      ABC_TRACE_FUNC(this, vsArgs);
+   virtual int main(lofty::mvector<lofty::istr const> const & vsArgs) {
+      LOFTY_TRACE_FUNC(this, vsArgs);
 
-      auto ftwErr(abc::io::text::stderr());
+      auto ftwErr(lofty::io::text::stderr());
 
-      abc::dmstr sAll;
-      abc::io::text::open_reader(abc::dmstr(ABC_SL("include/abaclade/enum.hxx")))->read_all(&sAll);
+      lofty::dmstr sAll;
+      lofty::io::text::open_reader(
+         lofty::dmstr(LOFTY_SL("../../../lofty/include/lofty/enum.hxx"))
+      )->read_all(&sAll);
       for (token_iterator it(std::move(sAll)); it != token_iterator_end(); ++it) {
          token const & tk = *it;
-         ftwErr->print(ABC_SL("\033[35;1mToken:\033[0m (type: {}): “{}”\n"), tk.m_tt, tk.m_s);
+         ftwErr->print(LOFTY_SL("\033[35;1mToken:\033[0m (type: {}): “{}”\n"), tk.m_tt, tk.m_s);
       }
 
       return 0;
    }
 };
 
-ABC_APP_CLASS(mkdoc_tokenizer_app)
+LOFTY_APP_CLASS(mkdoc_tokenizer_app)

@@ -891,15 +891,15 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    output base directory.
    """
 
-   # True if the test executable uses abc::testing to execute test cases and report their results, making it
-   # compatible with being run via AbacladeTestJob, or False if it’s a monolithic single test, executed via
+   # True if the test executable uses lofty::testing to execute test cases and report their results, making it
+   # compatible with being run via LoftyTestJob, or False if it’s a monolithic single test, executed via
    # ExternalCmdCapturingJob.
    #
    # TODO: make this a three-state, with True/False meaning explicit declaration, for example via a boolean
-   # “use abc::testing” attribute, with true or false mapping to True/False and turning off auto-detection,
+   # “use lofty::testing” attribute, with true or false mapping to True/False and turning off auto-detection,
    # and if missing mapped to None to mean False with auto-detection that can change it to True using the
    # current logic in add_dependency().
-   _uses_abaclade_testing = None
+   _uses_lofty_testing = None
 
    def __init__(self, parser, parsed):
       """Constructor.
@@ -921,16 +921,16 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       TestTargetMixIn.__init__(self, parser, parsed)
 
    def add_dependency(self, dep):
-      """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to
-      abaclade-testing, making it compatible with being run via AbacladeTestJob.
+      """See NamedBinaryTarget.add_dependency(). Overridden to detect if the test is linked to lofty-testing,
+      making it compatible with being run via LoftyTestJob.
       """
 
-      # Check if this test uses the abaclade-testing framework.
+      # Check if this test uses the lofty-testing framework.
       if isinstance(dep, (
          comk.dependency.UndeterminedLibDependency, comk.dependency.ExternalLibDependency, DynLibTarget
       )):
-         if dep.name == 'abaclade-testing':
-            self._uses_abaclade_testing = True
+         if dep.name == 'lofty-testing':
+            self._uses_lofty_testing = True
 
       NamedBinaryTarget.add_dependency(self, dep)
 
@@ -978,9 +978,9 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       if len(args) > 1:
          core.target_platform.adjust_popen_args_for_script(popen_args)
 
-      # If the build target uses abc::testing, run it with the special abc::testing job, AbacladeTestJob.
-      if self._uses_abaclade_testing:
-         job_cls = comk.job.AbacladeTestJob
+      # If the build target uses lofty::testing, run it with the special lofty::testing job, LoftyTestJob.
+      if self._uses_lofty_testing:
+         job_cls = comk.job.LoftyTestJob
       else:
          job_cls = comk.job.ExternalCmdCapturingJob
       # This will store stdout and stderr of the program to file, and will buffer stdout in memory so we can

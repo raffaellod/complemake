@@ -32,12 +32,12 @@ test; for example, a test for an image manipulation library could output a gener
 Complemake compare it against a pre-rendered bitmap and determine whether the test is passed or not, in
 addition to checking the test executable’s exit code.
 
-Special support is provided for tests using the abc::testing framework. Such tests are executed using
-comk.AbacladeTestJob, a subclass of comk.ExternalCmdCapturingJob; the stderr and stdout are still captured and
+Special support is provided for tests using the lofty::testing framework. Such tests are executed using
+comk.LoftyTestJob, a subclass of comk.ExternalCmdCapturingJob; the stderr and stdout are still captured and
 stored in files, but additionally stderr is parsed to capture progress of the assertions and test cases
 executed, and the resulting counts are used to display a test summary at the end of Complemake’s execution.
 
-TODO: link to documentation for abc::testing support in Complemake.
+TODO: link to documentation for lofty::testing support in Complemake.
 """
 
 import io
@@ -404,9 +404,9 @@ class ExternalCmdCapturingJob(ExternalCmdJob):
 
 ##############################################################################################################
 
-class AbacladeTestJob(ExternalCmdCapturingJob):
-   """External program performing tests using the abc::testing framework. Such a program will communicate via
-   stderr its test results (courtesy of abc::testing::runner), which this class will parse and log.
+class LoftyTestJob(ExternalCmdCapturingJob):
+   """External program performing tests using the lofty::testing framework. Such a program will communicate
+   via stderr its test results (courtesy of lofty::testing::runner), which this class will parse and log.
    """
 
    # Title of the test case being currently executed.
@@ -422,12 +422,12 @@ class AbacladeTestJob(ExternalCmdCapturingJob):
 
    def _stderr_line_read(self, line):
       """See ExternalCmdCapturingJob._stderr_line_read(). Overridden to interpret information sent by the
-      abc::testing framework and only show errors (the program’s stderr file log will still contain the entire
-      stderr output anyway).
+      lofty::testing framework and only show errors (the program’s stderr file log will still contain the
+      entire stderr output anyway).
       """
 
-      # TODO: document possible abc::testing output info and link to it from [DOC:6931 Complemake], here, and
-      # in every involved abc::testing::runner method.
+      # TODO: document possible lofty::testing output info and link to it from [DOC:6931 Complemake], here,
+      # and in every involved lofty::testing::runner method.
 
       if line.startswith('COMK-TEST-'):
          info = line[len('COMK-TEST-'):]
@@ -454,7 +454,7 @@ class AbacladeTestJob(ExternalCmdCapturingJob):
             else:
                line = None
          else:
-            line = u'unknown info from abc::testing program: {}'.format(line)
+            line = u'unknown info from lofty::testing program: {}'.format(line)
       if line is not None:
          # self._quiet_cmd[1] is the test name.
          self._log(None, u'{}: {}', self._quiet_cmd[1], line)
