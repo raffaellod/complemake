@@ -89,7 +89,6 @@ class TargetReferenceError(ProjectError):
 ##############################################################################################################
 
 @comk.projectparser.ProjectParser.local_tag('complemake/project', yaml.Kind.MAPPING)
-@comk.projectparser.ProjectParser.local_tag('complemake/makefile', yaml.Kind.MAPPING) # TODO: delete legacy alias.
 class Project(object):
    """Stores the attributes of a YAML complemake/project object."""
 
