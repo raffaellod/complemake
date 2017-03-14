@@ -100,13 +100,12 @@ def main(args):
       core.prepare_external_dependencies()
       # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
       # will be built.
-      if args.target:
-         # core.get_file_target() will raise an exception if no such file target is defined.
-         targets = (
-            core.get_named_target(target, None) or core.get_file_target(os.path.normpath(target)) \
-               for target in args.target
-         )
-      else:
+      targets = []
+      for target_name in args.target_names:
+         targets.append(core.get_named_target(target_name))
+      for target_path in args.target_files:
+         targets.append(core.get_file_target(os.path.normpath(target_path)))
+      if not targets:
          targets = core.named_targets
 
       # Build the selected targets.

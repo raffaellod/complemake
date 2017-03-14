@@ -95,7 +95,7 @@ class Parser(object):
 
       build_subparser = subparsers.add_parser(Command.BUILD)
       build_subparser.add_argument(
-         '--force', dest='force_build', action='store_true', default=False,
+         '--force', action='store_true', dest='force_build', default=False,
          help='Unconditionally rebuild all targets.'
       )
       build_subparser.add_argument(
@@ -112,9 +112,16 @@ class Parser(object):
          help='Continue building targets even if other independent targets fail.'
       )
       build_subparser.add_argument(
-         'target', nargs='*',
-         help='List of target files to be conditionally built. If none are specified, all targets declared ' +
-              'in the Complemake file (.comk) will be conditionally built.'
+         '-f', '--target-file', metavar='/generated/file', action='append', dest='target_files', default=[],
+         help='Specify once or more to indicate which target files should be built. ' +
+              'If no -f or -t arguments are provided, all targets declared in the Complemake file (.comk) ' +
+              'will be built.'
+      )
+      build_subparser.add_argument(
+         '-t', '--target-name', action='append', dest='target_names', default=[],
+         help='Specify once or more to indicate which named targets should be built. ' +
+              'If no -f or -t arguments are provided, all targets declared in the Complemake file (.comk) ' +
+              'will be built.'
       )
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)
