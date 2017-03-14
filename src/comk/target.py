@@ -346,7 +346,8 @@ class FileTarget(comk.dependency.FileDependencyMixIn, Target):
       core.add_file_target(self, self._file_path)
 
    def _get_build_log_path(self):
-      return os.path.join(self._core().output_dir, 'log', self._file_path + '.log')
+      core = self._core()
+      return os.path.join(core.output_dir, core.LOG_DIR, self._file_path + '.log')
 
    build_log_path = property(_get_build_log_path, doc="""
       Path to the file where the build log for this target (i.e. the captured stderr of the process that
@@ -378,7 +379,7 @@ class ProcessedSourceTarget(FileTarget):
          Target that this target’s output will be linked into.
       """
 
-      FileTarget.__init__(self, core, os.path.join(core.output_dir, 'int', source_file_path + suffix))
+      FileTarget.__init__(self, core, os.path.join(core.output_dir, core.INT_DIR, source_file_path + suffix))
 
       self._source_file_path = source_file_path
       self._final_output = weakref.ref(final_output)

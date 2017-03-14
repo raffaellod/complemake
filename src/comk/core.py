@@ -184,7 +184,10 @@ class Core(object):
 
    BIN_DIR = 'bin'
    INCLUDE_DIR = 'include'
+   INT_DIR = 'int'
    LIB_DIR = 'lib'
+   LOG_DIR = 'log'
+   METADATA_FILE = '.comk-metadata'
 
    # Special value used with get_target_by_*() to indicate that a target not found should result in an
    # exception.
@@ -476,7 +479,7 @@ class Core(object):
       # Make sure the project doesn’t define circular dependencies.
       self.validate_dependency_graph()
 
-      metadata_file_path = os.path.join(self._output_dir, '.comk-metadata')
+      metadata_file_path = os.path.join(self._output_dir, self.METADATA_FILE)
       # Try loading an existing metadata store, or default to creating a new one.
       try:
          self._metadata = comk.metadata.MetadataParser(self).parse_file(metadata_file_path)
