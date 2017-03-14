@@ -114,6 +114,9 @@ def main(args):
 
       core.log.test_summary()
       return 0 if all_succeeded else 1
+   elif args.command is comk.argparser.Command.CLEAN:
+      core.clean()
+      return 0
 
 if __name__ == '__main__':
    sys.exit(main(sys.argv))

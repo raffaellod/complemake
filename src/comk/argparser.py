@@ -38,6 +38,7 @@ class Command(object):
       return cls._instances.get(name, name)
 
 Command.BUILD = Command('build')
+Command.CLEAN = Command('clean')
 
 ##############################################################################################################
 
@@ -115,6 +116,8 @@ class Parser(object):
          help='List of target files to be conditionally built. If none are specified, all targets declared ' +
               'in the Complemake file (.comk) will be conditionally built.'
       )
+
+      clean_subparser = subparsers.add_parser(Command.CLEAN)
 
    def parse_args(self, *args, **kwargs):
       """See argparse.ArgumentParser.parse_args()."""

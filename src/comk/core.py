@@ -20,6 +20,7 @@
 
 import os
 import re
+import shutil
 import sys
 
 import comk.job
@@ -287,6 +288,23 @@ class Core(object):
             # Write any new metadata.
             self._metadata.write()
       return self.job_runner.failed_jobs == 0
+
+   def clean(self):
+      """Cleans output_dir."""
+
+      log = self._log
+      for dir in self.BIN_DIR, self.INT_DIR, self.LIB_DIR, self.LOG_DIR:
+         path = os.path.join(self._output_dir, dir)
+         log(log.LOW, 'clean: clearing {}', path)
+         shutil.rmtree(path, ignore_errors=True)
+      for file in self.METADATA_FILE, :
+         path = os.path.join(self._output_dir, file)
+         log(log.LOW, 'clean: deleting {}', path)
+         try:
+            os.unlink(path)
+         except OSError:
+            if os.path.exists(path):
+               raise
 
    def _get_dry_run(self):
       return self._dry_run
