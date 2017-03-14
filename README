@@ -170,6 +170,23 @@ excessive:
 Though not yet as complete as it should be, Complemake is the recommended
 utility to build projects using Lofty.
 
+Requirements currently satisfied by Complemake:
+
+•  Cross-platform enough to no longer need to separately maintain a GNU makefile
+   and a Visual Studio solution and projects to build Lofty;
+
+•  Implicit definition of intermediate targets, so that each project only needs
+   to state explicitly sources and outputs (this had already been achieved via
+   Makefile.inc for GNU make, and was not required for MSBuild);
+
+•  Trivial test declaration and execution (this had been implemented in both GNU
+   make and MSBuild, but at the cost of a lot of delicate tooling);
+
+•  Integration with lofty::testing framework (this had already been accomplished
+   for GNU make);
+
+•  Default parallel building of independent targets.
+
 
 8.3. Project goals
 ------------------

@@ -425,8 +425,8 @@ class LoftyTestJob(ExternalCmdCapturingJob):
       entire stderr output anyway).
       """
 
-      # TODO: document possible lofty::testing output info and link to it from [DOC:6931 Complemake], here,
-      # and in every involved lofty::testing::runner method.
+      # TODO: document possible lofty::testing output info in the README, here, and in every involved
+      # lofty::testing::runner method.
 
       if line.startswith('COMK-TEST-'):
          info = line[len('COMK-TEST-'):]
