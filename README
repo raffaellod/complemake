@@ -50,19 +50,29 @@ TODO: make Complemake installable.
 5. Using Complemake
 -------------------
 
-In order to use Complemake, a Complemake file (a fairly simple YAML file; see
-[DOC:5581 Complemake files]) must be created for your project, defining a list
-of named and unnamed (file path-only) targets.
+In order to use Complemake, create a .comk project (a fairly simple YAML 1.2
+file; see [DOC:5581 Complemake projects]) defining a list of targets. Here’s a
+minimal example:
 
-Complemake should be run preferably from the directory containing the target
-project’s Complemake file (.comk), relying on the PATH environment variable to
-locate the complemake.py program:
+   %YAML 1.2
+   --- !complemake/project
+   brief: Just a Complemake project.
+   targets:
+      - !complemake/target/exe
+         name: myexe
+         brief: My Executable
+         sources:
+         -  src/main.cxx
+
+Complemake should be run from the directory containing the project file, relying
+on the PATH environment variable to locate the complemake.py executable:
 
    complemake.py build
 
-
 When running, Complemake will build the targets in the project and create
-outputs in the bin/ and lib/ directories.
+outputs in the bin/ and lib/ directories. For the example above, the “build”
+command will generate bin/myexe (or bin\myexe.exe under Windows).
+
 
 To clean up the output files, run:
 
