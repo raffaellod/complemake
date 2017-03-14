@@ -68,7 +68,7 @@ class Parser(object):
       )
       self._parser.add_argument(
          '-p', '--project', metavar='PROJECT.comk',
-         help='Complemake file (.comk) containing instructions on how to build targets. If omitted and ' +
+         help='Complemake project (.comk) containing instructions on how to build targets. If omitted and ' +
               'the current directory contains a single file matching *.comk, that file will be used as the ' +
               'project.'
       )
@@ -115,14 +115,14 @@ class Parser(object):
       build_subparser.add_argument(
          '-f', '--target-file', metavar='/generated/file', action='append', dest='target_files', default=[],
          help='Specify once or more to indicate which target files should be built. ' +
-              'If no -f or -t arguments are provided, all targets declared in the Complemake file (.comk) ' +
-              'will be built.'
+              'If no -f or -t arguments are provided, all targets declared in the Complemake project ' +
+              '(.comk) will be built.'
       )
       build_subparser.add_argument(
          '-t', '--target-name', action='append', dest='target_names', default=[],
          help='Specify once or more to indicate which named targets should be built. ' +
-              'If no -f or -t arguments are provided, all targets declared in the Complemake file (.comk) ' +
-              'will be built.'
+              'If no -f or -t arguments are provided, all targets declared in the Complemake project ' +
+              '(.comk) will be built.'
       )
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)

@@ -138,7 +138,7 @@ class Project(object):
 ##############################################################################################################
 
 class Core(object):
-   """Parses a Complemake file (.comk) and exposes a comk.job.Runner instance that can be used to schedule
+   """Parses a Complemake project (.comk) and exposes a comk.job.Runner instance that can be used to schedule
    target builds and run them.
 
    Example usage:
@@ -325,7 +325,7 @@ class Core(object):
       """
 
       project_file_path = None
-      # Check if the current directory contains a single Complemake file.
+      # Check if the current directory contains a single project file.
       for file_name in os.listdir(self._project_path):
          if file_name.endswith('.comk'):
             if project_file_path:
@@ -467,7 +467,7 @@ class Core(object):
    """)
 
    def parse(self, file_path):
-      """Parses a Complemake file.
+      """Parses a project file.
 
       str file_path
          Path to the project to parse.
@@ -487,7 +487,7 @@ class Core(object):
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
       if not isinstance(project, Project):
          parser.raise_parsing_error(
-            'the top level object of a Complemake file must be of type complemake/project'
+            'the top level object of a Complemake project must be of type complemake/project'
          )
       self._external_dependencies = project.external_dependencies
       self._external_dependencies_incl_transitive.update(self._external_dependencies)

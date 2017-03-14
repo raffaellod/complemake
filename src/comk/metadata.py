@@ -35,7 +35,7 @@ if sys.hexversion >= 0x03000000:
 ##############################################################################################################
 
 class MetadataParser(yaml.parser.Parser):
-   """Parser of Complemake’s metadata YAML files."""
+   """Parser of Complemake’s metadata files."""
 
    def __init__(self, core):
       """Constructor.

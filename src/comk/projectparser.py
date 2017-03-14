@@ -24,7 +24,7 @@ import yaml.parser
 ##############################################################################################################
 
 class ProjectParser(yaml.parser.Parser):
-   """Parser of YAML Complemake files."""
+   """Parser of Complemake projects."""
 
    def __init__(self, core):
       """Constructor.
