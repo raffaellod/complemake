@@ -54,10 +54,6 @@ class Parser(object):
 
       # Flags that apply to all commands.
       self._parser.add_argument(
-         '-g', '--target-system-type', metavar='SYSTEM-TYPE',
-         help='Use SYSTEM-TYPE (e.g. dash-separated triplet) as the build target system type.'
-      )
-      self._parser.add_argument(
          '--help', action='help',
          help='Show this informative message and exit.'
       )
@@ -75,6 +71,11 @@ class Parser(object):
          help='Complemake file (.comk) containing instructions on how to build targets. If omitted and ' +
               'the current directory contains a single file matching *.comk, that file will be used as the ' +
               'project.'
+      )
+      self._parser.add_argument(
+         '-s', '--system-type', metavar='SYSTEM-TYPE',
+         help='Use SYSTEM-TYPE as the system type for which to build; examples: x86_64-pc-linux-gnu, ' +
+              'i686-pc-win32. If omitted, detect a default for the machine on which Complemake is being run.'
       )
       self._parser.add_argument(
          '--tool-c++', metavar='/path/to/c++', dest='tool_cxx',
