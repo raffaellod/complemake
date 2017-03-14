@@ -16,9 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------------------------------------
 
-"""Job scheduling and execution classes."""
-
-"""DOC:6821 Complemake ‒ Execution of external commands
+"""Job scheduling and execution classes.
 
 External commands run by Complemake are managed by specializations of comk.Job. The default subclass,
 comk.ExternalCmdJob, executes the job capturing its stderr and stdout and publishing them to any subclasses;
@@ -55,8 +53,8 @@ import comk
 ##############################################################################################################
 
 class Job(object):
-   """Job to be executed by a comk.job.Runner instance. See [DOC:6821 Complemake ‒ Execution of external
-   commands] for an overview on external command execution in Complemake.
+   """Job to be executed by a comk.job.Runner instance. See this submodule’s documentation for an overview on
+   external command execution in Complemake.
    """
 
    # Function to call when the job completes.

@@ -51,8 +51,7 @@ TODO: make Complemake installable.
 -------------------
 
 In order to use Complemake, create a .comk project (a fairly simple YAML 1.2
-file; see [DOC:5581 Complemake projects]) defining a list of targets. Here’s a
-minimal example:
+file) defining a list of targets. Here’s a minimal example:
 
    %YAML 1.2
    --- !complemake/project
@@ -63,6 +62,8 @@ minimal example:
          brief: My Executable
          sources:
          -  src/main.cxx
+
+TODO: document file format completely! More examples available as tests (/test).
 
 Complemake should be run from the directory containing the project file, relying
 on the PATH environment variable to locate the complemake.py executable:
