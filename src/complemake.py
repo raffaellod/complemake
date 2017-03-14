@@ -35,6 +35,7 @@ import os
 import platform as pyplatform
 import sys
 
+import comk.argparser
 import comk.core
 import comk.tool
 
@@ -59,77 +60,11 @@ def main(args):
       sys.stderr.write = lambda s: _win_safe_write(sys.stderr, s)
       sys.stdout.write = lambda s: _win_safe_write(sys.stdout, s)
 
-   import argparse
-
-   argparser = argparse.ArgumentParser(add_help=False)
-   #   Usage: complemake.py [options] [project] [targets...]
-   argparser.add_argument(
-      '-n', '--dry-run', action='store_true', default=False,
-      help='Don’t actually run any external commands. Useful to test if anything needs to be built.'
-   )
-   argparser.add_argument(
-      '-f', '--force-build', action='store_true', default=False,
-      help='Unconditionally rebuild all targets.'
-   )
-   argparser.add_argument(
-      '-t', '--force-test', action='store_true', default=False,
-      help='Unconditionally run all test targets.'
-   )
-   argparser.add_argument(
-      '--help', action='help',
-      help='Show this informative message and exit.'
-   )
-   argparser.add_argument(
-      '-j', '--jobs', default=None, metavar='N', type=int,
-      help='Build using N processes at at time; if N is omitted, build all independent targets at the same ' +
-           'time. If not specified, the default is --jobs <number of processors>.'
-   )
-   argparser.add_argument(
-      '-k', '--keep-going', action='store_true', default=False,
-      help='Continue building targets even if other independent targets fail.'
-   )
-   argparser.add_argument(
-      '-m', '--project', metavar='PROJECT.comk',
-      help='Complemake file (.comk) containing instructions on how to build targets. If omitted and the ' +
-           'current directory contains a single file matching *.comk, that file will be used as the project.'
-   )
-   argparser.add_argument(
-      '-o', '--outdir', metavar='/path/to/output/dir', default='',
-      help='Location where all Complemake output for the project should be stored. Defaults to the ' +
-           'project’s directory.'
-   )
-   argparser.add_argument(
-      '-g', '--target-system-type', metavar='SYSTEM-TYPE',
-      help='Use SYSTEM-TYPE (e.g. dash-separated triplet) as the build target system type.'
-   )
-   argparser.add_argument(
-      '--tool-c++', metavar='/path/to/c++', dest='tool_cxx',
-      help='Use /path/to/c++ as the C++ compiler (and linker driver, unless --tool-ld is also specified).'
-   )
-   argparser.add_argument(
-      '--tool-ld', metavar='/path/to/ld',
-      help='Use /path/to/ld as the linker/linker driver.'
-   )
-   argparser.add_argument(
-      '-v', '--verbose', action='count', default=0,
-      help='Increase verbosity level; can be specified multiple times.'
-   )
-   argparser.add_argument(
-      'target', nargs='*',
-      help='List of target files to be conditionally built. If none are specified, all targets declared in ' +
-           'the Complemake file (.comk) will be conditionally built.'
-   )
-
-   args = argparser.parse_args()
+   args = comk.argparser.Parser().parse_args()
 
    core = comk.core.Core()
    core.dry_run = args.dry_run
-   core.force_build = args.force_build
-   core.force_test = args.force_test
-   if args.jobs:
-      core.job_runner.running_jobs_max = args.jobs
-   core.keep_going = args.keep_going
-   core.output_dir = args.outdir
+   core.output_dir = args.output_dir
    core.project_path = os.getcwd()
    if args.target_system_type:
       core.set_target_platform(args.target_system_type)
@@ -153,25 +88,32 @@ def main(args):
          )
          return 1
    core.parse(args.project)
-   core.prepare_external_dependencies()
 #   core.print_target_graphs()
 
-   # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
-   # will be built.
-   if args.target:
-      # core.get_file_target() will raise an exception if no such file target is defined.
-      targets = (
-         core.get_named_target(target, None) or core.get_file_target(os.path.normpath(target)) \
-            for target in args.target
-      )
-   else:
-      targets = core.named_targets
+   if args.command is comk.argparser.Command.BUILD:
+      if args.jobs:
+         core.job_runner.running_jobs_max = args.jobs
+      core.force_build = args.force_build
+      core.force_test = args.force_test
+      core.keep_going = args.keep_going
 
-   # Build the selected targets.
-   all_succeeded = core.build_targets(targets)
+      core.prepare_external_dependencies()
+      # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
+      # will be built.
+      if args.target:
+         # core.get_file_target() will raise an exception if no such file target is defined.
+         targets = (
+            core.get_named_target(target, None) or core.get_file_target(os.path.normpath(target)) \
+               for target in args.target
+         )
+      else:
+         targets = core.named_targets
 
-   core.log.test_summary()
-   return 0 if all_succeeded else 1
+      # Build the selected targets.
+      all_succeeded = core.build_targets(targets)
+
+      core.log.test_summary()
+      return 0 if all_succeeded else 1
 
 if __name__ == '__main__':
    sys.exit(main(sys.argv))

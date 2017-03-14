@@ -58,11 +58,15 @@ Complemake should be run preferably from the directory containing the target
 project’s Complemake file (.comk), relying on the PATH environment variable to
 locate the complemake.py program:
 
-   complemake.py
+   complemake.py build
 
 
 When running, Complemake will build the targets in the project and create
 outputs in the bin/ and lib/ directories.
+
+To clean up the output files, run:
+
+   complemake.py clean
 
 Run complemake.py --help to see a guide to Complemake’s command-line arguments.
 
