@@ -96,7 +96,7 @@ def main(args):
       core.force_test = args.force_test
       core.keep_going = args.keep_going
 
-      core.prepare_external_dependencies()
+      core.prepare_external_dependencies(update=args.update_deps)
 
       # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
       # will be built.

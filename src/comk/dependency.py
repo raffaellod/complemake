@@ -88,6 +88,15 @@ class ExternalProjectDependency(Dependency):
 
          raise NotImplementedError('Repo.get_project_path() must be overridden in ' + type(self).__name__)
 
+      def initialize(self, log):
+         """Initializes the repo snapshot.
+
+         comk.logging.Logger log
+            Logger to use for any output.
+         """
+
+         raise NotImplementedError('Repo.initialize() must be overridden in ' + type(self).__name__)
+
       def update(self, log):
          """Updates the repo snapshot.
 
@@ -95,7 +104,7 @@ class ExternalProjectDependency(Dependency):
             Logger to use for any output.
          """
 
-         raise NotImplementedError('Repo.pull() must be overridden in ' + type(self).__name__)
+         raise NotImplementedError('Repo.update() must be overridden in ' + type(self).__name__)
 
 
    class GitRepo(Repo):
@@ -136,21 +145,29 @@ class ExternalProjectDependency(Dependency):
 
          return os.path.join(self._work_area_path, 'repo')
 
+      def initialize(self, log):
+         """See Repo.initialize()."""
+
+         repo_clone_path = self.get_project_path()
+         if not os.path.isdir(os.path.join(repo_clone_path, '.git')):
+            # First time.
+            log(log.MEDIUM, 'dep: updating git repo from {}', self._uri)
+            comk.makedirs(repo_clone_path)
+            self.run_git('git', 'clone', self._uri, repo_clone_path)
+
       def update(self, log):
          """See Repo.update()."""
 
-         log(log.MEDIUM, 'dep: updating git repo from {}', self._uri)
          repo_clone_path = self.get_project_path()
          if os.path.isdir(os.path.join(repo_clone_path, '.git')):
-            # TODO: invoke git from repo_clone_path.
+            log(log.MEDIUM, 'dep: updating git repo from {}', self._uri)
             # Drop all foreign files and changes.
             self.run_git('git', 'clean', '--force', cwd=repo_clone_path)
             # Use --ff-only to “encourage” the user to not fork within a Complemake-managed repo clone.
             self.run_git('git', 'pull', '--ff-only', cwd=repo_clone_path)
          else:
             # First time.
-            comk.makedirs(repo_clone_path)
-            self.run_git('git', 'clone', self._uri, repo_clone_path)
+            self.initialize()
 
 
    class LocalDirRepo(Repo):
@@ -177,46 +194,56 @@ class ExternalProjectDependency(Dependency):
 
          return self._path
 
+      def initialize(self, log):
+         """See Repo.initialize()."""
+
+         comk.makedirs(self._work_area_path)
+         # Leave a track of where the project actually is, for user’s convenience.
+         # Note: under Windows we assume that the user most likely doesn’t have privilege to create
+         # symlinks, so “link” here means a plain text file.
+         source_link_path = os.path.join(self._work_area_path, 'source')
+         link_exists = os.path.lexists(source_link_path)
+         if link_exists:
+            if comk.os_is_windows():
+               link_is_link = os.path.isfile(source_link_path)
+            else:
+               link_is_link = os.path.islink(source_link_path)
+            if not link_is_link:
+               log(log.HIGH, 'dep: removing unexpected non-file: {}', source_link_path)
+               shutil.rmtree(source_link_path, ignore_errors=True)
+               link_exists = False
+         if link_exists:
+            if comk.os_is_windows():
+               with io.open(source_link_path, 'r', encoding='utf-8') as source_link:
+                  stored_link = source_link.read()
+            else:
+               stored_link = os.readlink(source_link_path)
+            if stored_link != self._path:
+               log(log.HIGH, 'dep: deleting source link with incorrect contents: {}', stored_link)
+               os.unlink(source_link_path)
+               link_exists = False
+         if not link_exists:
+            log(log.MEDIUM, 'dep: creating source link for {}', self._path)
+            if comk.os_is_windows():
+               with io.open(source_link_path, 'w', encoding='utf-8') as source_link:
+                  source_link.write(self._path)
+            else:
+               os.symlink(self._path, source_link_path)
+
       def update(self, log):
          """See Repo.update()."""
 
-         comk.makedirs(self._work_area_path)
          # Leave a track of where the project actually is, for user’s convenience.
          source_link_path = os.path.join(self._work_area_path, 'source')
          if comk.os_is_windows():
             # The user most likely doesn’t have privilege to create a symlink, so just make a plain text file.
             link_exists = os.path.exists(source_link_path)
-            if link_exists and not os.path.isfile(source_link_path):
-               shutil.rmtree(source_link_path, ignore_errors=True)
-               link_exists = False
-            if link_exists:
-               with io.open(source_link_path, 'r', encoding='utf-8') as source_link:
-                  stored_link = source_link.read()
-               if stored_link != self._path:
-                  os.unlink(source_link_path)
-            if link_exists:
-               link_updated = False
-            else:
-               log(log.MEDIUM, 'dep: updating source link for {}', self._path)
-               with io.open(source_link_path, 'w', encoding='utf-8') as source_link:
-                  source_link.write(self._path)
-               link_updated = True
          else:
             link_exists = os.path.lexists(source_link_path)
-            if link_exists and not os.path.islink(source_link_path):
-               shutil.rmtree(source_link_path, ignore_errors=True)
-               link_exists = False
-            if link_exists and os.readlink(source_link_path) != self._path:
-               os.unlink(source_link_path)
-               link_exists = False
-            if link_exists:
-               link_updated = False
-            else:
-               log(log.MEDIUM, 'dep: updating source link for {}', self._path)
-               os.symlink(self._path, source_link_path)
-               link_updated = True
-         if not link_updated:
+         if link_exists:
             log(log.MEDIUM, 'dep: nothing to update for {}', self._path)
+         else:
+            self.initialize()
 
 
    # Parent Core instance.
@@ -288,8 +315,13 @@ class ExternalProjectDependency(Dependency):
          dir = os.path.join(self._dep_core.output_dir, dir)
       return self._dep_core.inproject_path(dir)
 
+   def initialize(self):
+      """Initializes the dependency data."""
+
+      self._repo.initialize(self._core().log)
+
    def update(self):
-      """Updates the repo snapshot."""
+      """Updates the dependency data."""
 
       self._repo.update(self._core().log)
 

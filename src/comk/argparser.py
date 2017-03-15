@@ -143,6 +143,10 @@ class Parser(object):
               'If no -f or -t arguments are provided, all targets declared in the Complemake project ' +
               '(.comk) will be built.'
       )
+      build_subparser.add_argument(
+         '-u', '--update-deps', action='store_true',
+         help='Update all dependencies (e.g. pull git repo) before building.'
+      )
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)
 

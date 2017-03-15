@@ -531,13 +531,20 @@ class Core(object):
       except (comk.FileNotFoundErrorCompat, OSError):
          self._metadata = comk.metadata.MetadataStore(self, metadata_file_path)
 
-   def prepare_external_dependencies(self):
-      """Updates all external dependencies and collects any transitive dependencies."""
+   def prepare_external_dependencies(self, update=False):
+      """Updates all external dependencies and collects any transitive dependencies.
+
+      bool update
+         If True, dependencies will be (recusrively) updated (by e.g. git pull).
+      """
 
       for dep in self._external_dependencies:
-         dep.update()
+         if update:
+            dep.update()
+         else:
+            dep.initialize()
          dep_core = dep.create_core()
-         dep_core.prepare_external_dependencies()
+         dep_core.prepare_external_dependencies(update)
          self._external_dependencies_incl_transitive.update(dep_core._external_dependencies_incl_transitive)
 
    def print_target_graphs(self):
