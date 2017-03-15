@@ -456,7 +456,32 @@ class Platform(object):
 
 ##############################################################################################################
 
-class DarwinPlatform(Platform):
+class PosixPlatform(Platform):
+   """Abstract base for POSIX platforms."""
+
+   def dynlib_file_name(self, name):
+      """See Platform.dynlib_file_name()."""
+
+      return 'lib{}.so'.format(name)
+
+   def dynlib_path_env_var(self):
+      """See Platform.dynlib_path_env_var()."""
+
+      return 'LD_LIBRARY_PATH';
+
+   def env_path_separator(self):
+      """See Platform.env_path_separator()."""
+
+      return ':'
+
+   def exe_file_name(self, name):
+      """See Platform.exe_file_name()."""
+
+      return name
+
+##############################################################################################################
+
+class DarwinPlatform(PosixPlatform):
    """Darwin (OS X) platform."""
 
    def configure_tool(self, tool):
@@ -474,16 +499,6 @@ class DarwinPlatform(Platform):
 
       return 'DYLD_LIBRARY_PATH';
 
-   def env_path_separator(self):
-      """See Platform.env_path_separator()."""
-
-      return ':'
-
-   def exe_file_name(self, name):
-      """See Platform.exe_file_name()."""
-
-      return '{}'.format(name)
-
    @classmethod
    def _match_system_type(cls, system_type):
       """See Platform._match_system_type()."""
@@ -495,7 +510,7 @@ class DarwinPlatform(Platform):
 
 ##############################################################################################################
 
-class FreeBsdPlatform(Platform):
+class FreeBsdPlatform(PosixPlatform):
    """FreeBSD platform."""
 
    def configure_tool(self, tool):
@@ -503,26 +518,6 @@ class FreeBsdPlatform(Platform):
 
       if isinstance(tool, comk.tool.Linker):
          tool.add_input_lib('pthread')
-
-   def dynlib_file_name(self, name):
-      """See Platform.dynlib_file_name()."""
-
-      return 'lib{}.so'.format(name)
-
-   def dynlib_path_env_var(self):
-      """See Platform.dynlib_path_env_var()."""
-
-      return 'LD_LIBRARY_PATH';
-
-   def env_path_separator(self):
-      """See Platform.env_path_separator()."""
-
-      return ':'
-
-   def exe_file_name(self, name):
-      """See Platform.exe_file_name()."""
-
-      return '{}'.format(name)
 
    @classmethod
    def _match_system_type(cls, system_type):
@@ -535,7 +530,7 @@ class FreeBsdPlatform(Platform):
 
 ##############################################################################################################
 
-class GnuPlatform(Platform):
+class GnuPlatform(PosixPlatform):
    """GNU Operating System platform."""
 
    def configure_tool(self, tool):
@@ -544,26 +539,6 @@ class GnuPlatform(Platform):
       if isinstance(tool, comk.tool.Linker):
          tool.add_input_lib('dl')
          tool.add_input_lib('pthread')
-
-   def dynlib_file_name(self, name):
-      """See Platform.dynlib_file_name()."""
-
-      return 'lib{}.so'.format(name)
-
-   def dynlib_path_env_var(self):
-      """See Platform.dynlib_path_env_var()."""
-
-      return 'LD_LIBRARY_PATH';
-
-   def env_path_separator(self):
-      """See Platform.env_path_separator()."""
-
-      return ':'
-
-   def exe_file_name(self, name):
-      """See Platform.exe_file_name()."""
-
-      return '{}'.format(name)
 
    @classmethod
    def _match_system_type(cls, system_type):
