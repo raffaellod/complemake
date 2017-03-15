@@ -934,22 +934,6 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
 
       NamedBinaryTarget.add_dependency(self, dep)
 
-   def get_exec_environ(self):
-      """Generates an os.environ-like dictionary containing any variables necessary to execute the test.
-
-      dict(str: str) return
-         Modified environment, or None if no environment changes are needed to run the test.
-      """
-
-      # If the build target is linked to a library built by this same project, make sure we add output_dir/lib
-      # to the library path.
-      env = None
-      if any(isinstance(dep, DynLibTarget) for dep in self._dependencies):
-         core = self._core()
-         lib_dir = core.inproject_path(os.path.join(core.output_dir, core.LIB_DIR))
-         env = core.target_platform.add_dir_to_dynlib_env_path(os.environ.copy(), lib_dir)
-      return env
-
    def _on_build_tool_run_complete(self):
       """See NamedBinaryTarget._on_build_tool_run_complete(). Overridden to execute the freshly-built test."""
 
@@ -971,7 +955,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
       # Prepare the arguments for Popen.
       popen_args = {
          'args': args,
-         'env' : self.get_exec_environ(),
+         'env' : core.get_exec_environ(),
       }
       # If we’re using a script to run this test, tweak the Popen invocation to run a possibly non-executable
       # file.

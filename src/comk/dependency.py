@@ -221,7 +221,7 @@ class ExternalProjectDependency(Dependency):
 
    # Parent Core instance.
    _core = None
-   # Core instance to build the dependency.
+   # See dep_core.
    _dep_core = None
    # Repo instance to provide repository interaction.
    _repo = None
@@ -275,9 +275,13 @@ class ExternalProjectDependency(Dependency):
       self._dep_core.project_path = self._repo.get_project_path()
 
       self._dep_core.parse(self._dep_core.find_project_file())
-      self._dep_core.prepare_external_dependencies()
 
       return self._dep_core
+
+   def _get_dep_core(self):
+      return self._dep_core
+
+   dep_core = property(_get_dep_core, doc="""Core instance for the dependency.""")
 
    def get_path(self, dir):
       """Returns a well-known directory for the project.

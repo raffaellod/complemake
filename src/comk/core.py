@@ -359,6 +359,31 @@ class Core(object):
       triggered by their dependencies.
    """)
 
+   def get_exec_environ(self, env = None):
+      """Generates an os.environ-like dictionary containing any variables necessary to execute built binaries.
+
+      dict(str: str) env
+         Environment dictionary to change, or None to use os.environ.
+      dict(str: str) return
+         Same as env if not None; otherwise modified copy of os.environ or None if no environment changes are
+         needed to run binaries.
+      """
+
+      # Recurse for each dependency.
+      for dep in self._external_dependencies:
+         env = dep._dep_core.get_exec_environ(env)
+      # Add one more for this project, if it builds any dynamic libraries.
+      if any(isinstance(target, comk.target.DynLibTarget) for target in self._targets):
+         if env is None:
+            env = os.environ.copy()
+         env_var = self._target_platform.dynlib_path_env_var()
+         lib_path = env.get(env_var, '')
+         if lib_path:
+            lib_path += self._target_platform.env_path_separator()
+         lib_path += self.inproject_path(os.path.join(self._output_dir, self.LIB_DIR))
+         env[env_var] = lib_path
+      return env
+
    def get_external_dependencies(self):
       """Returns a set containing the external dependencies declared in the project.
 
@@ -512,6 +537,7 @@ class Core(object):
       for dep in self._external_dependencies:
          dep.update()
          dep_core = dep.create_core()
+         dep_core.prepare_external_dependencies()
          self._external_dependencies_incl_transitive.update(dep_core._external_dependencies_incl_transitive)
 
    def print_target_graphs(self):
