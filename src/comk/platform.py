@@ -337,10 +337,6 @@ class Platform(object):
 
       raise NotImplementedError('Platform.dynlib_file_name() must be overridden in ' + type(self).__name__)
 
-   # If True, dynamic libraries need import libraries (i.e. statically-linked runtime-patchable data) for the
-   # linker to be able to generate executables that link to them; if False, dynlibs can be linked to directly.
-   dynlibs_need_implibs = False
-
    def dynlib_path_env_var(self):
       """Returns the name of the environment variable indicating where dynamic libraries should be found.
 
@@ -576,9 +572,6 @@ class WinPlatform(Platform):
       """See Platform.dynlib_file_name()."""
 
       return '{}.dll'.format(name)
-
-   # See Platform.dynlibs_need_implibs.
-   dynlibs_need_implibs = True
 
    def dynlib_path_env_var(self):
       """See Platform.dynlib_path_env_var()."""
