@@ -19,6 +19,9 @@
 """Complemake command line argument parsing."""
 
 import argparse
+import os
+
+import comk
 
 
 ##############################################################################################################
@@ -71,6 +74,21 @@ class Parser(object):
          help='Complemake project (.comk) containing instructions on how to build targets. If omitted and ' +
               'the current directory contains a single file matching *.comk, that file will be used as the ' +
               'project.'
+      )
+      if comk.os_is_windows():
+         default_shared_dir = 'Complemake'
+         user_apps_home_description = 'common repository for application-specific data (typically ' + \
+                                      '“Application Data”)'
+      else:
+         default_shared_dir = '.comk'
+         user_apps_home_description = 'user’s $HOME directory'
+      self._parser.add_argument(
+         '--shared-dir', metavar='path/to/shared/dir', type=self.get_abs_shared_dir,
+         default=default_shared_dir,
+         help=('Directory where Complemake will store data shared across all projects, such as projects’ ' +
+               'dependencies. Defaults to “{}” in the {}.').format(
+                  default_shared_dir, user_apps_home_description
+               )
       )
       self._parser.add_argument(
          '-s', '--system-type', metavar='SYSTEM-TYPE',
@@ -126,6 +144,13 @@ class Parser(object):
       )
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)
+
+   @staticmethod
+   def get_abs_shared_dir(shared_dir):
+      if os.path.isabs(shared_dir):
+         return shared_dir
+      else:
+         return os.path.normpath(os.path.join(comk.get_user_apps_home(), shared_dir))
 
    def parse_args(self, *args, **kwargs):
       """See argparse.ArgumentParser.parse_args()."""

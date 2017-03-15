@@ -178,6 +178,8 @@ class Core(object):
    _named_targets = None
    # See Core.output_dir.
    _output_dir = None
+   # See Core.shared_dir.
+   _shared_dir = None
    # Platform under which targets will be executed.
    _target_platform = None
    # All targets explicitly or implicitly defined in the project.
@@ -212,6 +214,7 @@ class Core(object):
       self._named_targets = {}
       self._output_dir = ''
       self._project_path = ''
+      self._shared_dir = None
       self._target_platform = None
       self._targets = set()
 
@@ -553,6 +556,16 @@ class Core(object):
       self._target_platform = o
       self._cross_build = (o.system_type() != self._host_platform.system_type())
 
+   def _get_shared_dir(self):
+      return self._shared_dir
+
+   def _set_shared_dir(self, shared_dir):
+      self._shared_dir = shared_dir
+
+   shared_dir = property(_get_shared_dir, _set_shared_dir, doc="""
+      Path where Complemake stores data shared across projects.
+   """)
+
    def spawn_child(self):
       """Creates and returns a new instance of Core with similar configuration as self.
 
@@ -569,6 +582,7 @@ class Core(object):
       # TODO: inject a “log prefixer” to allow distinguishing the child’s log output from self’s.
       child._log                         = self._log
       child.set_target_platform(self._target_platform)
+      child._shared_dir                  = self._shared_dir
       return child
 
    def _get_target_platform(self):

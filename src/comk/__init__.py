@@ -56,18 +56,18 @@ def derived_classes(base_cls):
             yielded.add(derived_cls)
             classes_to_scan.append(derived_cls)
 
-_per_user_comk_dir = None
+_user_apps_home = None
 
-def get_per_user_comk_dir():
+def get_user_apps_home():
    """Returns the path to a per-user folder for Complemake to store files shared across projects.
 
    str return
       Per-user Complemake folder path.
    """
 
-   global _per_user_comk_dir
-   if not _per_user_comk_dir:
-      if pyplatform.system() == 'Windows':
+   global _user_apps_home
+   if _user_apps_home is None:
+      if os_is_windows():
          import ctypes
          SHGetFolderPath = ctypes.windll.shell32.SHGetFolderPathW
          SHGetFolderPath.argtypes = (
@@ -79,10 +79,24 @@ def get_per_user_comk_dir():
 
          path = ctypes.wintypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
          SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, path)
-         _per_user_comk_dir = os.path.join(path.value, 'Complemake')
+         _user_apps_home = path.value
       else:
-         _per_user_comk_dir = os.path.join(os.environ['HOME'], '.comk')
-   return _per_user_comk_dir
+         _user_apps_home = os.environ['HOME']
+   return _user_apps_home
+
+_os_is_windows = None
+
+def os_is_windows():
+   """Returns True if Complemake is running under Windows, or False otherwise.
+
+   bool return
+      True if Complemake is running under Windows, or False otherwise.
+   """
+
+   global _os_is_windows
+   if not _os_is_windows:
+      _os_is_windows = pyplatform.system() == 'Windows'
+   return _os_is_windows
 
 def makedirs(path):
    """Implementation of os.makedirs(exists_ok=True) for both Python 2.7 and 3.x.

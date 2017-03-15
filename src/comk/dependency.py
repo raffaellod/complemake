@@ -18,11 +18,8 @@
 
 """Classes implementing different types of dependencies."""
 
-from __future__ import absolute_import
-
 import hashlib
 import os
-import platform as pyplatform
 import shutil
 import sys
 import weakref
@@ -57,19 +54,21 @@ class ExternalProjectDependency(Dependency):
       # Path to the local work area (build & output) for the dependency.
       _work_area_path = None
 
-      def __init__(self, path):
+      def __init__(self, core, signature):
          """Constructor.
 
-         str repo
-            Location of the repository.
+         comk.core.Core core
+            Core instance.
+         str signature
+            Signature of the repository.
          """
 
          hash = hashlib.sha1()
-         if isinstance(path, bytes):
-            hash.update(path)
+         if isinstance(signature, bytes):
+            hash.update(signature)
          else:
-            hash.update(path.encode('utf-8'))
-         self._work_area_path = os.path.join(comk.get_per_user_comk_dir(), 'depwa', hash.hexdigest())
+            hash.update(signature.encode('utf-8'))
+         self._work_area_path = os.path.join(core.shared_dir, 'depwa', hash.hexdigest())
 
       def get_output_dir(self):
          """Returns the path to the directory where build output files will be generated.
@@ -111,9 +110,11 @@ class ExternalProjectDependency(Dependency):
       # Git remote URI.
       _uri = None
 
-      def __init__(self, uri, min_treeish = None, max_treeish = None):
+      def __init__(self, core, uri, min_treeish = None, max_treeish = None):
          """Constructor.
 
+         comk.core.Core core
+            Core instance.
          str uri
             Git remote URI.
          str min_treeish
@@ -124,7 +125,7 @@ class ExternalProjectDependency(Dependency):
             branch will be used.
          """
 
-         ExternalProjectDependency.Repo.__init__(self, uri)
+         ExternalProjectDependency.Repo.__init__(self, core, uri)
 
          self._max_treeish = max_treeish
          self._min_treeish = min_treeish
@@ -158,14 +159,16 @@ class ExternalProjectDependency(Dependency):
       # Path where the “repository” is located.
       _path = None
 
-      def __init__(self, path):
+      def __init__(self, core, path):
          """Constructor.
 
+         comk.core.Core core
+            Core instance.
          str path
             Path where the “repository” is located.
          """
 
-         ExternalProjectDependency.Repo.__init__(self, path)
+         ExternalProjectDependency.Repo.__init__(self, core, path)
 
          self._path = os.path.abspath(path)
 
@@ -180,7 +183,7 @@ class ExternalProjectDependency(Dependency):
          comk.makedirs(self._work_area_path)
          # Leave a track of where the project actually is, for user’s convenience.
          source_link_path = os.path.join(self._work_area_path, 'source')
-         if pyplatform.system() == 'Windows':
+         if comk.os_is_windows():
             # The user most likely doesn’t have privilege to create a symlink, so just make a plain text file.
             link_exists = os.path.exists(source_link_path)
             if link_exists and not os.path.isfile(source_link_path):
@@ -244,11 +247,11 @@ class ExternalProjectDependency(Dependency):
          max_version = parser.get('max version')
          if max_version and not isinstance(max_version, basestring):
             parser.raise_parsing_error('attribute “max version” must be a string')
-         self._repo = self.GitRepo(repo, min_version, max_version)
+         self._repo = self.GitRepo(core, repo, min_version, max_version)
       elif repo.startswith('file:///') or repo.startswith('/') or repo.startswith('.'):
          if repo.startswith('file:///'):
             repo = repo[len('file:///'):]
-         self._repo = self.LocalDirRepo(core.inproject_path(repo))
+         self._repo = self.LocalDirRepo(core, core.inproject_path(repo))
       else:
          raise comk.core.ProjectError('unsupported repo path/URI: “{}”'.format(repo))
 

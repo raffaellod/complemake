@@ -29,12 +29,10 @@
 #                                line is passed to this executable as its arguments.
 #    vsjitdebugger.exe -p {pid}  Attaches the debugger from the command line.
 
-from __future__ import absolute_import
-
 import os
-import platform as pyplatform
 import sys
 
+import comk
 import comk.argparser
 import comk.core
 import comk.tool
@@ -51,7 +49,7 @@ def main(args):
       Command return status.
    """
 
-   if pyplatform.system() == 'Windows':
+   if comk.os_is_windows():
       def _win_safe_write(self, s):
          if not isinstance(s, bytes):
             s = bytes(s, encoding=self.encoding, errors='replace')
@@ -66,6 +64,7 @@ def main(args):
    core.dry_run = args.dry_run
    core.output_dir = args.output_dir
    core.project_path = os.getcwd()
+   core.shared_dir = args.shared_dir
    if args.system_type:
       core.set_target_platform(args.system_type)
    if args.tool_cxx:
