@@ -62,7 +62,7 @@ class Parser(object):
          help='Show this informative message and exit.'
       )
       self._parser.add_argument(
-         '-n', '--dry-run', action='store_true', default=False,
+         '-n', '--dry-run', action='store_true',
          help='Don’t actually run any external commands. Useful to test if anything needs to be built.'
       )
       self._parser.add_argument(
@@ -115,11 +115,11 @@ class Parser(object):
 
       build_subparser = subparsers.add_parser(Command.BUILD)
       build_subparser.add_argument(
-         '--force', action='store_true', dest='force_build', default=False,
+         '--force', action='store_true', dest='force_build',
          help='Unconditionally rebuild all targets.'
       )
       build_subparser.add_argument(
-         '--force-test', action='store_true', default=False,
+         '--force-test', action='store_true',
          help='Unconditionally run all test targets.'
       )
       build_subparser.add_argument(
@@ -128,7 +128,7 @@ class Parser(object):
               'same time. If not specified, the default is --jobs <number of processors>.'
       )
       build_subparser.add_argument(
-         '-k', '--keep-going', action='store_true', default=False,
+         '-k', '--keep-going', action='store_true',
          help='Continue building targets even if other independent targets fail.'
       )
       build_subparser.add_argument(
