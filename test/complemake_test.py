@@ -20,6 +20,7 @@
 """Runs Complemake through a series of test projects."""
 
 import os
+import platform
 import shutil
 import subprocess
 import unittest
@@ -33,6 +34,13 @@ class ComplemakeTest(unittest.TestCase):
 
    def __init__(self, *args):
       unittest.TestCase.__init__(self, *args)
+
+   @staticmethod
+   def exe(name):
+      if platform.system() == 'Windows':
+         return name + '.exe'
+      else:
+         return name
 
    def tearDown(self):
       self.run_complemake('clean')
@@ -59,6 +67,9 @@ class Exe1Test(ComplemakeTest):
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
+      exe1_path = os.path.join(self.project_path, self.exe('bin/exe1'))
+      self.assertTrue(os.path.isfile(exe1_path))
+      self.assertEqual(subprocess.call(exe1_path), 0)
 
 ##############################################################################################################
 
