@@ -305,9 +305,8 @@ class Core(object):
          log(log.LOW, 'clean: deleting {}', path)
          try:
             os.unlink(path)
-         except OSError:
-            if os.path.exists(path):
-               raise
+         except (comk.FileNotFoundErrorCompat, OSError):
+            pass
 
    def _get_dry_run(self):
       return self._dry_run
