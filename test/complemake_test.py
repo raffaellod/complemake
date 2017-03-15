@@ -20,6 +20,7 @@
 """Runs Complemake through a series of test projects."""
 
 import os
+import shutil
 import subprocess
 import unittest
 
@@ -28,24 +29,27 @@ import unittest
 
 class ComplemakeTest(unittest.TestCase):
    _complemake_path = os.path.abspath('src/complemake.py')
+   _shared_dir = os.path.abspath('test/shared-dir')
 
    def __init__(self, *args):
       unittest.TestCase.__init__(self, *args)
 
    def tearDown(self):
       self.run_complemake('clean')
+      shutil.rmtree(self._shared_dir, ignore_errors=True)
 
    def run_complemake(self, *args):
       old_cwd = os.getcwd()
       os.chdir(self.project_path)
       try:
-         all_args = [self._complemake_path]
+         all_args = [self._complemake_path, '--shared-dir', self._shared_dir]
          all_args.extend(args)
          return subprocess.call(all_args)
       finally:
          os.chdir(old_cwd)
 
    def setUp(self):
+      shutil.rmtree(self._shared_dir, ignore_errors=True)
       self.run_complemake('clean')
 
 ##############################################################################################################
