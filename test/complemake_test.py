@@ -62,5 +62,13 @@ class Exe1Test(ComplemakeTest):
 
 ##############################################################################################################
 
+class Exe2Test(ComplemakeTest):
+   project_path = 'test/exe2'
+
+   def runTest(self):
+      self.assertEqual(self.run_complemake('build'), 0)
+
+##############################################################################################################
+
 if __name__ == '__main__':
    unittest.main()
