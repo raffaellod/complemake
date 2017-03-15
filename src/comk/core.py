@@ -273,14 +273,14 @@ class Core(object):
       try:
          # Ensure all external dependencies are up to date.
          # In this first implementation, we don’t try to parallelize builds; we just build one dependency at a
-         # time. Note that each of these builds may in turn create a new Core instance and work on its own job
-         # runner.
+         # time, synchronously. Note that each of these builds may in turn create a new Core instance and work
+         # on its own job runner.
          # TODO: more fine grained: intelligently select dependencies to rebuild our targets.
          # TODO: even more fine grained: reach into the project files for each dependency, and selectively
          # rebuild targets within each dependency so that our targets can be build. This would allow to share
          # the job runner, so that the entire build can be fully parallelized, including dependencies.
          for dep in self._external_dependencies:
-            dep.build()
+            dep.dep_core.build_targets(dep.dep_core.named_targets)
          # Begin building the selected targets.
          for target in targets:
             target.start_build()

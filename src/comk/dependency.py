@@ -255,14 +255,6 @@ class ExternalProjectDependency(Dependency):
       else:
          raise comk.core.ProjectError('unsupported repo path/URI: “{}”'.format(repo))
 
-   def build(self):
-      """Builds the dependency. Unlike in-project targets, external dependencies build synchronously.
-
-      TODO: build external dependencies asynchronously, like targets.
-      """
-
-      return self._dep_core.build_targets(self._dep_core.named_targets)
-
    def create_core(self):
       """Creates a Core instance for the dependency.
 
