@@ -42,23 +42,42 @@ class ComplemakeTest(unittest.TestCase):
       else:
          return name
 
-   def tearDown(self):
-      self.run_complemake('clean')
-      shutil.rmtree(self._shared_dir, ignore_errors=True)
+   @staticmethod
+   def env_path_separator():
+      if platform.system() == 'Windows':
+         return ';'
+      else:
+         return ':'
+
+   def run_built_exe(self, exe_path):
+      # Build an environment dictionary that includes the path to each dependency’s lib output folder.
+      env = os.environ.copy()
+      all_args = (self._complemake_path, '--shared-dir', self._shared_dir, 'query', '--exec-env')
+      for line in subprocess.check_output(
+         all_args, cwd=self.project_path, universal_newlines=True
+      ).splitlines():
+         name, value = line.split('=', maxsplit=1)
+         if 'PATH' in name and name in env:
+            # Assume that *PATH* variables must be augmented, not overwritten.
+            env[name] = env.get(name) + self.env_path_separator() + value
+         else:
+            # Just overwrite the value.
+            env[name] = value
+
+      return subprocess.call((os.path.abspath(exe_path)), cwd=self.project_path, env=env)
 
    def run_complemake(self, *args):
-      old_cwd = os.getcwd()
-      os.chdir(self.project_path)
-      try:
-         all_args = [self._complemake_path, '--shared-dir', self._shared_dir]
-         all_args.extend(args)
-         return subprocess.call(all_args)
-      finally:
-         os.chdir(old_cwd)
+      all_args = [self._complemake_path, '--shared-dir', self._shared_dir]
+      all_args.extend(args)
+      return subprocess.call(all_args, cwd=self.project_path)
 
    def setUp(self):
       shutil.rmtree(self._shared_dir, ignore_errors=True)
       self.run_complemake('clean')
+
+   def tearDown(self):
+      self.run_complemake('clean')
+      shutil.rmtree(self._shared_dir, ignore_errors=True)
 
 ##############################################################################################################
 
@@ -68,8 +87,7 @@ class Exe1Test(ComplemakeTest):
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
       exe1_path = os.path.join(self.project_path, self.exe('bin/exe1'))
-      self.assertTrue(os.path.isfile(exe1_path))
-      self.assertEqual(subprocess.call(exe1_path), 0)
+      self.assertEqual(self.run_built_exe(exe1_path), 0)
 
 ##############################################################################################################
 
@@ -78,6 +96,8 @@ class Exe2Test(ComplemakeTest):
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
+      exe2_path = os.path.join(self.project_path, self.exe('bin/exe2'))
+      self.assertEqual(self.run_built_exe(exe2_path), 0)
 
 ##############################################################################################################
 
