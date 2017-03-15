@@ -285,9 +285,12 @@ class Platform(object):
          Same as env, returned for convenience.
       """
 
-      raise NotImplementedError(
-         'Platform.add_dir_to_dynlib_env_path() must be overridden in ' + type(self).__name__
-      )
+      lib_path = env.get(self.dynlib_path_env_var(), '')
+      if lib_path:
+         lib_path += self.env_path_separator()
+      lib_path += dir
+      env[self.dynlib_path_env_var()] = lib_path
+      return env
 
    def adjust_popen_args_for_script(self, popen_args):
       """Adjusts a dictionary of arguments to be used to run a program with subprocess.Popen in a way that
@@ -337,6 +340,24 @@ class Platform(object):
    # If True, dynamic libraries need import libraries (i.e. statically-linked runtime-patchable data) for the
    # linker to be able to generate executables that link to them; if False, dynlibs can be linked to directly.
    dynlibs_need_implibs = False
+
+   def dynlib_path_env_var(self):
+      """Returns the name of the environment variable indicating where dynamic libraries should be found.
+
+      str return
+         Name of the environment variable.
+      """
+
+      raise NotImplementedError('Platform.dynlib_path_env_var() must be overridden in ' + type(self).__name__)
+
+   def env_path_separator(self):
+      """Returns the separator to be used for environment variables like PATH.
+
+      str return
+         Separator.
+      """
+
+      raise NotImplementedError('Platform.env_path_separator() must be overridden in ' + type(self).__name__)
 
    def exe_file_name(self, name):
       """Generates an executable file name from the specified name.
@@ -438,16 +459,6 @@ class Platform(object):
 class DarwinPlatform(Platform):
    """Darwin (OS X) platform."""
 
-   def add_dir_to_dynlib_env_path(self, env, dir):
-      """See Platform.add_dir_to_dynlib_env_path()."""
-
-      lib_path = env.get('DYLD_LIBRARY_PATH', '')
-      if lib_path:
-         lib_path += ':'
-      lib_path += dir
-      env['DYLD_LIBRARY_PATH'] = lib_path
-      return env
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
@@ -457,6 +468,16 @@ class DarwinPlatform(Platform):
       """See Platform.dynlib_file_name()."""
 
       return 'lib{}.dylib'.format(name)
+
+   def dynlib_path_env_var(self):
+      """See Platform.dynlib_path_env_var()."""
+
+      return 'DYLD_LIBRARY_PATH';
+
+   def env_path_separator(self):
+      """See Platform.env_path_separator()."""
+
+      return ':'
 
    def exe_file_name(self, name):
       """See Platform.exe_file_name()."""
@@ -477,16 +498,6 @@ class DarwinPlatform(Platform):
 class FreeBsdPlatform(Platform):
    """FreeBSD platform."""
 
-   def add_dir_to_dynlib_env_path(self, env, dir):
-      """See Platform.add_dir_to_dynlib_env_path()."""
-
-      lib_path = env.get('LD_LIBRARY_PATH', '')
-      if lib_path:
-         lib_path += ':'
-      lib_path += dir
-      env['LD_LIBRARY_PATH'] = lib_path
-      return env
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
@@ -497,6 +508,16 @@ class FreeBsdPlatform(Platform):
       """See Platform.dynlib_file_name()."""
 
       return 'lib{}.so'.format(name)
+
+   def dynlib_path_env_var(self):
+      """See Platform.dynlib_path_env_var()."""
+
+      return 'LD_LIBRARY_PATH';
+
+   def env_path_separator(self):
+      """See Platform.env_path_separator()."""
+
+      return ':'
 
    def exe_file_name(self, name):
       """See Platform.exe_file_name()."""
@@ -517,16 +538,6 @@ class FreeBsdPlatform(Platform):
 class GnuPlatform(Platform):
    """GNU Operating System platform."""
 
-   def add_dir_to_dynlib_env_path(self, env, dir):
-      """See Platform.add_dir_to_dynlib_env_path()."""
-
-      lib_path = env.get('LD_LIBRARY_PATH', '')
-      if lib_path:
-         lib_path += ':'
-      lib_path += dir
-      env['LD_LIBRARY_PATH'] = lib_path
-      return env
-
    def configure_tool(self, tool):
       """See Platform.configure_tool()."""
 
@@ -538,6 +549,16 @@ class GnuPlatform(Platform):
       """See Platform.dynlib_file_name()."""
 
       return 'lib{}.so'.format(name)
+
+   def dynlib_path_env_var(self):
+      """See Platform.dynlib_path_env_var()."""
+
+      return 'LD_LIBRARY_PATH';
+
+   def env_path_separator(self):
+      """See Platform.env_path_separator()."""
+
+      return ':'
 
    def exe_file_name(self, name):
       """See Platform.exe_file_name()."""
@@ -557,16 +578,6 @@ class GnuPlatform(Platform):
 
 class WinPlatform(Platform):
    """Generic Windows platform."""
-
-   def add_dir_to_dynlib_env_path(self, env, dir):
-      """See Platform.add_dir_to_dynlib_env_path()."""
-
-      lib_path = env.get('PATH', '')
-      if lib_path:
-         lib_path += ';'
-      lib_path += dir
-      env['PATH'] = lib_path
-      return env
 
    def adjust_popen_args_for_script(self, popen_args):
       """See Platform.adjust_popen_args_for_script()."""
@@ -593,6 +604,16 @@ class WinPlatform(Platform):
 
    # See Platform.dynlibs_need_implibs.
    dynlibs_need_implibs = True
+
+   def dynlib_path_env_var(self):
+      """See Platform.dynlib_path_env_var()."""
+
+      return 'PATH';
+
+   def env_path_separator(self):
+      """See Platform.env_path_separator()."""
+
+      return ';'
 
    def exe_file_name(self, name):
       """See Platform.exe_file_name()."""
