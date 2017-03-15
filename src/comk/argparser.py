@@ -42,6 +42,7 @@ class Command(object):
 
 Command.BUILD = Command('build')
 Command.CLEAN = Command('clean')
+Command.QUERY = Command('query')
 
 ##############################################################################################################
 
@@ -144,6 +145,13 @@ class Parser(object):
       )
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)
+
+      query_subparser = subparsers.add_parser(Command.QUERY)
+      query_group = query_subparser.add_mutually_exclusive_group(required=True)
+      query_group.add_argument(
+         '--exec-env', action='store_true',
+         help='Print any environment variable assignments needed to execute binaries build by the project.'
+      )
 
    @staticmethod
    def get_abs_shared_dir(shared_dir):

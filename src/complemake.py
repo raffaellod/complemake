@@ -97,6 +97,7 @@ def main(args):
       core.keep_going = args.keep_going
 
       core.prepare_external_dependencies()
+
       # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
       # will be built.
       targets = []
@@ -114,6 +115,12 @@ def main(args):
       return 0 if all_succeeded else 1
    elif args.command is comk.argparser.Command.CLEAN:
       core.clean()
+      return 0
+   elif args.command is comk.argparser.Command.QUERY:
+      if args.exec_env:
+         core.prepare_external_dependencies()
+         for name, value in core.get_exec_environ(dict()).items():
+            print('{}={}'.format(name, value))
       return 0
 
 if __name__ == '__main__':
