@@ -92,9 +92,6 @@ class TargetReferenceError(ProjectError):
 class Project(object):
    """Stores the attributes of a YAML complemake/project object."""
 
-   # Set of comk.dependency.ExternalProjectDependency instances parsed from the project’s “deps” attribute.
-   _external_dependencies = None
-
    def __init__(self, parser, parsed):
       """Constructor.
 
@@ -104,19 +101,16 @@ class Project(object):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      self._external_dependencies = set()
       deps = parsed.get('deps')
       if deps:
          if not isinstance(deps, list):
             parser.raise_parsing_error('attribute “deps” must be a sequence')
          for i, o in enumerate(deps):
-            # For now, everything in “deps” is assumed to be an ExternalProjectDependency.
-            if not isinstance(o, dict):
+            if not isinstance(o, comk.dependency.ExternalProjectDependency):
                parser.raise_parsing_error((
-                  'elements of the “deps” attribute must be mappings, but element [{}] is not'
+                  'elements of the “deps” attribute must be of type !complemake/dep/*, but element [{}] ' +
+                  'is not'
                ).format(i))
-            dep = comk.dependency.ExternalProjectDependency(parser, o)
-            self._external_dependencies.add(dep)
 
       targets = parsed.get('targets')
       if not targets or not isinstance(targets, list):
@@ -127,13 +121,6 @@ class Project(object):
                'elements of the “targets” attribute must be of type !complemake/target/*, but element [{}] ' +
                'is not'
             ).format(i))
-
-   def _get_external_dependencies(self):
-      return self._external_dependencies
-
-   external_dependencies = property(_get_external_dependencies, doc="""
-      Returns the external dependencies declared in the project.
-   """)
 
 ##############################################################################################################
 
@@ -153,7 +140,7 @@ class Core(object):
    _cross_build = None
    # See Core.dry_run.
    _dry_run = None
-   # Set of comk.dependency.ExternalProjectDependency instances parsed from the project’s “deps” attribute.
+   # Map of comk.dependency.ExternalProjectDependency instances parsed from the project’s “deps” attribute.
    _external_dependencies = None
    # External dependencies collected for this project, including, those from dependent projects.
    _external_dependencies_incl_transitive = None
@@ -201,7 +188,7 @@ class Core(object):
 
       self._cross_build = None
       self._dry_run = False
-      self._external_dependencies = set()
+      self._external_dependencies = dict()
       self._external_dependencies_incl_transitive = set()
       self._file_targets = {}
       self._force_build = False
@@ -217,6 +204,20 @@ class Core(object):
       self._shared_dir = None
       self._target_platform = None
       self._targets = set()
+
+   def add_external_dependency(self, dep, repo):
+      """Records an external dependency.
+
+      comk.dependency.ExternalProjectDependency dep
+         External dependency to add.
+      str repo
+         Repo associated to the dependency.
+      """
+
+      if repo in self._external_dependencies:
+         raise KeyError('duplicate external dependency: {}'.format(repo))
+      self._external_dependencies[repo] = dep
+      self._external_dependencies_incl_transitive.add(dep)
 
    def add_file_target(self, target, file_path):
       """Records a file target, making sure no duplicates are added.
@@ -279,7 +280,7 @@ class Core(object):
          # TODO: even more fine grained: reach into the project files for each dependency, and selectively
          # rebuild targets within each dependency so that our targets can be build. This would allow to share
          # the job runner, so that the entire build can be fully parallelized, including dependencies.
-         for dep in self._external_dependencies:
+         for dep in self._external_dependencies.values():
             dep.dep_core.build_targets(dep.dep_core.named_targets)
          # Begin building the selected targets.
          for target in targets:
@@ -370,7 +371,7 @@ class Core(object):
       """
 
       # Recurse for each dependency.
-      for dep in self._external_dependencies:
+      for dep in self._external_dependencies.values():
          env = dep._dep_core.get_exec_environ(env)
       # Add one more for this project, if it builds any dynamic libraries.
       if any(isinstance(target, comk.target.DynLibTarget) for target in self._targets):
@@ -391,7 +392,7 @@ class Core(object):
          Dependencies for the project.
       """
 
-      return self._external_dependencies
+      return self._external_dependencies.values()
 
    def get_external_dependencies_incl_transitive(self):
       """Returns a set containing the external dependencies declared in the project, including any transitive
@@ -516,8 +517,6 @@ class Core(object):
          parser.raise_parsing_error(
             'the top level object of a Complemake project must be of type complemake/project'
          )
-      self._external_dependencies = project.external_dependencies
-      self._external_dependencies_incl_transitive.update(self._external_dependencies)
       # Validate each target.
       for target in self._targets:
          target.validate()
@@ -538,7 +537,7 @@ class Core(object):
          If True, dependencies will be (recusrively) updated (by e.g. git pull).
       """
 
-      for dep in self._external_dependencies:
+      for dep in self._external_dependencies.values():
          if update:
             dep.update()
          else:

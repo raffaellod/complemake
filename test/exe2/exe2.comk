@@ -20,7 +20,9 @@
 --- !complemake/project
 brief: Complemake Test Executable 2.
 deps:
-   -  repo: ../libsimple1
+   - !complemake/dep/dir
+      repo: ../libsimple1
+#  - !complemake/dep/git
 #     repo: git://…
 #     min version: hash
 #     max version: hash
