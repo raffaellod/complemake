@@ -20,7 +20,9 @@
 
 import hashlib
 import os
+import re
 import shutil
+import subprocess
 import sys
 import weakref
 
@@ -71,10 +73,8 @@ class ExternalProjectDependency(Dependency):
       hash = hashlib.sha1()
       if isinstance(repo, bytes):
          hash.update(repo)
-      elif isinstance(repo, basestring):
-         hash.update(repo.encode('utf-8'))
       else:
-         parser.raise_parsing_error('missing or non-string attribute “repo”')
+         hash.update(repo.encode('utf-8'))
       self._repo = repo
       self._work_area_path = os.path.join(core.shared_dir, 'depwa', hash.hexdigest())
 
@@ -169,12 +169,19 @@ class ExternalGitDependency(ExternalProjectDependency):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      ExternalProjectDependency.__init__(self, parser.core, parsed.get('repo'))
+      repo = parsed.get('repo')
+      if not repo or not isinstance(repo, basestring):
+         parser.raise_parsing_error('missing or non-string attribute “repo”')
+      # Convert non-URIs into absolute paths.
+      if not re.match('^([^@]*@)?[a-z]+://', repo):
+         repo = parser.core.inproject_path(repo)
 
-      min_version = parser.get('min version')
+      ExternalProjectDependency.__init__(self, parser.core, repo)
+
+      min_version = parsed.get('min version')
       if min_version and not isinstance(min_version, basestring):
          parser.raise_parsing_error('attribute “min version” must be a string')
-      max_version = parser.get('max version')
+      max_version = parsed.get('max version')
       if max_version and not isinstance(max_version, basestring):
          parser.raise_parsing_error('attribute “max version” must be a string')
       self._max_treeish = max_version
@@ -195,20 +202,22 @@ class ExternalGitDependency(ExternalProjectDependency):
          # First time.
          log(log.MEDIUM, 'dep: updating git repo from {}', self._repo)
          comk.makedirs(repo_clone_path)
-         self.run_git('git', 'clone', self._repo, repo_clone_path)
+         self.run_git('git', 'clone', self._repo, '.')
+
+   def run_git(self, *args):
+      subprocess.check_call(args, cwd=self.get_project_path())
 
    def update(self):
       """See ExternalProjectDependency.update()."""
 
       log = self._core().log
 
-      repo_clone_path = self.get_project_path()
-      if os.path.isdir(os.path.join(repo_clone_path, '.git')):
+      if os.path.isdir(os.path.join(self.get_project_path(), '.git')):
          log(log.MEDIUM, 'dep: updating git repo from {}', self._repo)
          # Drop all foreign files and changes.
-         self.run_git('git', 'clean', '--force', cwd=repo_clone_path)
+         self.run_git('git', 'clean', '--force')
          # Use --ff-only to “encourage” the user to not fork within a Complemake-managed repo clone.
-         self.run_git('git', 'pull', '--ff-only', cwd=repo_clone_path)
+         self.run_git('git', 'pull', '--ff-only')
       else:
          # First time.
          self.initialize()
@@ -228,7 +237,11 @@ class ExternalDirDependency(ExternalProjectDependency):
          Parsed YAML object to be used to construct the new instance.
       """
 
-      ExternalProjectDependency.__init__(self, parser.core, parser.core.inproject_path(parsed.get('repo')))
+      repo = parsed.get('repo')
+      if not repo or not isinstance(repo, basestring):
+         parser.raise_parsing_error('missing or non-string attribute “repo”')
+
+      ExternalProjectDependency.__init__(self, parser.core, parser.core.inproject_path(repo))
 
    def get_project_path(self):
       """See ExternalProjectDependency.get_project_path()."""
