@@ -27,9 +27,8 @@ import comk.job
 import comk.logging
 import comk.metadata
 import comk.platform
-import comk.projectparser
+import comk.project
 import comk.target
-import yaml
 
 if sys.hexversion >= 0x03000000:
    basestring = str
@@ -41,86 +40,6 @@ class AmbiguousProjectError(Exception):
    """Indicates that 0 or more than 1 projects were found in a given folder."""
 
    pass
-
-##############################################################################################################
-
-class ProjectError(Exception):
-   """Indicates a semantical error in a project."""
-
-   pass
-
-##############################################################################################################
-
-class DependencyCycleError(ProjectError):
-   """Raised when a project specifies dependencies among targets in a way that creates circular dependencies,
-   an unsolvable situation.
-   """
-
-   _targets = None
-
-   def __init__(self, message, targets, *args):
-      """See ProjectError.__init__().
-
-      str message
-         Exception message.
-      iterable(comk.target.Target) targets
-         Targets that create a cycle in the dependency graph.
-      iterable(object*) args
-         Other arguments.
-      """
-
-      # Don’t pass targets to the superclass’ constructor, so its __str__() won’t display it.
-      ProjectError.__init__(self, message, *args)
-
-      self._targets = targets
-
-   def __str__(self):
-      # Show the regular exception description line followed by the targets in the cycle, one per line.
-      s = ProjectError.__str__(self) + '\n' + '\n'.join('  ' + str(target) for target in self._targets)
-      return s
-
-##############################################################################################################
-
-class TargetReferenceError(ProjectError):
-   """Raised when a reference to a target can’t be resolved."""
-
-   pass
-
-##############################################################################################################
-
-@comk.projectparser.ProjectParser.local_tag('complemake/project', yaml.Kind.MAPPING)
-class Project(object):
-   """Stores the attributes of a YAML complemake/project object."""
-
-   def __init__(self, parser, parsed):
-      """Constructor.
-
-      comk.projectparser.ProjectParser parser
-         Parser instantiating the object.
-      object parsed
-         Parsed YAML object to be used to construct the new instance.
-      """
-
-      deps = parsed.get('deps')
-      if deps:
-         if not isinstance(deps, list):
-            parser.raise_parsing_error('attribute “deps” must be a sequence')
-         for i, o in enumerate(deps):
-            if not isinstance(o, comk.dependency.ExternalProjectDependency):
-               parser.raise_parsing_error((
-                  'elements of the “deps” attribute must be of type !complemake/dep/*, but element [{}] ' +
-                  'is not'
-               ).format(i))
-
-      targets = parsed.get('targets')
-      if not targets or not isinstance(targets, list):
-         parser.raise_parsing_error('attribute “targets” must be a non-empty sequence')
-      for i, o in enumerate(targets):
-         if not isinstance(o, comk.target.Target):
-            parser.raise_parsing_error((
-               'elements of the “targets” attribute must be of type !complemake/target/*, but element [{}] ' +
-               'is not'
-            ).format(i))
 
 ##############################################################################################################
 
@@ -419,7 +338,7 @@ class Core(object):
 
       target = self._file_targets.get(file_path, fallback)
       if target is self._RAISE_IF_NOT_FOUND:
-         raise TargetReferenceError('unknown target: {}'.format(file_path))
+         raise comk.project.TargetReferenceError('unknown target: {}'.format(file_path))
       return target
 
    def get_named_target(self, name, fallback = _RAISE_IF_NOT_FOUND):
@@ -437,7 +356,7 @@ class Core(object):
 
       target = self._named_targets.get(name, fallback)
       if target is self._RAISE_IF_NOT_FOUND:
-         raise TargetReferenceError('undefined target: {}'.format(name))
+         raise comk.project.TargetReferenceError('undefined target: {}'.format(name))
       return target
 
    def inproject_path(self, path):
@@ -506,14 +425,14 @@ class Core(object):
          self._target_platform = comk.platform.Platform.detect_host()
          self._cross_build = False
 
-      parser = comk.projectparser.ProjectParser(self)
+      parser = comk.project.Parser(self)
       # parser.parse_file() will construct instances of any YAML-constructible Target subclass; Target
       # instances will add themselves to self._targets on construction. By collecting all targets upfront we
       # allow for Target.validate() to always find a referenced target even it it was defined after the target
       # on which validate() is called.
       project = parser.parse_file(file_path)
       # At this point, each target is stored in the YAML object tree as a Target/YAML object pair.
-      if not isinstance(project, Project):
+      if not isinstance(project, comk.project.Project):
          parser.raise_parsing_error(
             'the top level object of a Complemake project must be of type complemake/project'
          )
@@ -604,7 +523,7 @@ class Core(object):
          Child Core instance.
       """
 
-      child = comk.core.Core()
+      child = Core()
       child._dry_run                     = self._dry_run
       child._force_build                 = self._force_build
       child._force_test                  = self._force_test
@@ -667,7 +586,7 @@ class Core(object):
                # Back edge found: this dependency creates a cycle. Since dependents[i] is the previous
                # occurrence of dependency_target as ancestor of sub_root_target, dependents[i:] will yield all
                # the nodes (targets) in the cycle. Note that dependents does include sub_root_target.
-               raise DependencyCycleError(
+               raise comk.project.DependencyCycleError(
                   'dependency graph validation failed, cycle detected:', dependents[i:]
                )
          if dependency_target not in validated_subtrees:

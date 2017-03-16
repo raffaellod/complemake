@@ -29,7 +29,7 @@ import comk
 import comk.core
 import comk.dependency
 import comk.job
-import comk.projectparser
+import comk.project
 import comk.tool
 import yaml
 
@@ -60,7 +60,7 @@ class Target(comk.dependency.Dependency):
    def __init__(self, *args):
       """Constructor. Automatically registers the target with the specified Core instance.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       dict(object: object) parsed
          Parsed YAML object to be used to construct the new instance.
@@ -73,7 +73,7 @@ class Target(comk.dependency.Dependency):
 
       comk.dependency.Dependency.__init__(self)
 
-      if isinstance(args[0], comk.projectparser.ProjectParser):
+      if isinstance(args[0], comk.project.Parser):
          parser, parsed = args
          core = parser.core
       else:
@@ -314,7 +314,7 @@ class FileTarget(comk.dependency.FileDependencyMixIn, Target):
    def __init__(self, *args):
       """Constructor. Automatically registers the path => target association with the specified Core instance.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -327,7 +327,7 @@ class FileTarget(comk.dependency.FileDependencyMixIn, Target):
          Target file path.
       """
 
-      if isinstance(args[0], comk.projectparser.ProjectParser):
+      if isinstance(args[0], comk.project.Parser):
          parser, parsed = args
 
          Target.__init__(self, parser, parsed)
@@ -536,7 +536,7 @@ class BinaryTarget(FileTarget):
    def __init__(self, parser, parsed):
       """Constructor. Automatically registers the path => target association with the specified Core instance.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -638,7 +638,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -649,7 +649,7 @@ class NamedBinaryTarget(NamedTargetMixIn, BinaryTarget):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/target/exe', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/target/exe', yaml.Kind.MAPPING)
 class ExecutableTarget(NamedBinaryTarget):
    """Executable program target. The output file will be placed in the “bin” directory relative to the output
    base directory.
@@ -658,7 +658,7 @@ class ExecutableTarget(NamedBinaryTarget):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -675,7 +675,7 @@ class ExecutableTarget(NamedBinaryTarget):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/target/dynlib', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/target/dynlib', yaml.Kind.MAPPING)
 class DynLibTarget(NamedBinaryTarget):
    """Dynamic library target. The output file will be placed in the “lib” directory relative to the output
    base directory.
@@ -684,7 +684,7 @@ class DynLibTarget(NamedBinaryTarget):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -730,7 +730,7 @@ class TestTargetMixIn(object):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -791,14 +791,14 @@ class TestTargetMixIn(object):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/target/tooltest', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/target/tooltest', yaml.Kind.MAPPING)
 class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
    """Target that executes a test."""
 
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -881,11 +881,11 @@ class ToolTestTarget(NamedTargetMixIn, Target, TestTargetMixIn):
          if isinstance(dep, (ProcessedSourceTarget, comk.dependency.OutputRerefenceDependency)):
             static_cmp_operands += 1
       if static_cmp_operands != 2:
-         raise comk.core.ProjectError('{}: need exactly two files/outputs to compare'.format(self))
+         raise comk.project.Error('{}: need exactly two files/outputs to compare'.format(self))
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/target/exetest', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/target/exetest', yaml.Kind.MAPPING)
 class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    """Builds an executable test. The output file will be placed in the “bin/test” directory relative to the
    output base directory.
@@ -904,7 +904,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -1053,9 +1053,7 @@ class ExecutableTestTarget(NamedBinaryTarget, TestTargetMixIn):
             static_cmp_operands += 1
       if static_cmp_operands != 0 and static_cmp_operands != 1:
          # Expected a file against which to compare the test’s output.
-         raise comk.core.ProjectError(
-            '{}: can’t compare the test output against more than one file'.format(self)
-         )
+         raise comk.project.Error('{}: can’t compare the test output against more than one file'.format(self))
 
 ##############################################################################################################
 
@@ -1066,7 +1064,7 @@ class OutputTransform(object):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/target/filter-output-transform', yaml.Kind.SCALAR)
+@comk.project.Parser.local_tag('complemake/target/filter-output-transform', yaml.Kind.SCALAR)
 class FilterOutputTransform(OutputTransform):
    """Implements a filter output transformation. This works by removing any text not matching a specific
    regular expression.
@@ -1078,7 +1076,7 @@ class FilterOutputTransform(OutputTransform):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.

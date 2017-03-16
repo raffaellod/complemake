@@ -26,8 +26,7 @@ import weakref
 
 import comk
 import comk.core
-import comk.projectparser
-import comk.tool
+import comk.project
 import yaml
 
 if sys.hexversion >= 0x03000000:
@@ -150,7 +149,7 @@ class ExternalProjectDependency(Dependency):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/dep/git', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/dep/git', yaml.Kind.MAPPING)
 class ExternalGitDependency(ExternalProjectDependency):
    """Dependency on an external git repo."""
 
@@ -164,7 +163,7 @@ class ExternalGitDependency(ExternalProjectDependency):
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -216,14 +215,14 @@ class ExternalGitDependency(ExternalProjectDependency):
 
 ##############################################################################################################
 
-@comk.projectparser.ProjectParser.local_tag('complemake/dep/dir', yaml.Kind.MAPPING)
+@comk.project.Parser.local_tag('complemake/dep/dir', yaml.Kind.MAPPING)
 class ExternalDirDependency(ExternalProjectDependency):
    """Dependency on an external project elsewhere in the file system."""
 
    def __init__(self, parser, parsed):
       """Constructor.
 
-      comk.projectparser.ProjectParser parser
+      comk.project.Parser parser
          Parser instantiating the object.
       object parsed
          Parsed YAML object to be used to construct the new instance.
@@ -307,7 +306,7 @@ class NamedDependencyMixIn(object):
       """
 
       if not name:
-         raise comk.core.ProjectError('missing target name')
+         raise comk.project.Error('missing target name')
       self._name = name
 
    def __str__(self):
@@ -343,7 +342,7 @@ class FileDependencyMixIn(object):
       """
 
       if not file_path:
-         raise comk.core.ProjectError('missing target file path')
+         raise comk.project.Error('missing target file path')
       self._file_path = os.path.normpath(file_path)
 
    def __str__(self):
