@@ -78,6 +78,11 @@ class ComplemakeTest(unittest.TestCase):
    def run_complemake(self, *args):
       return subprocess.call(self.complemake_args(*args), cwd=self.project_path)
 
+   def run_git(self, cwd, *args):
+      all_args = ['git']
+      all_args.extend(args)
+      return subprocess.check_call(all_args, cwd=cwd)
+
    def setUp(self):
       shutil.rmtree(self._shared_dir, ignore_errors=True)
       self.run_complemake('clean')
@@ -122,9 +127,11 @@ class Exe2WithGitDepTest(ComplemakeTest):
    def setUp(self):
       ComplemakeTest.setUp(self)
       # Create a repo for libsimple1.
-      subprocess.check_call(('git', 'init'), cwd=self.git_dep_path)
-      subprocess.check_call(('git', 'add', '.'), cwd=self.git_dep_path)
-      subprocess.check_call(('git', 'commit', '-m', 'Initial commit'), cwd=self.git_dep_path)
+      self.run_git(self.git_dep_path, 'init')
+      self.run_git(self.git_dep_path, 'add', '.')
+      self.run_git(self.git_dep_path, 'commit', '--quiet', '--message', 'Initial commit')
+      # Create the “max” tag.
+      self.run_git(self.git_dep_path, 'tag', 'max')
 
    def tearDown(self):
       shutil.rmtree(os.path.join(self.git_dep_path, '.git'), ignore_errors=True)

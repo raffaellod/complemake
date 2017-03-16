@@ -153,6 +153,11 @@ class ExternalProjectDependency(Dependency):
 class ExternalGitDependency(ExternalProjectDependency):
    """Dependency on an external git repo."""
 
+   class InvalidTreeish(Exception):
+      """Raised when an invalid branch, tag or hash is detected."""
+
+      pass
+
    # Latest “treeish” (hash, tag or branch) that may be used. If None, the tip of the repo’s default branch
    # will be used.
    _max_treeish = None
@@ -202,10 +207,35 @@ class ExternalGitDependency(ExternalProjectDependency):
          # First time.
          log(log.MEDIUM, 'dep: updating git repo from {}', self._repo)
          comk.makedirs(repo_clone_path)
-         self.run_git('git', 'clone', self._repo, '.')
+         self._run_cmd('git', 'clone', self._repo, '.')
+         self._update_head()
 
-   def run_git(self, *args):
+   def _run_cmd(self, *args):
+      """Runs a command from within the repo clone with the specified arguments.
+
+      iter(str*) args
+         Additional arguments.
+      """
+
       subprocess.check_call(args, cwd=self.get_project_path())
+
+   def _treeish_to_hash(self, treeish):
+      """Converts a treeish into a hash, raising an exception if the treeish can’t be found in the repo.
+
+      str treeish
+         Branch, tag or hash to look for.
+      str return
+         Hash.
+      """
+
+      with subprocess.Popen((
+         'git', 'rev-parse', '--quiet', '--verify', treeish
+      ), stdout=subprocess.PIPE, cwd=self.get_project_path()) as git_proc:
+         stdout, _ = git_proc.communicate()
+      hash = stdout.rstrip()
+      if not hash:
+         raise self.InvalidTreeish('invalid treeish: {}'.format(treeish))
+      return hash
 
    def update(self):
       """See ExternalProjectDependency.update()."""
@@ -215,12 +245,22 @@ class ExternalGitDependency(ExternalProjectDependency):
       if os.path.isdir(os.path.join(self.get_project_path(), '.git')):
          log(log.MEDIUM, 'dep: updating git repo from {}', self._repo)
          # Drop all foreign files and changes.
-         self.run_git('git', 'clean', '--force')
+         self._run_cmd('git', 'clean', '--force')
          # Use --ff-only to “encourage” the user to not fork within a Complemake-managed repo clone.
-         self.run_git('git', 'pull', '--ff-only')
+         self._run_cmd('git', 'pull', '--ff-only')
+         self._update_head()
       else:
          # First time.
          self.initialize()
+
+   def _update_head(self):
+      """Selects (checks out) the best commit in the [min, max] range indicated by the project."""
+
+      if self._max_treeish:
+         # TODO: verify that other projects are okay with the latest version.
+         hash = self._treeish_to_hash(self._max_treeish)
+         self._run_cmd('git', 'checkout', '--quiet', self._max_treeish)
+      # TODO: else, use self._min_treeish .
 
 ##############################################################################################################
 
