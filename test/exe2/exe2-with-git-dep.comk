@@ -20,8 +20,10 @@
 --- !complemake/project
 brief: Complemake Test Executable 2.
 deps:
-   - !complemake/dep/dir
+   - !complemake/dep/git
       repo: ../libsimple1
+      min version: min # tag
+      max version: max # tag
 targets:
    - !complemake/target/exe
       name: exe2

@@ -32,8 +32,18 @@ class ComplemakeTest(unittest.TestCase):
    _complemake_path = os.path.abspath('src/complemake.py')
    _shared_dir = os.path.abspath('test/shared-dir')
 
+   project_file = None
+
    def __init__(self, *args):
       unittest.TestCase.__init__(self, *args)
+
+   def complemake_args(self, *args):
+      all_args = [self._complemake_path, '--shared-dir', self._shared_dir]
+      if self.project_file is not None:
+         all_args.extend(('--project', self.project_file))
+      if args:
+         all_args.extend(args)
+      return all_args
 
    @staticmethod
    def exe(name):
@@ -52,9 +62,8 @@ class ComplemakeTest(unittest.TestCase):
    def run_built_exe(self, exe_path):
       # Build an environment dictionary that includes the path to each dependency’s lib output folder.
       env = os.environ.copy()
-      all_args = (self._complemake_path, '--shared-dir', self._shared_dir, 'query', '--exec-env')
       for line in subprocess.check_output(
-         all_args, cwd=self.project_path, universal_newlines=True
+         self.complemake_args('query', '--exec-env'), cwd=self.project_path, universal_newlines=True
       ).splitlines():
          name, value = line.split('=', maxsplit=1)
          if 'PATH' in name and name in env:
@@ -67,9 +76,7 @@ class ComplemakeTest(unittest.TestCase):
       return subprocess.call((os.path.abspath(exe_path)), cwd=self.project_path, env=env)
 
    def run_complemake(self, *args):
-      all_args = [self._complemake_path, '--shared-dir', self._shared_dir]
-      all_args.extend(args)
-      return subprocess.call(all_args, cwd=self.project_path)
+      return subprocess.call(self.complemake_args(*args), cwd=self.project_path)
 
    def setUp(self):
       shutil.rmtree(self._shared_dir, ignore_errors=True)
@@ -93,11 +100,35 @@ class Exe1Test(ComplemakeTest):
 
 class Exe2Test(ComplemakeTest):
    project_path = 'test/exe2'
+   project_file = 'exe2.comk'
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
       exe2_path = os.path.join(self.project_path, self.exe('bin/exe2'))
       self.assertEqual(self.run_built_exe(exe2_path), 0)
+
+##############################################################################################################
+
+class Exe2WithGitDepTest(ComplemakeTest):
+   git_dep_path = 'test/libsimple1'
+   project_path = 'test/exe2'
+   project_file = 'exe2-with-git-dep.comk'
+
+   def runTest(self):
+      self.assertEqual(self.run_complemake('build'), 0)
+      exe2_path = os.path.join(self.project_path, self.exe('bin/exe2'))
+      self.assertEqual(self.run_built_exe(exe2_path), 0)
+
+   def setUp(self):
+      ComplemakeTest.setUp(self)
+      # Create a repo for libsimple1.
+      subprocess.check_call(('git', 'init'), cwd=self.git_dep_path)
+      subprocess.check_call(('git', 'add', '.'), cwd=self.git_dep_path)
+      subprocess.check_call(('git', 'commit', '-m', 'Initial commit'), cwd=self.git_dep_path)
+
+   def tearDown(self):
+      shutil.rmtree(os.path.join(self.git_dep_path, '.git'), ignore_errors=True)
+      ComplemakeTest.tearDown(self)
 
 ##############################################################################################################
 
