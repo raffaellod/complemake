@@ -70,14 +70,15 @@ def get_user_apps_home():
       if os_is_windows():
          import ctypes
          SHGetFolderPath = ctypes.windll.shell32.SHGetFolderPathW
-         SHGetFolderPath.argtypes = (
-            ctypes.wintypes.HWND, ctypes.c_int, ctypes.wintypes.HANDLE, ctypes.wintypes.DWORD,
-            ctypes.wintypes.LPCWSTR
-         )
+         DWORD = ctypes.c_ulong
+         HANDLE = ctypes.c_void_p
+         HWND = HANDLE
+         LPCWSTR = ctypes.c_wchar_p
+         SHGetFolderPath.argtypes = (HWND, ctypes.c_int, HANDLE, DWORD, LPCWSTR)
+         MAX_PATH = 260
          # <user name>\Application Data
          CSIDL_APPDATA = 26
-
-         path = ctypes.wintypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+         path = ctypes.create_unicode_buffer(MAX_PATH)
          SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, path)
          _user_apps_home = path.value
       else:
