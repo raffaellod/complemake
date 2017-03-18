@@ -1,16 +1,17 @@
-﻿**Complemake** – _the build tool your project was missing_.
+﻿**Complemake** – the build tool your project was missing.
 
 ## 1. Introduction
 
 Complemake is a build utility for software (currently C++-only) projects, featuring:
 
-*  Multiple platform compatibility: currently Linux, Windows, OS X and FreeBSD;
+*  Built-in dependency resolution and building;
 *  Parallel execution of all build tasks;
-*  Simple and concise YAML-based project syntax;
-*  Minimal instructions required in each project, and no toolchain-specific commands/flags;
-*  Integration with [Lofty](https://github.com/raffaellod/lofty)’s Testing framework, providing a fluid
+*  Multiple platform compatibility: currently Linux, Windows, OS X and FreeBSD;
+*  Easy sub-command-style invocation, like Git and Mercurial;
+*  Simple and concise YAML-based project syntax: minimal instructions required in each project, and no
+   toolchain-specific commands/flags;
+*  Integration with [Lofty](https://github.com/raffaellod/lofty)’s Testing framework, providing a smooth
    automated testing experience;
-*  Command-style invocation like Git and Mercurial, for ease of use;
 *  No GNU Autotools.
 
 
@@ -24,8 +25,8 @@ git clone https://github.com/raffaellod/complemake.git
 cd complemake
 ```
 
-The default branch, `master`, is where all development occurs. See § 4. Versioning and branching for more
- information on available branches.
+The default branch, `master`, is where all development occurs. See § _4. Versioning and branching_ for more
+information on available branches.
 
 ### 2.1. Building
 
@@ -65,9 +66,9 @@ project file to use if the directory only contains one (otherwise you can use `-
 complemake build
 ```
 
-When running, Complemake will build the targets in the project and create outputs in the `bin/` and `lib/`
-directories (this is configurable). For the example above, the `build` command will generate `bin/myexe` (or
-`bin\myexe.exe` under Windows).
+When running, Complemake will build the targets in the project and create outputs in the `bin` and `lib`
+folders (this is configurable via flags). For the example above, the `build` command will generate `bin/myexe`
+(or `bin\myexe.exe` under Windows).
 
 To clean up the output files, run:
 
@@ -80,7 +81,7 @@ Run `complemake --help` to see a guide to all command-line arguments.
 
 ## 4. Versioning and branching
 
-Complemake uses semantical versioning, with releases named v_X.Y.Z_ where _X_ is the major version, _Y_ is the
+Complemake uses semantical versioning, with releases named `vX.Y.Z` where _X_ is the major version, _Y_ is the
 minor version, and _Z_ is the revision.
 
 While the major number is 0, changes to the minor indicate breaking changes, while the revision is incremented
@@ -178,7 +179,7 @@ Complemake has met or is targeting these goals:
 
 3. Fully automate the testing of all targets built;
 
-4. Provide dependency easy resolution and building;
+4. Provide dependency resolution and building;
 
 5. Allow export Complemake projects to simple shell scripts, to enable quick building of projects by
    non-developers as a one-time operation.
