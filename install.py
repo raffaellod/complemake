@@ -18,6 +18,8 @@
 
 """Installs Complemake."""
 
+from __future__ import print_function
+
 import argparse
 import io
 import os
@@ -36,8 +38,13 @@ def main(args):
    """
 
    argparser = argparse.ArgumentParser(add_help=False)
+   if platform.system() == 'Windows':
+      # TODO: pick a different directory; putting things in C:\Windows is very sloppy!
+      default_dst = os.environ['WINDIR']
+   else:
+      default_dst = '/usr/local/bin'
    argparser.add_argument(
-      '--dest', metavar='DESTINATION', default='/usr/local/bin',
+      '--dest', metavar='DESTINATION', default=default_dst,
       help='Installation destination folder.'
    )
    argparser.add_argument(
@@ -53,20 +60,24 @@ def main(args):
 
    if args.dev:
       complemake_src_dir = os.getcwd()
-      complemake_dst_file = os.path.join(args.dest, 'complemake')
       print('Installing to: {}'.format(args.dest))
-      try:
-         os.unlink(complemake_dst_file)
-      except OSError:
-         pass
       if platform.system() == 'Windows':
-         with io.open(complemake_dst_file, 'w', encoding='utf-16le', universal_newlines=True) as cmd_script:
-            cmd_script.write_line('@echo off && setlocal')
-            # This could use some escaping, but for now it’s okay.
-            cmd_script.write_line('set COMPLEMAKE_DIR="{}"'.format(complemake_src_dir))
-            cmd_script.write_line('"%COMPLEMAKE_DIR%\src\complemake.py" %*')
+         complemake_dst_script = os.path.join(args.dest, 'complemake.cmd')
+         with io.open(complemake_dst_script, 'w', encoding='utf-8') as cmd_script:
+            # Replacements in these lines could use some escaping, but for now they’re okay.
+            for line in \
+               '@echo off && setlocal', \
+               'set COMPLEMAKE_DIR="{}"'.format(complemake_src_dir), \
+               '"%COMPLEMAKE_DIR%\src\complemake.py" %*' \
+            :
+               print(line, file=cmd_script)
       else:
-         os.symlink(os.path.join(complemake_src_dir, 'src', 'complemake.py'), complemake_dst_file)
+         complemake_dst_link = os.path.join(args.dest, 'complemake')
+         try:
+            os.unlink(complemake_dst_link)
+         except OSError:
+            pass
+         os.symlink(os.path.join(complemake_src_dir, 'src', 'complemake.py'), complemake_dst_link)
    else:
       # TODO: install by copying elsewhere.
       print('Non-dev installing not yet implemented, sorry!')
