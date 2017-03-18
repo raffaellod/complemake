@@ -80,7 +80,7 @@ def main(args):
          os.symlink(os.path.join(complemake_src_dir, 'src', 'complemake.py'), complemake_dst_link)
    else:
       # TODO: install by copying elsewhere.
-      print('Non-dev installing not yet implemented, sorry!')
+      print('Non-dev installing not yet implemented, sorry! Please use --dev for now.')
       return 1
    return 0
 

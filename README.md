@@ -1,5 +1,4 @@
-﻿# Complemake
-_The build tool your project was missing_.
+﻿**Complemake** – _the build tool your project was missing_.
 
 ## 1. Introduction
 
@@ -34,12 +33,11 @@ Since Complemake is entirely written in Python, it doesn’t need to be built.
 
 ### 2.2. Installing
 
-At the moment, Complemake lacks any means for installation. The recommended way to “install” it for the time
-being is to create a symlink to complemake.py in a directory in the system `PATH` (such as `/usr/local/bin` on
-non-Windows system).
+This will install a symlink (POSIX) or a cmd script (Windows) to run `complemake.py` as just `complemake`:
 
-**TODO**: make Complemake installable.
-
+```
+install.py --dev
+```
 
 ## 3. Using Complemake
 
@@ -60,11 +58,11 @@ targets:
 
 **TODO**: document file format completely! More examples available as tests (`/test`).
 
-Complemake should be run from the directory containing the project file, relying on the `PATH` environment
-variable to locate the `complemake.py` executable:
+Complemake should be run from the directory containing the project file. You don’t need to specifiy which
+project file to use if the directory only contains one (otherwise you can use `--project`):
 
 ```
-complemake.py build
+complemake build
 ```
 
 When running, Complemake will build the targets in the project and create outputs in the `bin/` and `lib/`
@@ -74,15 +72,15 @@ directories (this is configurable). For the example above, the `build` command w
 To clean up the output files, run:
 
 ```
-complemake.py clean
+complemake clean
 ```
 
-Run `complemake.py --help` to see a guide to all command-line arguments.
+Run `complemake --help` to see a guide to all command-line arguments.
 
 
 ## 4. Versioning and branching
 
-Complemake uses semantical versioning, with releases named _vX.Y.Z_ where _X_ is the major version, _Y_ is the
+Complemake uses semantical versioning, with releases named v_X.Y.Z_ where _X_ is the major version, _Y_ is the
 minor version, and _Z_ is the revision.
 
 While the major number is 0, changes to the minor indicate breaking changes, while the revision is incremented
