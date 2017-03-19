@@ -19,9 +19,9 @@ You should have received a copy of the GNU General Public License along with Com
 #ifdef COMPLEMAKE_BUILD_SIMPLE1
    #ifdef _WIN32
       #if defined(_MSC_VER) || defined(__clang__)
-         #define SIMPLE1_SYM __declspec(dllimport)
+         #define SIMPLE1_SYM __declspec(dllexport)
       #elif defined(__GNUC__)
-         #define SIMPLE1_SYM __attribute__((dllimport))
+         #define SIMPLE1_SYM __attribute__((dllexport))
       #endif
    #else
       #if defined(__clang__) || defined(__GNUC__)
@@ -31,9 +31,9 @@ You should have received a copy of the GNU General Public License along with Com
 #else
    #ifdef _WIN32
       #if defined(_MSC_VER) || defined(__clang__)
-         #define SIMPLE1_SYM __declspec(dllexport)
+         #define SIMPLE1_SYM __declspec(dllimport)
       #elif defined(__GNUC__)
-         #define SIMPLE1_SYM __attribute__((dllexport))
+         #define SIMPLE1_SYM __attribute__((dllimport))
       #endif
    #else
       #if defined(__clang__) || defined(__GNUC__)
