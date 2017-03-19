@@ -45,36 +45,6 @@ class ComplemakeTest(unittest.TestCase):
          all_args.extend(args)
       return all_args
 
-   @staticmethod
-   def exe(name):
-      if platform.system() == 'Windows':
-         return name + '.exe'
-      else:
-         return name
-
-   @staticmethod
-   def env_path_separator():
-      if platform.system() == 'Windows':
-         return ';'
-      else:
-         return ':'
-
-   def run_built_exe(self, exe_path):
-      # Build an environment dictionary that includes the path to each dependency’s lib output folder.
-      env = os.environ.copy()
-      for line in subprocess.check_output(
-         self.complemake_args('query', '--exec-env'), cwd=self.project_path, universal_newlines=True
-      ).splitlines():
-         name, value = line.split('=', maxsplit=1)
-         if 'PATH' in name and name in env:
-            # Assume that *PATH* variables must be augmented, not overwritten.
-            env[name] = env.get(name) + self.env_path_separator() + value
-         else:
-            # Just overwrite the value.
-            env[name] = value
-
-      return subprocess.call((os.path.abspath(exe_path)), cwd=self.project_path, env=env)
-
    def run_complemake(self, *args):
       return subprocess.call(self.complemake_args(*args), cwd=self.project_path)
 
@@ -98,8 +68,7 @@ class Exe1Test(ComplemakeTest):
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
-      exe1_path = os.path.join(self.project_path, self.exe('bin/exe1'))
-      self.assertEqual(self.run_built_exe(exe1_path), 0)
+      self.assertEqual(self.run_complemake('exec', 'bin/exe1'), 0)
 
 ##############################################################################################################
 
@@ -109,8 +78,7 @@ class Exe2Test(ComplemakeTest):
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
-      exe2_path = os.path.join(self.project_path, self.exe('bin/exe2'))
-      self.assertEqual(self.run_built_exe(exe2_path), 0)
+      self.assertEqual(self.run_complemake('exec', 'bin/exe2'), 0)
 
 ##############################################################################################################
 
@@ -121,8 +89,7 @@ class Exe2WithGitDepTest(ComplemakeTest):
 
    def runTest(self):
       self.assertEqual(self.run_complemake('build'), 0)
-      exe2_path = os.path.join(self.project_path, self.exe('bin/exe2'))
-      self.assertEqual(self.run_built_exe(exe2_path), 0)
+      self.assertEqual(self.run_complemake('exec', 'bin/exe2'), 0)
 
    def setUp(self):
       ComplemakeTest.setUp(self)
