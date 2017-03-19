@@ -118,8 +118,16 @@ def main(args):
       return 0
    elif args.command is comk.argparser.Command.EXEC:
       core.prepare_external_dependencies()
-      os.execve(args.exec_exe, args.exec_args, core.get_exec_environ(os.environ.copy()))
-      return 0
+      exec_args = [args.exec_exe]
+      exec_args.extend(args.exec_args)
+      env = core.get_exec_environ(os.environ.copy())
+      if comk.os_is_windows() and sys.hexversion >= 0x03040000 and sys.hexversion < 0x03060000:
+         # Work around Python bug #23462 by avoiding os.exec*() altogether.
+         import subprocess
+         return subprocess.call(exec_args, env=env)
+      else:
+         os.execve(args.exec_exe, exec_args, env)
+         return 0
    elif args.command is comk.argparser.Command.QUERY:
       if args.query_exec_env:
          core.prepare_external_dependencies()
