@@ -42,6 +42,7 @@ class Command(object):
 
 Command.BUILD = Command('build')
 Command.CLEAN = Command('clean')
+Command.EXEC  = Command('exec')
 Command.QUERY = Command('query')
 
 ##############################################################################################################
@@ -150,10 +151,20 @@ class Parser(object):
 
       clean_subparser = subparsers.add_parser(Command.CLEAN)
 
+      exec_subparser = subparsers.add_parser(Command.EXEC)
+      exec_subparser.add_argument(
+         'exec_exe', metavar='EXECUTABLE',
+         help='Command to execute.'
+      )
+      exec_subparser.add_argument(
+         'exec_args', metavar='...', nargs=argparse.REMAINDER,
+         help='Arguments to pass EXECUTABLE.'
+      )
+
       query_subparser = subparsers.add_parser(Command.QUERY)
       query_group = query_subparser.add_mutually_exclusive_group(required=True)
       query_group.add_argument(
-         '--exec-env', action='store_true',
+         '--exec-env', dest='query_exec_env', action='store_true',
          help='Print any environment variable assignments needed to execute binaries build by the project.'
       )
 

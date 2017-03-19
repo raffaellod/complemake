@@ -70,7 +70,21 @@ When running, Complemake will build the targets in the project and create output
 folders (this is configurable via flags). For the example above, the `build` command will generate `bin/myexe`
 (or `bin\myexe.exe` under Windows).
 
-To clean up the output files, run:
+If any executables in the project rely on dynamic libraries that were built as dependencies by Complemake,
+just running them wouldn’t work because the executables wouldn’t be able to load the libraries.
+To overcome this, you can use Complemake to execute any generated executables:
+
+```
+complemake exec bin/myexe
+```
+
+This will run `bin/myexe` in an environment configured with all the necessary dynamic library search paths.
+When the project’s executables will be installed (e.g. on an end user’s machine), all dependencies must be
+installed as well.
+
+**TODO**: Complemake should support creating installable packages, especially for Windows.
+
+When you’re satisfied with your project and want to clean up the generated files, run:
 
 ```
 complemake clean

@@ -98,8 +98,8 @@ def main(args):
 
       core.prepare_external_dependencies(update=args.update_deps)
 
-      # If any targets were specified, only a subset of the targets should be built; otherwise all named targets
-      # will be built.
+      # If any targets were specified, only a subset of the targets should be built; otherwise all named
+      # targets will be built.
       targets = []
       for target_name in args.target_names:
          targets.append(core.get_named_target(target_name))
@@ -116,8 +116,12 @@ def main(args):
    elif args.command is comk.argparser.Command.CLEAN:
       core.clean()
       return 0
+   elif args.command is comk.argparser.Command.EXEC:
+      core.prepare_external_dependencies()
+      os.execve(args.exec_exe, args.exec_args, core.get_exec_environ(os.environ.copy()))
+      return 0
    elif args.command is comk.argparser.Command.QUERY:
-      if args.exec_env:
+      if args.query_exec_env:
          core.prepare_external_dependencies()
          for name, value in core.get_exec_environ(dict()).items():
             print('{}={}'.format(name, value))
