@@ -46,7 +46,8 @@ class ComplemakeTest(unittest.TestCase):
       return all_args
 
    def run_complemake(self, *args):
-      return subprocess.call(self.complemake_args(*args), cwd=self.project_path)
+      need_shell = platform.system() == 'Windows'
+      return subprocess.call(self.complemake_args(*args), cwd=self.project_path, shell=need_shell)
 
    def run_git(self, cwd, *args):
       all_args = ['git']
