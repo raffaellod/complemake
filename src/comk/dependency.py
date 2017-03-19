@@ -19,6 +19,7 @@
 """Classes implementing different types of dependencies."""
 
 import hashlib
+import io
 import os
 import re
 import shutil
