@@ -20,6 +20,7 @@
 """Runs Complemake through a series of test projects."""
 
 import os
+import tempfile
 import platform
 import shutil
 import subprocess
@@ -30,7 +31,7 @@ import unittest
 
 class ComplemakeTest(unittest.TestCase):
    _complemake_path = os.path.abspath('src/complemake.py')
-   _shared_dir = os.path.abspath('test/shared-dir')
+   _shared_dir = tempfile.mkdtemp()
 
    project_file = None
 
