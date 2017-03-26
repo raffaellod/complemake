@@ -229,10 +229,11 @@ class ExternalGitDependency(ExternalProjectDependency):
          Hash.
       """
 
-      with subprocess.Popen((
+      git_proc = subprocess.Popen((
          'git', 'rev-parse', '--quiet', '--verify', treeish
-      ), stdout=subprocess.PIPE, cwd=self.get_project_path()) as git_proc:
-         stdout, _ = git_proc.communicate()
+      ), stdout=subprocess.PIPE, cwd=self.get_project_path())
+      stdout, _ = git_proc.communicate()
+
       hash = stdout.rstrip()
       if not hash:
          raise self.InvalidTreeish('invalid treeish: {}'.format(treeish))
