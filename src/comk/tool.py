@@ -1029,7 +1029,7 @@ class ClangMachOLdLinker(Linker):
          # Extract the list of supported architectures.
          # configured to support archs: armv6 armv7 arm64 i386 x86_64 x86_64h armv6m armv7m
          match = re.search(
-            r'^[Cc]onfigured to support arch[^:]*:(?P<archs>(:? [-_0-9A-Za-z]+)+)$', out, re.MULTILINE
+            r'^[Cc]onfigured to support arch[^:]*: *(?P<archs>.+)$', out, re.MULTILINE
          )
          if not match:
             return None
