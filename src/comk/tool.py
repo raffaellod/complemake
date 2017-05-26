@@ -571,6 +571,8 @@ class ClangxxCompiler(CxxCompiler):
          '-Wmissing-declarations', # Warn if a global function is defined without a previous declaration.
          '-Wno-pessimizing-move',  # Don’t warn that moving a local object in a return statement prevents copy
                                    # elision.
+         '-Wno-redundant-move',    # Don’t warn about redundant move in return statement when it’s actually
+                                   # not redundant.
          '-Wpacked',               # Warn if a struct has “packed” attribute but that has no effect on its
                                    # layout or size.
          '-Wshadow',               # Warn when a local symbol shadows another symbol.
