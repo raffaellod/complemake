@@ -569,10 +569,6 @@ class ClangxxCompiler(CxxCompiler):
          '-pedantic',              # Issue all the warnings demanded by strict ISO C++.
          '-Wconversion',           # Warn for implicit conversions that may alter a value.
          '-Wmissing-declarations', # Warn if a global function is defined without a previous declaration.
-         '-Wno-pessimizing-move',  # Don’t warn that moving a local object in a return statement prevents copy
-                                   # elision.
-         '-Wno-redundant-move',    # Don’t warn about redundant move in return statement when it’s actually
-                                   # not redundant.
          '-Wpacked',               # Warn if a struct has “packed” attribute but that has no effect on its
                                    # layout or size.
          '-Wshadow',               # Warn when a local symbol shadows another symbol.
@@ -580,6 +576,13 @@ class ClangxxCompiler(CxxCompiler):
                                    # value.
          '-Wundef',                # Warn if an undefined identifier is evaluated in “#if”.
       ])
+      if self._ver and self._ver >= comk.version.Version(8):
+         args.extend([
+            '-Wno-pessimizing-move', # Don’t warn that moving a local object in a return statement prevents
+                                     # copy elision.
+            '-Wno-redundant-move',   # Don’t warn about redundant move in return statement when it’s actually
+                                     # not redundant.
+         ])
 
       # TODO: add support for os.environ['CFLAGS'] and other vars ?
 
